@@ -1,9 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import { AuthPortal } from "../components/login";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import Dashboard from "../views/Dashboard";
+import OrderManagement from "../views/OrderManagement";
 import {
-  OrdersView,
   PaymentsView,
   BatchQueueView,
   TrackingView,
@@ -19,7 +25,7 @@ function AppRoutes() {
     "/forgot-password",
     "/verify-otp",
     "/reset-password",
-    "/register"
+    "/register",
   ];
 
   // If we are on any of the authentication pages, render the AuthPortal directly at the top level
@@ -33,10 +39,10 @@ function AppRoutes() {
       <Route path="/" element={<DashboardLayout />}>
         {/* Default Route redirects to Dashboard */}
         <Route index element={<Navigate to="/dashboard" replace />} />
-        
+
         {/* Sub Pages */}
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="orders" element={<OrdersView />} />
+        <Route path="orders" element={<OrderManagement />} />
         <Route path="payments" element={<PaymentsView />} />
         <Route path="batch-queue" element={<BatchQueueView />} />
         <Route path="tracking" element={<TrackingView />} />

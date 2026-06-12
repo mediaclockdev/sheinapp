@@ -10,6 +10,10 @@ import smartbatchicon from "../assets/smartbatchrecicon.svg";
 import incomingordersreviewicon from "../assets/incomingorderreviewicon.svg";
 import filtericon from "../assets/filtericon.svg";
 import exporticon from "../assets/exporticon.svg";
+import dotmenu from "../assets/3dotmenu.svg";
+import dress1 from "../assets/dress1.svg";
+import dress2 from "../assets/dress2.svg";
+import dress3 from "../assets/dress3.svg";
 
 // Mock API Call simulating backend data loading
 const fetchDashboardData = () => {
@@ -74,7 +78,7 @@ const fetchDashboardData = () => {
             id: "1",
             productName: "Floral Midi Dress",
             sku: "SKU: SH-29402",
-            image: "floral_midi_dress.png",
+            image: dress1,
             customerName: "Elena Rodriguez",
             customerRisk: "Trusted",
             size: "M",
@@ -87,7 +91,7 @@ const fetchDashboardData = () => {
             id: "2",
             productName: "Minimalist Canvas Tote",
             sku: "SKU: SH-88219",
-            image: "canvas_tote.png",
+            image: dress2,
             customerName: "Mark Thompson",
             customerRisk: "New Customer",
             size: "Large",
@@ -100,7 +104,7 @@ const fetchDashboardData = () => {
             id: "3",
             productName: "Pointed-Toe Heels",
             sku: "SKU: SH-10293",
-            image: "toe_heels.png",
+            image: dress3,
             customerName: "Jessica Wu",
             customerRisk: "Previous Delivery Refusal",
             size: "38",
@@ -141,7 +145,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="p-8 bg-[#F8FAFF] min-h-[calc(100vh-70px)] space-y-6">
+    <div className="p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
       {/* Header Info */}
       <div className="flex justify-between items-center">
         <div>
@@ -529,9 +533,9 @@ const Dashboard = () => {
       </div>
 
       {/* Incoming Orders Review Table (Full width card) */}
-      <div className="bg-white rounded-2xl border border-[#E8DFE1] shadow-[0_4px_24px_rgba(0,0,0,0.01)] overflow-hidden relative">
+      <div className="bg-white rounded-2xl border border-[#D3C3C5] shadow-[0_4px_24px_rgba(0,0,0,0.01)] overflow-hidden relative">
         {/* Table Header */}
-        <div className="p-6 border-b border-[#E8DFE1] flex flex-wrap justify-between items-center gap-4">
+        <div className="p-6 border-b border-[#D3C3C5] flex flex-wrap justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <img
               src={incomingordersreviewicon}
@@ -545,17 +549,17 @@ const Dashboard = () => {
           </div>
 
           <div className="flex gap-3">
-            <button className="flex items-center gap-1.5 px-3 py-1 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200">
+            <button className="flex items-center gap-1.5 px-3 py-1 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
               <img src={filtericon} alt="Filter" className="h-3.5 w-3.5" />
 
               <p>Filter</p>
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200">
+            <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
               <img src={exporticon} alt="Export" className="h-3.5 w-3.5" />
 
               <span>Export</span>
             </button>
-            <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-4 py-2 rounded-xl text-xs transition duration-200">
+            <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-4 py-2 rounded-xl text-xs transition duration-200 cursor-pointer">
               See All
             </button>
           </div>
@@ -565,7 +569,7 @@ const Dashboard = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-[#F4F4F6] text-[10px] uppercase font-bold text-[#8C959F] bg-slate-50/50">
+              <tr className="border-b border-[#D3C3C5] text-[13px] uppercase font-semibold text-[#5C5F60] bg-[#DBE4ED]/30">
                 <th className="px-6 py-4">Product</th>
                 <th className="px-6 py-4">Customer Risk</th>
                 <th className="px-6 py-4">Size</th>
@@ -584,87 +588,85 @@ const Dashboard = () => {
                     <div className="flex items-center gap-3">
                       {/* Product image thumbnail */}
                       <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200 shrink-0 overflow-hidden">
-                        {/* Commented out img for product thumbnail as requested */}
-                        {/* <img src={order.image} alt={order.productName} className="h-full w-full object-cover" /> */}
-                        <span className="text-base text-slate-400">👗</span>
+                        <img
+                          src={order.image}
+                          alt={order.productName}
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                       <div>
-                        <span className="text-sm font-extrabold text-[#17222B] block leading-tight">
+                        <p className="text-sm font-semibold text-[#141D23] block leading-tight">
                           {order.productName}
-                        </span>
-                        <span className="text-[10px] font-bold text-[#8C959F] block mt-0.5">
+                        </p>
+                        <p className="text-xs font-normal text-[#5C5F60s] block mt-0.5">
                           {order.sku}
-                        </span>
+                        </p>
                       </div>
                     </div>
                   </td>
 
                   {/* Customer Risk Badge */}
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`h-2.5 w-2.5 rounded-full ${
-                          order.customerRisk === "Trusted"
-                            ? "bg-[#1F7B44]"
-                            : order.customerRisk === "New Customer"
-                              ? "bg-yellow-400"
-                              : "bg-red-500"
-                        }`}
-                      ></span>
-                      <div>
-                        <span className="text-sm font-extrabold text-[#17222B] block leading-tight">
-                          {order.customerName}
-                        </span>
+                    <div>
+                      <p className="text-sm font-semibold text-[#141D23] block leading-tight">
+                        {order.customerName}
+                      </p>
+                      <div className="flex items-center gap-1">
                         <span
+                          className={`h-2.5 w-2.5 rounded-full ${
+                            order.customerRisk === "Trusted"
+                              ? "bg-[#15803D]"
+                              : order.customerRisk === "New Customer"
+                                ? "bg-[#A16207]"
+                                : "bg-[#B91C1C]"
+                          }`}
+                        ></span>
+                        <p
                           className={`text-[9px] font-bold block mt-0.5 uppercase tracking-wide ${
                             order.customerRisk === "Trusted"
-                              ? "text-[#1F7B44]"
+                              ? "text-[#15803D]"
                               : order.customerRisk === "New Customer"
-                                ? "text-yellow-600"
-                                : "text-red-500"
+                                ? "text-[#A16207]"
+                                : "text-[#B91C1C]"
                           }`}
                         >
-                          &bull; {order.customerRisk}
-                        </span>
+                          {order.customerRisk}
+                        </p>
                       </div>
                     </div>
                   </td>
 
                   {/* Size */}
-                  <td className="px-6 py-4 text-[#5c5f60] font-semibold">
+                  <td className="px-6 py-4 text-sm font-normal text-[#141D23]">
                     {order.size}
                   </td>
 
                   {/* Color */}
-                  <td className="px-6 py-4 text-[#5c5f60] font-semibold">
+                  <td className="px-6 py-4 text-sm font-normal text-[#141D23]">
                     {order.color}
                   </td>
 
                   {/* Weight */}
-                  <td className="px-6 py-4 text-[#5c5f60] font-semibold">
+                  <td className="px-6 py-4 text-sm font-normal text-[#141D23]">
                     {order.weight}
                   </td>
 
                   {/* Coupon Bucket */}
                   <td className="px-6 py-4">
-                    <span className="bg-slate-100 px-2.5 py-1 rounded-md text-[10px] font-bold text-slate-600 tracking-wider">
+                    <span className="bg-[#E1E3E4] px-2.5 py-1 rounded-sm text-sm font-normal uppercase text-[#626566] tracking-wider">
                       {order.couponBucket}
                     </span>
                   </td>
 
                   {/* Price */}
-                  <td className="px-6 py-4 text-right text-[#17222B] font-extrabold text-sm">
+                  <td className="px-6 py-4 text-right text-[#141D23] font-semibold text-sm">
                     {order.price}
                   </td>
 
                   {/* Actions column */}
                   <td className="px-6 py-4 text-center">
                     <button className="p-1 rounded hover:bg-slate-100 text-[#8C959F] hover:text-[#17222B] transition">
-                      {/* Commented out img for action options */}
-                      {/* <img src="more_vert.svg" alt="Options" className="h-5 w-5" /> */}
-                      <span className="font-extrabold text-sm leading-none block px-1">
-                        ⋮
-                      </span>
+                      <img src={dotmenu} alt="Options" className="h-5 w-5" />
                     </button>
                   </td>
                 </tr>

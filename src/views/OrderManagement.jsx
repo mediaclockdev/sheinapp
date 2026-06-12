@@ -1,0 +1,534 @@
+import React, { useState } from "react";
+import { Calendar, RotateCcw, Eye, Trash2, Plus, Minus } from "lucide-react";
+import exporticon from "../assets/exporticon.svg";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import star from "../assets/ratingstar.svg";
+import customermessage from "../assets/customermessage.svg";
+import product1 from "../assets/Product1.svg";
+import product2 from "../assets/Product2.svg";
+import product3 from "../assets/Product3.svg";
+import product4 from "../assets/Product4.svg";
+
+const OrderManagement = () => {
+  const [status, setStatus] = useState("Submitted");
+  const today = new Date();
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
+  const [dateRange, setDateRange] = useState([sevenDaysAgo, today]);
+
+  const [startDate, endDate] = dateRange;
+
+  const orders = [
+    {
+      id: "#SHP-92831",
+      customer: "Alice L.",
+      initials: "AL",
+      items: 12,
+      status: "WAITING",
+    },
+    {
+      id: "#SHP-92832",
+      customer: "Bob M.",
+      initials: "BM",
+      items: 4,
+      status: "PURCHASED",
+    },
+    {
+      id: "#SHP-92833",
+      customer: "User 3",
+      initials: "U3",
+      items: 14,
+      status: "SUBMITTED",
+    },
+    {
+      id: "#SHP-92834",
+      customer: "User 4",
+      initials: "U4",
+      items: 2,
+      status: "SUBMITTED",
+    },
+    {
+      id: "#SHP-92831",
+      customer: "Alice L.",
+      initials: "AL",
+      items: 12,
+      status: "WAITING",
+    },
+    {
+      id: "#SHP-92832",
+      customer: "Bob M.",
+      initials: "BM",
+      items: 4,
+      status: "PURCHASED",
+    },
+    {
+      id: "#SHP-92833",
+      customer: "User 3",
+      initials: "U3",
+      items: 14,
+      status: "SUBMITTED",
+    },
+    {
+      id: "#SHP-92834",
+      customer: "User 4",
+      initials: "U4",
+      items: 2,
+      status: "SUBMITTED",
+    },
+    {
+      id: "#SHP-92831",
+      customer: "Alice L.",
+      initials: "AL",
+      items: 12,
+      status: "WAITING",
+    },
+    {
+      id: "#SHP-92832",
+      customer: "Bob M.",
+      initials: "BM",
+      items: 4,
+      status: "PURCHASED",
+    },
+    {
+      id: "#SHP-92833",
+      customer: "User 3",
+      initials: "U3",
+      items: 14,
+      status: "SUBMITTED",
+    },
+    {
+      id: "#SHP-92834",
+      customer: "User 4",
+      initials: "U4",
+      items: 2,
+      status: "SUBMITTED",
+    },
+  ];
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "WAITING":
+        return "bg-[#FFF2D8] text-[#B36B00]";
+      case "PURCHASED":
+        return "bg-[#DDF8E8] text-[#14804A]";
+      default:
+        return "bg-[#E7EEFF] text-[#1D4ED8]";
+    }
+  };
+  const products = [
+    {
+      name: "Floral Print Dress",
+      sku: "SKU: SH-9283-01",
+      size: "S",
+      Color: "Sage",
+      price: "$14.00",
+      icon: product1,
+    },
+    {
+      name: "Satin Cami Top",
+      sku: "SKU: SH-9283-02",
+      size: "M",
+      Color: "Cream",
+      price: "$22.00",
+      icon: product2,
+    },
+    {
+      name: "Cotton Crew Neck T-Shirt",
+      sku: "SKU: SH-9283-03",
+      size: "L",
+      Color: "White",
+      price: "$18.00",
+      icon: product3,
+    },
+    {
+      name: "Denim Jeans",
+      sku: "SKU: SH-9283-04",
+      size: "26",
+      Color: "Blue",
+      price: "$32.00",
+      icon: product4,
+    },
+  ];
+  return (
+    <div className="p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
+      {/* Header Info */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-[32px] font-bold text-[#17222B] tracking-tight">
+            Order Management
+          </h1>
+          <p className="text-base text-[#5C5F60]/80 mt-1 font-semibold">
+            Review and approve customer link submissions.
+          </p>
+        </div>
+        <button className="bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
+          <img src={exporticon} alt="export csv icon" className="h-4 w-4" />
+          <span>Export CSV</span>
+        </button>
+      </div>
+
+      {/* status */}
+      <div className="w-full bg-[#F8F5F7] border border-[#D9D4D7] rounded-lg px-5 py-4">
+        <div className="flex items-center justify-between">
+          {/* Left Side */}
+          <div className="flex items-center gap-8">
+            {/* Status */}
+            <div>
+              <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
+                Status
+              </p>
+
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="h-11 px-4 bg-[#ECF5FE] rounded-md border-none outline-none text-[#141D23] text-base font-normal min-w-[120px]"
+              >
+                <option>Submitted</option>
+                <option>Pending</option>
+                <option>Failed</option>
+              </select>
+            </div>
+
+            {/* Date Range */}
+            <div>
+              <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
+                Date Range
+              </p>
+              <div className="flex items-center gap-2 bg-[#ECF5FE] px-3 py-1.5">
+                <Calendar />
+                <DatePicker
+                  selectsRange
+                  startDate={startDate}
+                  endDate={endDate}
+                  onChange={(update) => setDateRange(update)}
+                  dateFormat="MMM d"
+                  className="focus:outline-none text-base font-normal"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side */}
+          <div className="flex items-center gap-4">
+            <span className="text-[#5C5F60] font-normal text-base">
+              84 Orders
+            </span>
+
+            <button className="text-[#8B6575] hover:rotate-180 transition-transform duration-300">
+              <RotateCcw size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* main content */}
+      <div className="flex gap-5 ">
+        {/* table */}
+        <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-[60%]">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#F3F4F6] border-b border-[#D8D8D8]">
+                <th className="w-12 px-3 py-4">
+                  <input type="checkbox" />
+                </th>
+
+                <th className="text-left text-xs font-semibold text-[#666] py-4">
+                  ORDER ID
+                </th>
+
+                <th className="text-left text-xs font-semibold text-[#666] py-4">
+                  CUSTOMER
+                </th>
+
+                <th className="text-left text-xs font-semibold text-[#666] py-4">
+                  ITEMS
+                </th>
+
+                <th className="text-left text-xs font-semibold text-[#666] py-4">
+                  STATUS
+                </th>
+
+                <th className="text-center text-xs font-semibold text-[#666] py-4">
+                  ACTIONS
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {orders.map((order, index) => (
+                <tr
+                  key={order.id}
+                  className="border-b border-[#ECECEC] hover:bg-gray-50"
+                >
+                  <td className="px-3 py-4">
+                    <input
+                      type="checkbox"
+                      defaultChecked={index === 1}
+                      className="accent-[#7A5C69]"
+                    />
+                  </td>
+
+                  <td className="py-4">
+                    <p className="font-semibold text-[#2D2D2D] leading-5">
+                      {order.id.split("-")[0]}-
+                      <br />
+                      {order.id.split("-")[1]}
+                    </p>
+                  </td>
+
+                  <td className="py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
+                        {order.initials}
+                      </div>
+
+                      <span className="text-sm text-[#333]">
+                        {order.customer}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="py-4 text-sm text-[#444]">
+                    {order.items} items
+                  </td>
+
+                  <td className="py-4">
+                    <span
+                      className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusClass(
+                        order.status,
+                      )}`}
+                    >
+                      {order.status}
+                    </span>
+                  </td>
+
+                  <td className="py-4 text-center">
+                    <button className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center mx-auto hover:bg-[#F9F5F6]">
+                      <Eye size={16} className="text-[#7A5C69]" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* order details */}
+        <div className="w-[40%] border border-[#D3C3C5] rounded-lg">
+          <div className="px-4 py-4 flex flex-col gap-1 bg-[#ECF5FE] border-b border-b-[#D3C3C5]">
+            <p className="text-[#141D23] font-normal  text-lg ">
+              Order Details
+            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-[#78555E] font-bold text-xs">#SHP-92832</p>
+              <p className="text-[#5C5F60] font-bold text-xs">4 ITEMS</p>
+            </div>
+          </div>
+          {/* customer context */}
+          <div className="p-4 ">
+            <p className="text-[#5C5F60] font-bold text-xs mb-2">
+              CUSTOMER CONTEXT
+            </p>
+            <div className="bg-[#ECF5FE] p-4 border border-[#D3C3C5]/30 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <p className="text-[#141D23] text-base font-bold">Bob Miller</p>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <img src={star} alt="star" />
+                    <p className="text-[#141D23] font-bold text-xs">4.5/5.0</p>
+                  </div>
+                  <p className="text-[#166534] font-bold text-xs bg-[#DCFCE7] rounded-xs px-1.5 py-0.5">
+                    HIGHLY TRUSTED
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[#5C5F60] font-normal text-xs">
+                  Shipping: 742 Evergreen Terrace, Springfield, OR
+                </p>
+                <p className="text-[#5C5F60] font-normal text-xs">
+                  Phone: +1 555-0123
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* customer message */}
+          <div className="p-4">
+            <p className="text-[#5C5F60] font-bold text-xs mb-2">
+              CUSTOMER MESSAGE
+            </p>
+            <div className="bg-[#FFD1DC]/10 p-4 rounded-lg border border-[#FFD1DC]/30 flex items-center gap-2">
+              <img src={customermessage} alt="customer message icon" />
+              <p className="text-[#4F4446] font-medium text-xs">
+                "Please make sure to check the size guide for the denim skirt."
+              </p>
+            </div>
+          </div>
+
+          {/* product */}
+          <div className="p-4">
+            <p className="text-[#5C5F60] text-xs font-bold mb-2">
+              PRODUCTS ({products.length})
+            </p>
+
+            <div className="space-y-4">
+              {products.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="border border-[#D3C3C5] rounded-xl bg-white p-4"
+                >
+                  <div className="flex justify-between items-start">
+                    {/* Left Side */}
+                    <div className="flex gap-4">
+                      <div className="w-20 h-20 border border-[#D3C3C5] rounded-md overflow-hidden">
+                        <img
+                          src={item.icon}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="font-bold text-sm text-[#141D23]">
+                          {item.name}
+                        </p>
+
+                        <p className="text-[#5C5F60] text-xs font-normal">
+                          {item.sku}
+                        </p>
+
+                        <div className="flex gap-4 text-[#5C5F60] text-xs font-normal">
+                          <span>Size: {item.size}</span>
+                          <span>Color: {item.Color}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Side */}
+                    <div className="flex flex-col items-end justify-between h-20">
+                      <div className="flex items-center gap-3">
+                        <p className="font-bold text-xs text-[#78555E]">
+                          {item.price}
+                        </p>
+
+                        <button>
+                          <Trash2 size={16} className="text-[#5C5F60]" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden">
+                        <button className="px-3 py-1 text-[#845F68]">
+                          <Minus size={14} />
+                        </button>
+
+                        <span className="px-4 font-bold text-[10px] text-[#141D23]">
+                          1
+                        </span>
+
+                        <button className="px-3 py-1 text-[#845F68]">
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* retail price */}
+          <div className="border-t border-[#E5D6D8]">
+            {/* Pricing Section */}
+            <div className="p-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-[18px] font-semibold text-[#20262D]">
+                  Retail Price
+                </h3>
+                <span className="text-[18px] font-semibold text-[#20262D]">
+                  $86.00
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center mt-6">
+                <span className="text-[#5C5F60] text-[16px]">Promotions</span>
+                <span className="text-[#D92D20] text-[16px]">-$5.08</span>
+              </div>
+
+              {/* Exclude Promotion */}
+              <div className="mt-4 bg-[#EEF2F8] border border-[#D8DEE8] rounded-md px-3 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-[#CBB5BB]"
+                  />
+                  <span className="text-[#5C5F60]">Exclude Promotion</span>
+                </div>
+
+                <span className="text-[#8A6A72] text-lg">ⓘ</span>
+              </div>
+
+              <div className="flex justify-between items-center mt-5">
+                <span className="text-[#5C5F60] text-[16px]">
+                  SHEIN CLUB Exclusive Discount
+                </span>
+                <span className="text-[#D92D20]">-$0.20</span>
+              </div>
+
+              <div className="flex justify-between items-center mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#5C5F60] text-[16px]">Coupon</span>
+
+                  <span className="bg-[#FFE7E5] text-[#EF4444] text-xs px-2 py-0.5 rounded">
+                    05:03:09
+                  </span>
+                </div>
+
+                <span className="text-[#D92D20]">-$0.18</span>
+              </div>
+
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-[#5C5F60] text-[16px]">Shipping Fee</span>
+
+                <span className="text-[#15803D] font-semibold">FREE</span>
+              </div>
+
+              <div className="border-t border-[#E5E7EB] mt-5 pt-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-[20px] font-bold text-[#20262D]">
+                      Estimated Price
+                    </h3>
+
+                    <p className="text-xs text-[#7A7A7A]">
+                      Final price confirmed at checkout
+                    </p>
+                  </div>
+
+                  <span className="text-[48px] font-bold text-[#845F68] leading-none">
+                    $81.00
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 flex gap-4">
+              <button className="flex-1 h-14 rounded-xl bg-[#F2C3D0] text-[#7D5C66] font-medium shadow-md hover:opacity-90 transition">
+                ✓ Approve
+              </button>
+
+              <button className="flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-white text-[#5C5F60] font-medium hover:bg-gray-50 transition">
+                ✕ Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OrderManagement;
