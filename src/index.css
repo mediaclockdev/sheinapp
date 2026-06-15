@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+/* Make react-datepicker input wrapper occupy 100% width of parent */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+.react-datepicker__input-container {
+  width: 100%;
+}
+.react-datepicker__input-container input {
+  width: 100%;
+  background: transparent;
+}
+
+/* Make calendar popover fit on mobile screen width */
+@media (max-width: 640px) {
+  .react-datepicker-popper {
+    width: 90vw !important;
+    left: 5vw !important;
+    right: 5vw !important;
+  }
+  .react-datepicker {
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .react-datepicker__month-container {
+    width: 100% !important;
+    float: none !important;
+  }
+}

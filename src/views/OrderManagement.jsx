@@ -212,16 +212,16 @@ const OrderManagement = () => {
   return (
     <div className="p-4 lg:p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
       {/* Header Info */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between lg:items-center">
         <div>
-          <h1 className="text-[32px] font-bold text-[#17222B] tracking-tight">
+          <h1 className="text-2xl lg:text-[32px] font-bold text-[#17222B] tracking-tight">
             Order Management
           </h1>
-          <p className="text-base text-[#5C5F60]/80 mt-1 font-semibold">
+          <p className="text-sm lg:text-base text-[#5C5F60]/80 mt-1 font-semibold">
             Review and approve customer link submissions.
           </p>
         </div>
-        <button className="bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
+        <button className="w-[40%] lg:w-full bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl whitespace-nowrap text-sm lg:text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
           <img src={exporticon} alt="export csv icon" className="h-4 w-4" />
           <span>Export CSV</span>
         </button>
@@ -231,9 +231,9 @@ const OrderManagement = () => {
       <div className="w-full bg-[#F8F5F7] border border-[#D9D4D7] rounded-lg px-5 py-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Left Side */}
-          <div className="flex lg:items-center gap-4 lg:gap-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-8 w-full sm:w-auto">
             {/* Status */}
-            <div>
+            <div className="w-full sm:w-auto">
               <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
                 Status
               </p>
@@ -241,7 +241,7 @@ const OrderManagement = () => {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="h-11 px-4 bg-[#ECF5FE] rounded-md border-none outline-none text-[#141D23] text-base font-normal min-w-[120px]"
+                className="h-11 w-full sm:w-auto px-4 bg-[#ECF5FE] rounded-md border-none outline-none text-[#141D23] text-base font-normal min-w-[120px]"
               >
                 <option>Submitted</option>
                 <option>Pending</option>
@@ -250,19 +250,19 @@ const OrderManagement = () => {
             </div>
 
             {/* Date Range */}
-            <div>
+            <div className="w-full sm:w-auto">
               <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
                 Date Range
               </p>
-              <div className="flex items-center gap-2 bg-[#ECF5FE] px-1 lg:px-3 py-1.5 w-[50%] lg:w-full">
-                <Calendar />
+              <div className="flex items-center gap-2 bg-[#ECF5FE] px-3 py-1.5 w-full sm:w-[220px] rounded-md">
+                <Calendar className="text-[#5C5F60] shrink-0" size={18} />
                 <DatePicker
                   selectsRange
                   startDate={startDate}
                   endDate={endDate}
                   onChange={(update) => setDateRange(update)}
                   dateFormat="MMM d"
-                  className="focus:outline-none text-base font-normal relative z-[99999]"
+                  className="focus:outline-none text-base font-normal bg-transparent w-full"
                 />
               </div>
             </div>
@@ -283,13 +283,12 @@ const OrderManagement = () => {
 
       {/* main content */}
       <div className="flex flex-col lg:flex-row gap-5 ">
-        {/* ============================================================
-            OLD HAND-BUILT TABLE (COMMENTED OUT)
-            Replaced with TanStack React Table below for proper
-            pagination, row selection, and scalable data handling.
-            Original code preserved here for reference.
-        ================================================================
-        <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-[60%]">
+        {/* ============================================================ OLD
+        HAND-BUILT TABLE (COMMENTED OUT) Replaced with TanStack React Table
+        below for proper pagination, row selection, and scalable data handling.
+        Original code preserved here for reference.
+        ================================================================ */}
+        {/* <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full lg:w-[60%]">
           <table className="w-full">
             <thead>
               <tr className="bg-[#F3F4F6] border-b border-[#D8D8D8]">
@@ -364,13 +363,12 @@ const OrderManagement = () => {
               ))}
             </tbody>
           </table>
-        </div>
-        ============================================================ */}
+        </div> */}
 
         {/* ── NEW TABLE — TanStack React Table with Pagination ──────── */}
         <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full lg:w-[60%] flex flex-col">
-          {/* Scrollable table body */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Desktop/Tablet view */}
+          <div className="hidden md:block flex-1 overflow-y-auto">
             <table className="w-full">
               <thead className="sticky top-0 z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -432,14 +430,79 @@ const OrderManagement = () => {
             </table>
           </div>
 
-          {/* Pagination Footer */}
+          {/* Mobile Card view */}
+          <div className="md:hidden flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-[#ECECEC]">
+              <label className="flex items-center gap-2 text-xs font-semibold text-[#5C5F60] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={table.getIsAllPageRowsSelected()}
+                  onChange={table.getToggleAllPageRowsSelectedHandler()}
+                  className="accent-[#7A5C69] h-4 w-4"
+                />
+                Select All on Page
+              </label>
+            </div>
+
+            {table.getRowModel().rows.map((row) => (
+              <div
+                key={row.id}
+                className={`p-4 rounded-xl border border-[#ECECEC] space-y-3 bg-white hover:bg-gray-50 transition relative ${
+                  row.getIsSelected() ? "bg-[#FFF8FA] border-[#FFD1DC]" : ""
+                }`}
+              >
+                {/* Header: Select checkbox + Order ID + Status */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={row.getIsSelected()}
+                      onChange={row.getToggleSelectedHandler()}
+                      className="accent-[#7A5C69] h-4 w-4"
+                    />
+                    <span className="font-extrabold text-[#2D2D2D] text-sm">
+                      {row.original.id}
+                    </span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusClass(row.original.status)}`}
+                  >
+                    {row.original.status}
+                  </span>
+                </div>
+
+                {/* Body: Customer & Items */}
+                <div className="flex items-center justify-between text-xs text-[#5C5F60]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[8px] font-semibold text-[#4B5563]">
+                      {row.original.initials}
+                    </div>
+                    <span className="font-bold text-[#333]">
+                      {row.original.customer}
+                    </span>
+                  </div>
+                  <span className="font-medium bg-[#ECF5FE] text-[#1D4ED8] px-2 py-0.5 rounded-md">
+                    {row.original.items} items
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end pt-1 border-t border-[#ECECEC]/50">
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition">
+                    <Eye size={14} />
+                    <span>View Details</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div className="px-4 py-3 border-t border-[#ECECEC] bg-[#FBF7F8] flex items-center justify-between">
             <span className="text-xs font-semibold text-[#8C959F]">
               {startRow}-{endRow} of {totalRows}
             </span>
 
             <div className="flex items-center gap-1.5">
-              {/* Previous page */}
               <button
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
@@ -448,12 +511,15 @@ const OrderManagement = () => {
                 ‹
               </button>
 
-              {/* Page numbers */}
+              <span className="text-xs font-semibold text-[#8C959F] sm:hidden mx-1">
+                Page {pageIndex + 1} of {pageCount}
+              </span>
+
               {Array.from({ length: pageCount }, (_, i) => (
                 <button
                   key={i}
                   onClick={() => table.setPageIndex(i)}
-                  className={`h-8 w-8 rounded-lg border flex items-center justify-center font-extrabold text-xs transition ${
+                  className={`h-8 w-8 rounded-lg border flex items-center justify-center font-extrabold text-xs transition hidden sm:flex ${
                     pageIndex === i
                       ? "bg-[#FFE8EF] text-[#D24D77] border-[#FFE8EF]"
                       : "border-[#E8DFE1] text-[#5c5f60] hover:bg-slate-100"
@@ -463,7 +529,6 @@ const OrderManagement = () => {
                 </button>
               ))}
 
-              {/* Next page */}
               <button
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
@@ -474,7 +539,6 @@ const OrderManagement = () => {
             </div>
           </div>
         </div>
-
         {/* order details */}
         <div className="w-full lg:w-[40%] border border-[#D3C3C5] rounded-lg">
           <div className="px-4 py-4 flex flex-col gap-1 bg-[#ECF5FE] border-b border-b-[#D3C3C5]">

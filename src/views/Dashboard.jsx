@@ -147,14 +147,14 @@ const Dashboard = () => {
   return (
     <div className="p-4 lg:p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
       {/* Header Info */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row gap-5 lg:justify-between lg:items-center">
         <div>
-          <h1 className="text-[32px] font-bold text-[#17222B] tracking-tight">
+          <h1 className="text-2xl lg:text-[32px] font-bold text-[#17222B] tracking-tight">
             Welcome back, {data.agent.name}
           </h1>
           <p className="text-base text-[#5C5F60]/80 mt-1 font-semibold">
             You have{" "}
-            <span className="text-[#78555E] font-extrabold">
+            <span className="text-[#78555E] font-bold">
               {data.agent.newOrdersCount} new orders
             </span>{" "}
             to review today.
@@ -162,8 +162,7 @@ const Dashboard = () => {
         </div>
 
         {/* New Batch Action button */}
-        <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-5 py-2.5 rounded-xl text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
-          {/* Commented out img for new batch button icon */}
+        <button className="w-[40%] lg:w-full bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-5 py-2.5 rounded-xl text-base whitespace-nowrap cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
           <img src={newbatchicon} alt="New Batch" className="h-4 w-4" />
           <span>New Batch</span>
         </button>
