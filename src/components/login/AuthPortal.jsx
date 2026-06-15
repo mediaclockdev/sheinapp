@@ -217,7 +217,7 @@ function LoginScreen() {
                 <input
                   className="min-w-0 flex-1 border-0 bg-transparent text-[14px] outline-none"
                   type="password"
-                  defaultValue="password"
+                  placeholder="••••••••"
                 />
                 <Icon name="eye" className="h-4 w-4 shrink-0 text-[#6c737d]" />
               </span>
@@ -372,7 +372,7 @@ function ResetScreen() {
               type="password"
               icon="key"
               rightIcon="eye"
-              value="password"
+              placeholder="••••••••"
               shellClassName="h-10"
             />
             <div className="mt-2 flex items-center">
@@ -388,7 +388,7 @@ function ResetScreen() {
             label="Confirm New Password"
             type="password"
             icon="lock"
-            value="password"
+            placeholder="••••••••"
             shellClassName="h-10"
           />
           <PrimaryButton arrow className="!mt-8 h-[54px] text-[14px]">
@@ -454,7 +454,7 @@ function RegisterScreen() {
           label="Secure Password"
           type="password"
           icon="lock"
-          value="password"
+          placeholder="••••••••"
         />
         <div className="flex gap-3 rounded bg-[#eef7ff] px-5 py-5 text-[12px] font-semibold leading-5 text-[#4e5963]">
           <Icon
