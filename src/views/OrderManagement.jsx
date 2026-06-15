@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Calendar, RotateCcw, Eye, Trash2, Plus, Minus } from "lucide-react";
 import exporticon from "../assets/exporticon.svg";
 import DatePicker from "react-datepicker";
@@ -9,9 +9,16 @@ import product1 from "../assets/Product1.svg";
 import product2 from "../assets/Product2.svg";
 import product3 from "../assets/Product3.svg";
 import product4 from "../assets/Product4.svg";
+import {
+  useReactTable,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+} from "@tanstack/react-table";
 
 const OrderManagement = () => {
   const [status, setStatus] = useState("Submitted");
+  const [rowSelection, setRowSelection] = useState({});
   const today = new Date();
 
   const sevenDaysAgo = new Date();
@@ -21,94 +28,46 @@ const OrderManagement = () => {
 
   const [startDate, endDate] = dateRange;
 
-  const orders = [
-    {
-      id: "#SHP-92831",
-      customer: "Alice L.",
-      initials: "AL",
-      items: 12,
-      status: "WAITING",
-    },
-    {
-      id: "#SHP-92832",
-      customer: "Bob M.",
-      initials: "BM",
-      items: 4,
-      status: "PURCHASED",
-    },
-    {
-      id: "#SHP-92833",
-      customer: "User 3",
-      initials: "U3",
-      items: 14,
-      status: "SUBMITTED",
-    },
-    {
-      id: "#SHP-92834",
-      customer: "User 4",
-      initials: "U4",
-      items: 2,
-      status: "SUBMITTED",
-    },
-    {
-      id: "#SHP-92831",
-      customer: "Alice L.",
-      initials: "AL",
-      items: 12,
-      status: "WAITING",
-    },
-    {
-      id: "#SHP-92832",
-      customer: "Bob M.",
-      initials: "BM",
-      items: 4,
-      status: "PURCHASED",
-    },
-    {
-      id: "#SHP-92833",
-      customer: "User 3",
-      initials: "U3",
-      items: 14,
-      status: "SUBMITTED",
-    },
-    {
-      id: "#SHP-92834",
-      customer: "User 4",
-      initials: "U4",
-      items: 2,
-      status: "SUBMITTED",
-    },
-    {
-      id: "#SHP-92831",
-      customer: "Alice L.",
-      initials: "AL",
-      items: 12,
-      status: "WAITING",
-    },
-    {
-      id: "#SHP-92832",
-      customer: "Bob M.",
-      initials: "BM",
-      items: 4,
-      status: "PURCHASED",
-    },
-    {
-      id: "#SHP-92833",
-      customer: "User 3",
-      initials: "U3",
-      items: 14,
-      status: "SUBMITTED",
-    },
-    {
-      id: "#SHP-92834",
-      customer: "User 4",
-      initials: "U4",
-      items: 2,
-      status: "SUBMITTED",
-    },
-  ];
-  const getStatusClass = (status) => {
-    switch (status) {
+  // ── Order data (84 rows for pagination) ────────────────────────────
+  const orders = useMemo(() => {
+    const customerPool = [
+      { name: "Alice L.", initials: "AL" },
+      { name: "Bob M.", initials: "BM" },
+      { name: "User 3", initials: "U3" },
+      { name: "User 4", initials: "U4" },
+      { name: "User 5", initials: "U5" },
+      { name: "User 6", initials: "U6" },
+      { name: "User 7", initials: "U7" },
+      { name: "User 8", initials: "U8" },
+      { name: "User 9", initials: "U9" },
+      { name: "User 10", initials: "U10" },
+      { name: "User 11", initials: "U11" },
+      { name: "User 12", initials: "U12" },
+      { name: "User 13", initials: "U13" },
+      { name: "User 14", initials: "U14" },
+    ];
+    const statusPool = [
+      "WAITING",
+      "PURCHASED",
+      "SUBMITTED",
+      "SUBMITTED",
+      "SUBMITTED",
+    ];
+    const itemPool = [
+      12, 4, 14, 2, 13, 16, 2, 19, 8, 7, 10, 5, 17, 10, 7, 12,
+    ];
+
+    return Array.from({ length: 84 }, (_, i) => ({
+      id: `#SHP-${92831 + i}`,
+      customer: customerPool[i % customerPool.length].name,
+      initials: customerPool[i % customerPool.length].initials,
+      items: itemPool[i % itemPool.length],
+      status: statusPool[i % statusPool.length],
+    }));
+  }, []);
+
+  const getStatusClass = (s) => {
+    switch (s) {
       case "WAITING":
         return "bg-[#FFF2D8] text-[#B36B00]";
       case "PURCHASED":
@@ -117,6 +76,109 @@ const OrderManagement = () => {
         return "bg-[#E7EEFF] text-[#1D4ED8]";
     }
   };
+
+  // ── TanStack Table – column definitions ────────────────────────────
+  const columns = useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table: tbl }) => (
+          <input
+            type="checkbox"
+            checked={tbl.getIsAllPageRowsSelected()}
+            onChange={tbl.getToggleAllPageRowsSelectedHandler()}
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            className="accent-[#7A5C69]"
+          />
+        ),
+      },
+      {
+        accessorKey: "id",
+        header: "ORDER ID",
+        cell: ({ getValue }) => {
+          const val = getValue();
+          const parts = val.split("-");
+          return (
+            <p className="font-semibold text-[#2D2D2D] leading-5">
+              {parts[0]}-
+              <br />
+              {parts[1]}
+            </p>
+          );
+        },
+      },
+      {
+        accessorKey: "customer",
+        header: "CUSTOMER",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
+              {row.original.initials}
+            </div>
+            <span className="text-sm text-[#333]">
+              {row.original.customer}
+            </span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "items",
+        header: "ITEMS",
+        cell: ({ getValue }) => (
+          <span className="text-sm text-[#444]">{getValue()} items</span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "STATUS",
+        cell: ({ getValue }) => (
+          <span
+            className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusClass(getValue())}`}
+          >
+            {getValue()}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "ACTIONS",
+        cell: () => (
+          <button className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center mx-auto hover:bg-[#F9F5F6]">
+            <Eye size={16} className="text-[#7A5C69]" />
+          </button>
+        ),
+      },
+    ],
+    [],
+  );
+
+  // ── TanStack Table instance ────────────────────────────────────────
+  const table = useReactTable({
+    data: orders,
+    columns,
+    state: { rowSelection },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: { pageSize: 15 },
+    },
+  });
+
+  // Pagination helpers
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const totalRows = orders.length;
+  const startRow = pageIndex * pageSize + 1;
+  const endRow = Math.min((pageIndex + 1) * pageSize, totalRows);
+  const pageCount = table.getPageCount();
+
   const products = [
     {
       name: "Floral Print Dress",
@@ -213,7 +275,7 @@ const OrderManagement = () => {
           {/* Right Side */}
           <div className="flex items-center gap-4">
             <span className="text-[#5C5F60] font-normal text-base">
-              84 Orders
+              {orders.length} Orders
             </span>
 
             <button className="text-[#8B6575] hover:rotate-180 transition-transform duration-300">
@@ -225,7 +287,12 @@ const OrderManagement = () => {
 
       {/* main content */}
       <div className="flex gap-5 ">
-        {/* table */}
+        {/* ============================================================
+            OLD HAND-BUILT TABLE (COMMENTED OUT)
+            Replaced with TanStack React Table below for proper
+            pagination, row selection, and scalable data handling.
+            Original code preserved here for reference.
+        ================================================================
         <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-[60%]">
           <table className="w-full">
             <thead>
@@ -233,29 +300,23 @@ const OrderManagement = () => {
                 <th className="w-12 px-3 py-4">
                   <input type="checkbox" />
                 </th>
-
                 <th className="text-left text-xs font-semibold text-[#666] py-4">
                   ORDER ID
                 </th>
-
                 <th className="text-left text-xs font-semibold text-[#666] py-4">
                   CUSTOMER
                 </th>
-
                 <th className="text-left text-xs font-semibold text-[#666] py-4">
                   ITEMS
                 </th>
-
                 <th className="text-left text-xs font-semibold text-[#666] py-4">
                   STATUS
                 </th>
-
                 <th className="text-center text-xs font-semibold text-[#666] py-4">
                   ACTIONS
                 </th>
               </tr>
             </thead>
-
             <tbody>
               {orders.map((order, index) => (
                 <tr
@@ -269,7 +330,6 @@ const OrderManagement = () => {
                       className="accent-[#7A5C69]"
                     />
                   </td>
-
                   <td className="py-4">
                     <p className="font-semibold text-[#2D2D2D] leading-5">
                       {order.id.split("-")[0]}-
@@ -277,23 +337,19 @@ const OrderManagement = () => {
                       {order.id.split("-")[1]}
                     </p>
                   </td>
-
                   <td className="py-4">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
                         {order.initials}
                       </div>
-
                       <span className="text-sm text-[#333]">
                         {order.customer}
                       </span>
                     </div>
                   </td>
-
                   <td className="py-4 text-sm text-[#444]">
                     {order.items} items
                   </td>
-
                   <td className="py-4">
                     <span
                       className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusClass(
@@ -303,7 +359,6 @@ const OrderManagement = () => {
                       {order.status}
                     </span>
                   </td>
-
                   <td className="py-4 text-center">
                     <button className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center mx-auto hover:bg-[#F9F5F6]">
                       <Eye size={16} className="text-[#7A5C69]" />
@@ -313,6 +368,115 @@ const OrderManagement = () => {
               ))}
             </tbody>
           </table>
+        </div>
+        ============================================================ */}
+
+        {/* ── NEW TABLE — TanStack React Table with Pagination ──────── */}
+        <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-[60%] flex flex-col">
+          {/* Scrollable table body */}
+          <div className="flex-1 overflow-y-auto">
+            <table className="w-full">
+              <thead className="sticky top-0 z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr
+                    key={headerGroup.id}
+                    className="bg-[#F3F4F6] border-b border-[#D8D8D8]"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        className={`py-4 text-xs font-semibold text-[#666] ${
+                          header.column.id === "select"
+                            ? "w-12 px-3"
+                            : header.column.id === "actions"
+                              ? "text-center px-3"
+                              : "text-left"
+                        }`}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className={`border-b border-[#ECECEC] hover:bg-gray-50 transition ${
+                      row.getIsSelected() ? "bg-[#FFF8FA]" : ""
+                    }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className={`py-4 ${
+                          cell.column.id === "select"
+                            ? "px-3"
+                            : cell.column.id === "actions"
+                              ? "text-center"
+                              : ""
+                        }`}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="px-4 py-3 border-t border-[#ECECEC] bg-[#FBF7F8] flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#8C959F]">
+              {startRow}-{endRow} of {totalRows}
+            </span>
+
+            <div className="flex items-center gap-1.5">
+              {/* Previous page */}
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ‹
+              </button>
+
+              {/* Page numbers */}
+              {Array.from({ length: pageCount }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => table.setPageIndex(i)}
+                  className={`h-8 w-8 rounded-lg border flex items-center justify-center font-extrabold text-xs transition ${
+                    pageIndex === i
+                      ? "bg-[#FFE8EF] text-[#D24D77] border-[#FFE8EF]"
+                      : "border-[#E8DFE1] text-[#5c5f60] hover:bg-slate-100"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+
+              {/* Next page */}
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ›
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* order details */}
