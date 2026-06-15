@@ -12,7 +12,7 @@ import reportsicon from "../../assets/reportsicon.svg";
 import settingsicon from "../../assets/settingsicon.svg";
 import helpicon from "../../assets/helpicon.svg";
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", iconSrc: dashboardicon },
     { name: "Orders", path: "/orders", iconSrc: ordericon },
@@ -25,24 +25,44 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-[260px] bg-[#F6FAFF] border-r border-[#D3C3C5] flex flex-col justify-between h-screen sticky top-0 py-6 px-4 shrink-0 font-sans">
-      {/* Top Section */}
-      <div className="flex flex-col gap-6">
-        {/* Logo and Brand Title */}
-        <div className="">
-          <div className="h-16 w-16 overflow-hidden">
-            <img
-              src={logo2}
-              alt="Shelynx Logo"
-              className="h-16 w-16 object-cover"
-            />
+    <>
+      {/* Mobile/Tablet Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#F6FAFF] border-r border-[#D3C3C5] flex flex-col justify-between h-screen py-6 px-4 shrink-0 font-sans transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Top Section */}
+        <div className="flex flex-col gap-6">
+          {/* Logo and Brand Title */}
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="h-16 w-16 overflow-hidden">
+                <img
+                  src={logo2}
+                  alt="Shelynx Logo"
+                  className="h-16 w-16 object-cover"
+                />
+              </div>
+              <p className="text-[13px] font-semibold text-[#5C5F60] mt-3.5">
+                Agent Portal
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1.5 rounded-lg hover:bg-slate-200 text-[#5C5F60] transition-colors"
+              aria-label="Close Sidebar"
+            >
+              <span className="text-lg font-bold">✕</span>
+            </button>
           </div>
-          <div className="text-center">
-            <p className="text-[13px] font-semibold text-[#5C5F60] mt-3.5">
-              Agent Portal
-            </p>
-          </div>
-        </div>
 
         {/* Trust Score Card */}
         <div className="bg-[#FFD1DC]/10 rounded-xl border border-[#FFD1DC]/50 p-3 shadow-[0_4px_16px_rgba(255,95,150,0.02)]">
@@ -114,7 +134,8 @@ const Sidebar = () => {
           <span>Help Center</span>
         </a>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

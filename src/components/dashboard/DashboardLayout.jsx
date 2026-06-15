@@ -1,17 +1,28 @@
-import React from "react";
+import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 
 const DashboardLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="flex bg-[#F8FAFF] min-h-screen text-[#17222B] font-sans antialiased">
-      {/* Persistent Left Sidebar */}
-      <Sidebar />
+      {/* Left Sidebar */}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Right-side container */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-[70px] bg-white border-b border-[#E8DFE1] px-8 flex items-center justify-between sticky top-0 z-30 shadow-[0_2px_12px_rgba(0,0,0,0.01)]">
+        <header className="h-[70px] bg-white border-b border-[#E8DFE1] px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-[0_2px_12px_rgba(0,0,0,0.01)]">
+          {/* Hamburger Menu for Mobile/Tablet */}
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="lg:hidden p-2 rounded-lg hover:bg-slate-100 mr-2 transition duration-200"
+            aria-label="Open Sidebar"
+          >
+            <span className="text-xl">☰</span>
+          </button>
+
           {/* Search Bar */}
           <div className="flex items-center gap-3 bg-[#F4F7FB] border border-[#DCDFE6] rounded-xl px-4 py-2 w-full max-w-[720px] focus-within:border-[#ff5f96] focus-within:ring-2 focus-within:ring-pink-100 transition duration-200">
             {/* Commented out img for search icon */}
@@ -25,7 +36,7 @@ const DashboardLayout = () => {
           </div>
 
           {/* User profile & Notifications */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 lg:gap-6">
             {/* Notification Bell */}
             <button className="relative p-2 rounded-lg hover:bg-slate-100 transition duration-200">
               {/* Commented out img for notification bell icon */}
@@ -42,10 +53,10 @@ const DashboardLayout = () => {
             {/* User Profile Info */}
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <span className="text-base font-bold text-[#141D23] block leading-tight">
+                <span className="text-base font-bold text-[#141D23] hidden lg:block leading-tight">
                   Sarah Chen
                 </span>
-                <span className="text-xs font-medium text-[#5C5F60]/70 block">
+                <span className="text-xs font-medium text-[#5C5F60]/70 hidden lg:block">
                   Verified Agent #48219
                 </span>
               </div>

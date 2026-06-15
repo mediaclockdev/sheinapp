@@ -145,7 +145,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
+    <div className="p-4 lg:p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
       {/* Header Info */}
       <div className="flex justify-between items-center">
         <div>
@@ -170,7 +170,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {/* Card 1: Total Orders */}
         <div className="bg-white p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]">
           <div className="flex flex-col gap-3">
@@ -392,7 +392,7 @@ const Dashboard = () => {
             </div>
 
             {/* Inner Boxes (3 Columns) */}
-            <div className="grid grid-cols-3 gap-3 mt-6">
+            <div className="grid grid-col-1 lg:grid-cols-3 gap-3 mt-6">
               {/* Gross Earnings */}
               <div className="bg-[#ECF5FE] border border-[#EEF2F8] p-3.5 rounded-xl">
                 <span className="text-[11px] font-bold text-[#8C959F] uppercase tracking-wider block">
@@ -497,9 +497,9 @@ const Dashboard = () => {
       </div>
 
       {/* Smart Batch Recommendations */}
-      <div className="bg-white rounded-2xl border border-[#E8DFE1] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.01)] flex gap-5">
+      <div className="bg-white rounded-2xl border border-[#E8DFE1] p-4 lg:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.01)] flex gap-5">
         {/* Sparkle icon wrapper */}
-        <div className="h-15 w-15 shrink-0">
+        <div className="h-15 w-15 shrink-0 hidden md:block">
           <img
             src={smartbatchicon}
             alt="Recommendation"
@@ -522,7 +522,7 @@ const Dashboard = () => {
             "{data.recommendation.message}"
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col lg:flex-row gap-4">
             <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-bold px-4 py-2 rounded-lg text-base transition duration-200 cursor-pointer">
               Apply Recommendation
             </button>

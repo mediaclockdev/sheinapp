@@ -53,9 +53,7 @@ const OrderManagement = () => {
       "SUBMITTED",
       "SUBMITTED",
     ];
-    const itemPool = [
-      12, 4, 14, 2, 13, 16, 2, 19, 8, 7, 10, 5, 17, 10, 7, 12,
-    ];
+    const itemPool = [12, 4, 14, 2, 13, 16, 2, 19, 8, 7, 10, 5, 17, 10, 7, 12];
 
     return Array.from({ length: 84 }, (_, i) => ({
       id: `#SHP-${92831 + i}`,
@@ -121,9 +119,7 @@ const OrderManagement = () => {
             <div className="w-7 h-7 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
               {row.original.initials}
             </div>
-            <span className="text-sm text-[#333]">
-              {row.original.customer}
-            </span>
+            <span className="text-sm text-[#333]">{row.original.customer}</span>
           </div>
         ),
       },
@@ -214,7 +210,7 @@ const OrderManagement = () => {
     },
   ];
   return (
-    <div className="p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
+    <div className="p-4 lg:p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
       {/* Header Info */}
       <div className="flex justify-between items-center">
         <div>
@@ -233,9 +229,9 @@ const OrderManagement = () => {
 
       {/* status */}
       <div className="w-full bg-[#F8F5F7] border border-[#D9D4D7] rounded-lg px-5 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Left Side */}
-          <div className="flex items-center gap-8">
+          <div className="flex lg:items-center gap-4 lg:gap-8">
             {/* Status */}
             <div>
               <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
@@ -258,7 +254,7 @@ const OrderManagement = () => {
               <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
                 Date Range
               </p>
-              <div className="flex items-center gap-2 bg-[#ECF5FE] px-3 py-1.5">
+              <div className="flex items-center gap-2 bg-[#ECF5FE] px-1 lg:px-3 py-1.5 w-[50%] lg:w-full">
                 <Calendar />
                 <DatePicker
                   selectsRange
@@ -266,7 +262,7 @@ const OrderManagement = () => {
                   endDate={endDate}
                   onChange={(update) => setDateRange(update)}
                   dateFormat="MMM d"
-                  className="focus:outline-none text-base font-normal"
+                  className="focus:outline-none text-base font-normal relative z-[99999]"
                 />
               </div>
             </div>
@@ -286,7 +282,7 @@ const OrderManagement = () => {
       </div>
 
       {/* main content */}
-      <div className="flex gap-5 ">
+      <div className="flex flex-col lg:flex-row gap-5 ">
         {/* ============================================================
             OLD HAND-BUILT TABLE (COMMENTED OUT)
             Replaced with TanStack React Table below for proper
@@ -372,7 +368,7 @@ const OrderManagement = () => {
         ============================================================ */}
 
         {/* ── NEW TABLE — TanStack React Table with Pagination ──────── */}
-        <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-[60%] flex flex-col">
+        <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full lg:w-[60%] flex flex-col">
           {/* Scrollable table body */}
           <div className="flex-1 overflow-y-auto">
             <table className="w-full">
@@ -480,7 +476,7 @@ const OrderManagement = () => {
         </div>
 
         {/* order details */}
-        <div className="w-[40%] border border-[#D3C3C5] rounded-lg">
+        <div className="w-full lg:w-[40%] border border-[#D3C3C5] rounded-lg">
           <div className="px-4 py-4 flex flex-col gap-1 bg-[#ECF5FE] border-b border-b-[#D3C3C5]">
             <p className="text-[#141D23] font-normal  text-lg ">
               Order Details
