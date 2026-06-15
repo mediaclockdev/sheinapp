@@ -370,7 +370,7 @@ const Dashboard = () => {
         </div>
 
         {/* Right Column: Revenue Analytics Card (5/12 width) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-[#E8DFE1] shadow-[0_4px_24px_rgba(0,0,0,0.01)] p-6 flex flex-col justify-between">
+        <div className=" bg-white rounded-2xl border border-[#E8DFE1] shadow-[0_4px_24px_rgba(0,0,0,0.01)] p-6 flex flex-col justify-between mt-5">
           <div>
             <div className="flex justify-between items-start">
               <div>
@@ -408,28 +408,29 @@ const Dashboard = () => {
               </div>
 
               {/* Agent Commission */}
-              <div className="bg-[#F8FAFF] border border-[#EEF2F8] p-3.5 rounded-xl">
-                <span className="text-[9px] font-bold text-[#8C959F] uppercase tracking-wider block">
+              <div className="bg-[#ECF5FE] border border-[#EEF2F8] p-3.5 rounded-xl">
+                <span className="text-[11px] font-bold text-[#5C5F60] uppercase tracking-wider block">
                   Agent Commission
                 </span>
-                <p className="text-sm font-black text-[#17222B] mt-1.5 leading-none">
+                <p className="text-2xl font-semibold text-[#141D23] mt-1.5 leading-none">
                   {data.revenueAnalytics.agentCommission}
                 </p>
-                <span className="text-[9px] text-[#8C959F] font-bold mt-1.5 block leading-tight">
-                  Rate applied: {data.revenueAnalytics.agentCommissionRate}
+                <span className="text-xs text-[#5C5F60]/60 font-medium mt-1.5 block leading-tight">
+                  Standard rate applied:
+                  {data.revenueAnalytics.agentCommissionRate}
                 </span>
               </div>
 
               {/* Net Payout */}
-              <div className="bg-[#FFE8EF]/30 border border-[#FFE8EF] p-3.5 rounded-xl">
-                <span className="text-[9px] font-bold text-[#A46078] uppercase tracking-wider block">
+              <div className="bg-[#FFD1DC]/10 border border-[#FFD1DC]/30 p-3.5 rounded-xl">
+                <span className="text-xs font-bold text-[#78555E] uppercase tracking-wider block">
                   Net Payout
                 </span>
-                <p className="text-sm font-black text-[#D24D77] mt-1.5 leading-none">
+                <p className="text-2xl font-semibold text-[#78555E] mt-1.5 leading-none">
                   {data.revenueAnalytics.netPayout}
                 </p>
-                <span className="text-[9px] text-[#A46078] font-bold mt-1.5 block leading-tight">
-                  Due: {data.revenueAnalytics.netPayoutDate}
+                <span className="text-xs text-[#78555E]/70 font-bold mt-1.5 block leading-tight">
+                  Scheduled for {data.revenueAnalytics.netPayoutDate}
                 </span>
               </div>
             </div>
