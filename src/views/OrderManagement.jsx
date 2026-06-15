@@ -221,7 +221,7 @@ const OrderManagement = () => {
             Review and approve customer link submissions.
           </p>
         </div>
-        <button className="w-[40%] lg:w-full bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl whitespace-nowrap text-sm lg:text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
+        <button className="w-[40%] lg:w-[15%] bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl whitespace-nowrap text-sm lg:text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
           <img src={exporticon} alt="export csv icon" className="h-4 w-4" />
           <span>Export CSV</span>
         </button>
@@ -668,17 +668,17 @@ const OrderManagement = () => {
             {/* Pricing Section */}
             <div className="p-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-[18px] font-semibold text-[#20262D]">
+                <h3 className="text-base font-bold text-[#141D23]">
                   Retail Price
                 </h3>
-                <span className="text-[18px] font-semibold text-[#20262D]">
+                <span className="text-base font-bold text-[#141D23]">
                   $86.00
                 </span>
               </div>
 
               <div className="flex justify-between items-center mt-6">
-                <span className="text-[#5C5F60] text-[16px]">Promotions</span>
-                <span className="text-[#D92D20] text-[16px]">-$5.08</span>
+                <span className="text-[#5C5F60] text-sm">Promotions</span>
+                <span className="text-[#BA1A1A] text-sm">-$5.08</span>
               </div>
 
               {/* Exclude Promotion */}
@@ -695,43 +695,45 @@ const OrderManagement = () => {
               </div>
 
               <div className="flex justify-between items-center mt-5">
-                <span className="text-[#5C5F60] text-[16px]">
+                <span className="text-[#5C5F60] text-base">
                   SHEIN CLUB Exclusive Discount
                 </span>
-                <span className="text-[#D92D20]">-$0.20</span>
+                <span className="text-[#BA1A1A] text-base">-$0.20</span>
               </div>
 
               <div className="flex justify-between items-center mt-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-[#5C5F60] text-[16px]">Coupon</span>
+                  <span className="text-[#5C5F60] text-base">Coupon</span>
 
-                  <span className="bg-[#FFE7E5] text-[#EF4444] text-xs px-2 py-0.5 rounded">
+                  <span className="bg-[#FFDAD6] text-[#BA1A1A] text-sm px-2 py-0.5 rounded">
                     05:03:09
                   </span>
                 </div>
 
-                <span className="text-[#D92D20]">-$0.18</span>
+                <span className="text-[#BA1A1A] text-base">-$0.18</span>
               </div>
 
               <div className="flex justify-between items-center mt-4">
-                <span className="text-[#5C5F60] text-[16px]">Shipping Fee</span>
+                <span className="text-[#5C5F60] text-base">Shipping Fee</span>
 
-                <span className="text-[#15803D] font-semibold">FREE</span>
+                <span className="text-[#166534] font-semibold text-base">
+                  FREE
+                </span>
               </div>
 
               <div className="border-t border-[#E5E7EB] mt-5 pt-5">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-[20px] font-bold text-[#20262D]">
+                    <h3 className="text-xl font-bold text-[#141D23]">
                       Estimated Price
                     </h3>
 
-                    <p className="text-xs text-[#7A7A7A]">
+                    <p className="text-sm text-[#5C5F60]">
                       Final price confirmed at checkout
                     </p>
                   </div>
 
-                  <span className="text-[48px] font-bold text-[#845F68] leading-none">
+                  <span className="text-xl font-bold text-[#78555E] leading-none">
                     $81.00
                   </span>
                 </div>
@@ -740,11 +742,11 @@ const OrderManagement = () => {
 
             {/* Footer Buttons */}
             <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 flex gap-4">
-              <button className="flex-1 h-14 rounded-xl bg-[#F2C3D0] text-[#7D5C66] font-medium shadow-md hover:opacity-90 transition">
+              <button className="flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90  cursor-pointer transition">
                 ✓ Approve
               </button>
 
-              <button className="flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-white text-[#5C5F60] font-medium hover:bg-gray-50 transition">
+              <button className="flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition">
                 ✕ Reject
               </button>
             </div>

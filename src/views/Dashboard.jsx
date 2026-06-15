@@ -162,7 +162,7 @@ const Dashboard = () => {
         </div>
 
         {/* New Batch Action button */}
-        <button className="w-[40%] lg:w-full bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-5 py-2.5 rounded-xl text-base whitespace-nowrap cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
+        <button className="w-[40%] lg:w-[15%] bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-5 py-2.5 rounded-xl text-base whitespace-nowrap cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
           <img src={newbatchicon} alt="New Batch" className="h-4 w-4" />
           <span>New Batch</span>
         </button>

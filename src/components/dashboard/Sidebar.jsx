@@ -36,7 +36,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       )}
 
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-[#F6FAFF] border-r border-[#D3C3C5] flex flex-col justify-between h-screen py-6 px-4 shrink-0 font-sans transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:translate-x-0 overflow-y-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-[#F6FAFF] border-r border-[#D3C3C5] flex flex-col justify-between h-screen py-6 px-4 shrink-0 font-sans transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:translate-x-0 overflow-y-auto scrollbar-none ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -116,7 +116,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           {/* Order Journey Card */}
           {pathname.startsWith("/orders") && (
-            <div className="bg-[#EEF4FB]/30 border border-[#D3C3C5]/50 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)] mt-2">
+            <div className="bg-[#EEF4FB]/30 border border-[#D3C3C5]/50 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)] mt-2 mb-2">
               <span className="text-[10px] font-bold text-[#8A6A72] uppercase tracking-wider block mb-3">
                 Order Journey
               </span>
@@ -130,8 +130,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                     ✓
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#141D23] leading-tight">Submitted</p>
-                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">Oct 12 • 10:45 AM</p>
+                    <p className="text-xs font-bold text-[#141D23] leading-tight">
+                      Submitted
+                    </p>
+                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">
+                      Oct 12 • 10:45 AM
+                    </p>
                   </div>
                 </div>
 
@@ -141,8 +145,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                     ✓
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#141D23] leading-tight">Payment Verified</p>
-                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">Oct 12 • 02:20 PM</p>
+                    <p className="text-xs font-bold text-[#141D23] leading-tight">
+                      Payment Verified
+                    </p>
+                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">
+                      Oct 12 • 02:20 PM
+                    </p>
                   </div>
                 </div>
 
@@ -152,8 +160,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <span className="w-1.5 h-1.5 rounded-full bg-[#78555E]" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#78555E] leading-tight">Purchased</p>
-                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">Oct 14 • 11:30 AM</p>
+                    <p className="text-xs font-bold text-[#78555E] leading-tight">
+                      Purchased
+                    </p>
+                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">
+                      Oct 14 • 11:30 AM
+                    </p>
                   </div>
                 </div>
               </div>
