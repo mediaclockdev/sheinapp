@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import newbatchicon from "../assets/newbatch.svg";
 import totalordersicon from "../assets/totalordericon.svg";
 import pendingreviewicon from "../assets/pendingreviewicon.svg";
@@ -319,7 +319,7 @@ const Dashboard = () => {
                     <th className="px-6 py-4">Batch ID</th>
                     <th className="px-6 py-4">Current Amount</th>
                     <th className="px-6 py-4">Target Amount</th>
-                    <th className="px-6 py-4">Progress</th>
+                    <th className="px-6 py-4">Item Amount</th>
                     <th className="px-6 py-4">Discount %</th>
                     <th className="px-6 py-4 text-right">Action</th>
                   </tr>
@@ -518,7 +518,7 @@ const Dashboard = () => {
 
           {/* recommendation text box */}
           <div className="bg-[#ECF5FE] border-l-4 border-l-[#78555E] p-4 rounded-r-lg text-sm font-semibold text-[#141D23] leading-relaxed italic">
-            "{data.recommendation.message}"
+            "Coming soon"
           </div>
 
           <div className="flex flex-col lg:flex-row gap-4">

@@ -1,20 +1,57 @@
-import React, { useState, useMemo } from "react";
-import { Calendar, RotateCcw, Eye, Trash2, Plus, Minus } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { Calendar, RotateCcw, Eye, Plus, Minus, Trash2 } from "lucide-react";
+import SuccessToast from "../components/common/SuccessToast";
+import editicon from "../assets/editicon.svg";
 import exporticon from "../assets/exporticon.svg";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import star from "../assets/ratingstar.svg";
 import customermessage from "../assets/customermessage.svg";
-import product1 from "../assets/Product1.svg";
-import product2 from "../assets/Product2.svg";
-import product3 from "../assets/Product3.svg";
-import product4 from "../assets/Product4.svg";
 import {
   useReactTable,
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
 } from "@tanstack/react-table";
+
+const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
+const ORDERS_API_URL = `${API_BASE_URL}/api/orders`;
+const ORDER_DETAIL_API_URL = `${API_BASE_URL}/api/orders`;
+
+const getInitials = (name = "") =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "NA";
+
+const mapOrder = (order) => {
+  const customerName =
+    order.customer?.fullName ||
+    order.customer?.name ||
+    order.customerName ||
+    "Unknown";
+
+  return {
+    id: order.orderId || order._id || order.id || "#SHP-0000",
+    customer: customerName,
+    initials: getInitials(customerName),
+    items: Array.isArray(order.items)
+      ? order.items.length
+      : Array.isArray(order.products)
+        ? order.products.length
+        : Number(
+            order._count?.items ??
+              order.itemsCount ??
+              order.itemCount ??
+              order.items ??
+              0,
+          ) || 0,
+    status: (order.status || "SUBMITTED").toUpperCase(),
+    raw: order,
+  };
+};
 
 const OrderManagement = () => {
   const [status, setStatus] = useState("Submitted");
@@ -28,50 +65,211 @@ const OrderManagement = () => {
 
   const [startDate, endDate] = dateRange;
 
-  // ── Order data (84 rows for pagination) ────────────────────────────
-  const orders = useMemo(() => {
-    const customerPool = [
-      { name: "Alice L.", initials: "AL" },
-      { name: "Bob M.", initials: "BM" },
-      { name: "User 3", initials: "U3" },
-      { name: "User 4", initials: "U4" },
-      { name: "User 5", initials: "U5" },
-      { name: "User 6", initials: "U6" },
-      { name: "User 7", initials: "U7" },
-      { name: "User 8", initials: "U8" },
-      { name: "User 9", initials: "U9" },
-      { name: "User 10", initials: "U10" },
-      { name: "User 11", initials: "U11" },
-      { name: "User 12", initials: "U12" },
-      { name: "User 13", initials: "U13" },
-      { name: "User 14", initials: "U14" },
-    ];
-    const statusPool = [
-      "WAITING",
-      "PURCHASED",
-      "SUBMITTED",
-      "SUBMITTED",
-      "SUBMITTED",
-    ];
-    const itemPool = [12, 4, 14, 2, 13, 16, 2, 19, 8, 7, 10, 5, 17, 10, 7, 12];
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState(null);
 
-    return Array.from({ length: 84 }, (_, i) => ({
-      id: `#SHP-${92831 + i}`,
-      customer: customerPool[i % customerPool.length].name,
-      initials: customerPool[i % customerPool.length].initials,
-      items: itemPool[i % itemPool.length],
-      status: statusPool[i % statusPool.length],
-    }));
+  const fetchOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    setOrdersError(null);
+    try {
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      const response = await fetch(ORDERS_API_URL, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.message || "Failed to fetch orders");
+
+      const list = result.data || result.orders || result || [];
+      const mapped = Array.isArray(list) ? list.map(mapOrder) : [];
+      console.log("Orders fetched:", list, "Mapped:", mapped);
+      setOrders(mapped);
+    } catch (err) {
+      setOrdersError(err.message);
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+  const [canModerate, setCanModerate] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusError, setStatusError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  const handleViewOrder = async (id, { moderate = false } = {}) => {
+    if (!id) return;
+    setSelectedOrderId(id);
+    setSelectedOrder(null);
+    setCanModerate(moderate);
+    setStatusError(null);
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      const response = await fetch(`${ORDER_DETAIL_API_URL}/${id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.message || "Failed to fetch order details");
+
+      setSelectedOrder(result.data || result);
+    } catch (err) {
+      setDetailError(err.message);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeOrderDetails = () => {
+    setSelectedOrderId(null);
+    setSelectedOrder(null);
+    setDetailError(null);
+    setCanModerate(false);
+    setStatusError(null);
+  };
+
+  const recalculateOrderTotals = (items, serviceFee) => {
+    const itemSubtotal = items.reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+      0,
+    );
+    return { itemSubtotal, grandTotal: itemSubtotal + Number(serviceFee || 0) };
+  };
+
+  const handleItemQuantityChange = (itemId, delta) => {
+    setSelectedOrder((prev) => {
+      if (!prev) return prev;
+      const items = prev.items.map((item) =>
+        item.id === itemId
+          ? { ...item, quantity: Math.max(1, Number(item.quantity || 1) + delta) }
+          : item,
+      );
+      return { ...prev, items, ...recalculateOrderTotals(items, prev.serviceFee) };
+    });
+  };
+
+  const handleDeleteItem = (itemId) => {
+    setSelectedOrder((prev) => {
+      if (!prev) return prev;
+      const items = prev.items.filter((item) => item.id !== itemId);
+      return { ...prev, items, ...recalculateOrderTotals(items, prev.serviceFee) };
+    });
+  };
+
+  const handleSaveOrderEdits = async (token) => {
+    const response = await fetch(
+      `${ORDERS_API_URL}/${selectedOrderId}/edit`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          items: selectedOrder.items.map((item) => ({
+            id: item.id,
+            quantity: Number(item.quantity),
+          })),
+        }),
+      },
+    );
+
+    const rawText = await response.text();
+    let result = {};
+    try {
+      result = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      console.error("Non-JSON response from /edit:", rawText);
+    }
+
+    if (!response.ok) {
+      console.error("Save order edits failed", response.status, result, rawText);
+      throw new Error(
+        result.message ||
+          result.errors?.map((e) => e.message).join(", ") ||
+          `Failed to save order edits (status ${response.status})`,
+      );
+    }
+  };
+
+  const handleUpdateOrderStatus = async (newStatus) => {
+    if (!selectedOrderId) return;
+    setStatusUpdating(true);
+    setStatusError(null);
+    try {
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      if (newStatus === "APPROVED") {
+        await handleSaveOrderEdits(token);
+      }
+
+      const response = await fetch(
+        `${ORDERS_API_URL}/${selectedOrderId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ status: newStatus }),
+        },
+      );
+
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.message || "Failed to update order status");
+
+      setSelectedOrder((prev) =>
+        prev ? { ...prev, status: newStatus } : prev,
+      );
+      setSuccessMessage(
+        newStatus === "APPROVED"
+          ? "Order approved successfully!"
+          : "Order rejected successfully!",
+      );
+      fetchOrders();
+    } catch (err) {
+      setStatusError(err.message);
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   const getStatusClass = (s) => {
     switch (s) {
       case "WAITING":
-        return "bg-[#FFF2D8] text-[#B36B00]";
+        return "bg-[#FEF3C7] text-[#F59E0B]";
       case "PURCHASED":
-        return "bg-[#DDF8E8] text-[#14804A]";
+        return "bg-[#DCFCE7] text-[#166534]";
       default:
-        return "bg-[#E7EEFF] text-[#1D4ED8]";
+        "APPROVED";
+        return "bg-[#DBEAFE] text-[#1E40AF]";
     }
   };
 
@@ -144,10 +342,29 @@ const OrderManagement = () => {
       {
         id: "actions",
         header: "ACTIONS",
-        cell: () => (
-          <button className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center mx-auto hover:bg-[#F9F5F6]">
-            <Eye size={16} className="text-[#7A5C69]" />
-          </button>
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={() =>
+                handleViewOrder(row.original.raw?.id ?? row.original.id)
+              }
+              title="View Details"
+              className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6]"
+            >
+              <Eye size={16} className="text-[#7A5C69]" />
+            </button>
+            <button
+              onClick={() =>
+                handleViewOrder(row.original.raw?.id ?? row.original.id, {
+                  moderate: true,
+                })
+              }
+              title="Approve / Reject"
+              className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6]"
+            >
+              <img src={editicon} alt="edit icon" className="size-3.5" />
+            </button>
+          </div>
         ),
       },
     ],
@@ -175,42 +392,13 @@ const OrderManagement = () => {
   const endRow = Math.min((pageIndex + 1) * pageSize, totalRows);
   const pageCount = table.getPageCount();
 
-  const products = [
-    {
-      name: "Floral Print Dress",
-      sku: "SKU: SH-9283-01",
-      size: "S",
-      Color: "Sage",
-      price: "$14.00",
-      icon: product1,
-    },
-    {
-      name: "Satin Cami Top",
-      sku: "SKU: SH-9283-02",
-      size: "M",
-      Color: "Cream",
-      price: "$22.00",
-      icon: product2,
-    },
-    {
-      name: "Cotton Crew Neck T-Shirt",
-      sku: "SKU: SH-9283-03",
-      size: "L",
-      Color: "White",
-      price: "$18.00",
-      icon: product3,
-    },
-    {
-      name: "Denim Jeans",
-      sku: "SKU: SH-9283-04",
-      size: "26",
-      Color: "Blue",
-      price: "$32.00",
-      icon: product4,
-    },
-  ];
+  const orderItems = selectedOrder?.items || [];
   return (
     <div className="p-4 lg:p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
+      <SuccessToast
+        message={successMessage}
+        onClose={() => setSuccessMessage(null)}
+      />
       {/* Header Info */}
       <div className="flex flex-col lg:flex-row gap-4 justify-between lg:items-center">
         <div>
@@ -243,9 +431,9 @@ const OrderManagement = () => {
                 onChange={(e) => setStatus(e.target.value)}
                 className="h-11 w-full sm:w-auto px-4 bg-[#ECF5FE] rounded-md border-none outline-none text-[#141D23] text-base font-normal min-w-[120px]"
               >
-                <option>Submitted</option>
-                <option>Pending</option>
-                <option>Failed</option>
+                <option>Approved</option>
+                <option>Waiting</option>
+                <option>Purchased</option>
               </select>
             </div>
 
@@ -274,12 +462,22 @@ const OrderManagement = () => {
               {orders.length} Orders
             </span>
 
-            <button className="text-[#8B6575] hover:rotate-180 transition-transform duration-300">
+            <button
+              onClick={fetchOrders}
+              disabled={ordersLoading}
+              className="text-[#8B6575] hover:rotate-180 transition-transform duration-300 disabled:opacity-50"
+            >
               <RotateCcw size={18} />
             </button>
           </div>
         </div>
       </div>
+
+      {ordersError && (
+        <div className="bg-red-50 border border-red-300 text-red-600 text-sm font-medium rounded-md px-4 py-3">
+          {ordersError}
+        </div>
+      )}
 
       {/* main content */}
       <div className="flex flex-col lg:flex-row gap-5 ">
@@ -366,7 +564,11 @@ const OrderManagement = () => {
         </div> */}
 
         {/* ── NEW TABLE — TanStack React Table with Pagination ──────── */}
-        <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full lg:w-[60%] flex flex-col">
+        <div
+          className={`bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full flex flex-col transition-all ${
+            selectedOrderId ? "lg:w-[60%]" : "lg:w-full"
+          }`}
+        >
           {/* Desktop/Tablet view */}
           <div className="hidden md:block flex-1 overflow-y-auto">
             <table className="w-full">
@@ -400,6 +602,26 @@ const OrderManagement = () => {
               </thead>
 
               <tbody>
+                {ordersLoading && (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="py-8 text-center text-sm text-[#8C959F]"
+                    >
+                      Loading orders...
+                    </td>
+                  </tr>
+                )}
+                {!ordersLoading && orders.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="py-8 text-center text-sm text-[#8C959F]"
+                    >
+                      No orders found.
+                    </td>
+                  </tr>
+                )}
                 {table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
@@ -487,10 +709,26 @@ const OrderManagement = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex justify-end pt-1 border-t border-[#ECECEC]/50">
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition">
+                <div className="flex justify-end gap-2 pt-1 border-t border-[#ECECEC]/50">
+                  <button
+                    onClick={() =>
+                      handleViewOrder(row.original.raw?.id ?? row.original.id)
+                    }
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition"
+                  >
                     <Eye size={14} />
                     <span>View Details</span>
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleViewOrder(row.original.raw?.id ?? row.original.id, {
+                        moderate: true,
+                      })
+                    }
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition"
+                  >
+                    <img src={editicon} alt="edit icon" className="size-3.5" />
+                    <span>Edit</span>
                   </button>
                 </div>
               </div>
@@ -540,218 +778,240 @@ const OrderManagement = () => {
           </div>
         </div>
         {/* order details */}
-        <div className="w-full lg:w-[40%] border border-[#D3C3C5] rounded-lg">
-          <div className="px-4 py-4 flex flex-col gap-1 bg-[#ECF5FE] border-b border-b-[#D3C3C5]">
-            <p className="text-[#141D23] font-normal  text-lg ">
-              Order Details
-            </p>
-            <div className="flex items-center gap-3">
-              <p className="text-[#78555E] font-bold text-xs">#SHP-92832</p>
-              <p className="text-[#5C5F60] font-bold text-xs">4 ITEMS</p>
-            </div>
-          </div>
-          {/* customer context */}
-          <div className="p-4 ">
-            <p className="text-[#5C5F60] font-bold text-xs mb-2">
-              CUSTOMER CONTEXT
-            </p>
-            <div className="bg-[#ECF5FE] p-4 border border-[#D3C3C5]/30 rounded-lg space-y-2">
-              <div className="flex justify-between">
-                <p className="text-[#141D23] text-base font-bold">Bob Miller</p>
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1">
-                    <img src={star} alt="star" />
-                    <p className="text-[#141D23] font-bold text-xs">4.5/5.0</p>
-                  </div>
-                  <p className="text-[#166534] font-bold text-xs bg-[#DCFCE7] rounded-xs px-1.5 py-0.5">
-                    HIGHLY TRUSTED
+        {selectedOrderId && (
+          <div className="w-full lg:w-[40%] border border-[#D3C3C5] rounded-lg">
+            <div className="px-4 py-4 flex items-start justify-between gap-1 bg-[#ECF5FE] border-b border-b-[#D3C3C5]">
+              <div className="flex flex-col gap-1">
+                <p className="text-[#141D23] font-normal  text-lg ">
+                  Order Details
+                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-[#78555E] font-bold text-xs">
+                    {selectedOrder?.orderId || `#${selectedOrderId}`}
+                  </p>
+                  <p className="text-[#5C5F60] font-bold text-xs">
+                    {orderItems.length} ITEMS
                   </p>
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-[#5C5F60] font-normal text-xs">
-                  Shipping: 742 Evergreen Terrace, Springfield, OR
-                </p>
-                <p className="text-[#5C5F60] font-normal text-xs">
-                  Phone: +1 555-0123
-                </p>
-              </div>
+              <button
+                onClick={closeOrderDetails}
+                className="text-[#5C5F60] hover:text-[#141D23] text-lg leading-none"
+              >
+                ✕
+              </button>
             </div>
-          </div>
 
-          {/* customer message */}
-          <div className="p-4">
-            <p className="text-[#5C5F60] font-bold text-xs mb-2">
-              CUSTOMER MESSAGE
-            </p>
-            <div className="bg-[#FFD1DC]/10 p-4 rounded-lg border border-[#FFD1DC]/30 flex items-center gap-2">
-              <img src={customermessage} alt="customer message icon" />
-              <p className="text-[#4F4446] font-medium text-xs">
-                "Please make sure to check the size guide for the denim skirt."
+            {detailLoading && (
+              <p className="p-4 text-sm text-[#8C959F]">
+                Loading order details...
               </p>
-            </div>
-          </div>
+            )}
 
-          {/* product */}
-          <div className="p-4">
-            <p className="text-[#5C5F60] text-xs font-bold mb-2">
-              PRODUCTS ({products.length})
-            </p>
+            {detailError && (
+              <p className="p-4 text-sm text-red-600">{detailError}</p>
+            )}
 
-            <div className="space-y-4">
-              {products.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border border-[#D3C3C5] rounded-xl bg-white p-4"
-                >
-                  <div className="flex justify-between items-start">
-                    {/* Left Side */}
-                    <div className="flex gap-4">
-                      <div className="w-20 h-20 border border-[#D3C3C5] rounded-md overflow-hidden">
-                        <img
-                          src={item.icon}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+            {!detailLoading && !detailError && selectedOrder && (
+              <>
+                {/* customer context */}
+                <div className="p-4 ">
+                  <p className="text-[#5C5F60] font-bold text-xs mb-2">
+                    CUSTOMER CONTEXT
+                  </p>
+                  <div className="bg-[#ECF5FE] p-4 border border-[#D3C3C5]/30 rounded-lg space-y-2">
+                    <p className="text-[#141D23] text-base font-bold">
+                      {selectedOrder.customerName}
+                    </p>
+                    <div className="space-y-2">
+                      <p className="text-[#5C5F60] font-normal text-xs">
+                        Shipping: {selectedOrder.shippingAddress}
+                      </p>
+                      <p className="text-[#5C5F60] font-normal text-xs">
+                        Phone: {selectedOrder.customerPhone}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-                      <div className="space-y-2">
-                        <p className="font-bold text-sm text-[#141D23]">
-                          {item.name}
-                        </p>
+                {/* customer message */}
+                {selectedOrder.customerMessage && (
+                  <div className="p-4">
+                    <p className="text-[#5C5F60] font-bold text-xs mb-2">
+                      CUSTOMER MESSAGE
+                    </p>
+                    <div className="bg-[#FFD1DC]/10 p-4 rounded-lg border border-[#FFD1DC]/30 flex items-center gap-2">
+                      <img src={customermessage} alt="customer message icon" />
+                      <p className="text-[#4F4446] font-medium text-xs">
+                        "{selectedOrder.customerMessage}"
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-                        <p className="text-[#5C5F60] text-xs font-normal">
-                          {item.sku}
-                        </p>
+                {/* product */}
+                <div className="p-4">
+                  <p className="text-[#5C5F60] text-xs font-bold mb-2">
+                    PRODUCTS ({orderItems.length})
+                  </p>
 
-                        <div className="flex gap-4 text-[#5C5F60] text-xs font-normal">
-                          <span>Size: {item.size}</span>
-                          <span>Color: {item.Color}</span>
+                  <div className="space-y-4">
+                    {orderItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="border border-[#D3C3C5] rounded-xl bg-white p-4"
+                      >
+                        <div className="flex justify-between items-start">
+                          {/* Left Side */}
+                          <div className="flex gap-4">
+                            <div className="w-20 h-20 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
+                              {item.photoUrl ? (
+                                <img
+                                  src={`${API_BASE_URL}${item.photoUrl}`}
+                                  alt={item.productName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-[10px] text-[#8C959F]">
+                                  No image
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              <p className="font-bold text-sm text-[#141D23]">
+                                {item.productName}
+                              </p>
+
+                              <p className="text-[#5C5F60] text-xs font-normal">
+                                SKU: {item.skuCode}
+                              </p>
+
+                              <div className="flex gap-4 text-[#5C5F60] text-xs font-normal">
+                                <span>Size: {item.size}</span>
+                                <span>Color: {item.color}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Side */}
+                          <div className="flex flex-col items-end justify-between h-20">
+                            <div className="flex items-center gap-3">
+                              <p className="font-bold text-xs text-[#78555E]">
+                                ${Number(item.price).toFixed(2)}
+                              </p>
+                              {canModerate && (
+                                <button
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  title="Remove item"
+                                >
+                                  <Trash2
+                                    size={16}
+                                    className="text-[#5C5F60] hover:text-red-600"
+                                  />
+                                </button>
+                              )}
+                            </div>
+
+                            {canModerate ? (
+                              <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden">
+                                <button
+                                  onClick={() =>
+                                    handleItemQuantityChange(item.id, -1)
+                                  }
+                                  className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                                >
+                                  <Minus size={12} />
+                                </button>
+                                <span className="px-3 font-bold text-[10px] text-[#141D23]">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    handleItemQuantityChange(item.id, 1)
+                                  }
+                                  className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                                >
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="px-4 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] py-1">
+                                Qty: {item.quantity}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* retail price */}
+                <div className="border-t border-[#E5D6D8]">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-base font-bold text-[#141D23]">
+                        Item Subtotal
+                      </h3>
+                      <span className="text-base font-bold text-[#141D23]">
+                        ${Number(selectedOrder.itemSubtotal).toFixed(2)}
+                      </span>
                     </div>
 
-                    {/* Right Side */}
-                    <div className="flex flex-col items-end justify-between h-20">
-                      <div className="flex items-center gap-3">
-                        <p className="font-bold text-xs text-[#78555E]">
-                          {item.price}
-                        </p>
+                    <div className="flex justify-between items-center mt-5">
+                      <span className="text-[#5C5F60] text-base">
+                        Service Fee
+                      </span>
+                      <span className="text-[#141D23] text-base">
+                        ${Number(selectedOrder.serviceFee).toFixed(2)}
+                      </span>
+                    </div>
 
-                        <button>
-                          <Trash2 size={16} className="text-[#5C5F60]" />
-                        </button>
-                      </div>
+                    <div className="border-t border-[#E5E7EB] mt-5 pt-5">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-bold text-[#141D23]">
+                            Grand Total
+                          </h3>
+                        </div>
 
-                      <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden">
-                        <button className="px-3 py-1 text-[#845F68]">
-                          <Minus size={14} />
-                        </button>
-
-                        <span className="px-4 font-bold text-[10px] text-[#141D23]">
-                          1
+                        <span className="text-xl font-bold text-[#78555E] leading-none">
+                          ${Number(selectedOrder.grandTotal).toFixed(2)}
                         </span>
-
-                        <button className="px-3 py-1 text-[#845F68]">
-                          <Plus size={14} />
-                        </button>
                       </div>
                     </div>
                   </div>
+                  {/* Footer Buttons */}
+                  {canModerate && (
+                    <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 space-y-3">
+                      {statusError && (
+                        <p className="text-sm text-red-600">{statusError}</p>
+                      )}
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => handleUpdateOrderStatus("APPROVED")}
+                          disabled={statusUpdating}
+                          className="flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50"
+                        >
+                          ✓ Approve
+                        </button>
+
+                        <button
+                          onClick={() => handleUpdateOrderStatus("REJECTED")}
+                          disabled={statusUpdating}
+                          className="flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50"
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
-
-          {/* retail price */}
-          <div className="border-t border-[#E5D6D8]">
-            {/* Pricing Section */}
-            <div className="p-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-bold text-[#141D23]">
-                  Retail Price
-                </h3>
-                <span className="text-base font-bold text-[#141D23]">
-                  $86.00
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center mt-6">
-                <span className="text-[#5C5F60] text-sm">Promotions</span>
-                <span className="text-[#BA1A1A] text-sm">-$5.08</span>
-              </div>
-
-              {/* Exclude Promotion */}
-              <div className="mt-4 bg-[#EEF2F8] border border-[#D8DEE8] rounded-md px-3 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-[#CBB5BB]"
-                  />
-                  <span className="text-[#5C5F60]">Exclude Promotion</span>
-                </div>
-
-                <span className="text-[#8A6A72] text-lg">ⓘ</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-5">
-                <span className="text-[#5C5F60] text-base">
-                  SHEIN CLUB Exclusive Discount
-                </span>
-                <span className="text-[#BA1A1A] text-base">-$0.20</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#5C5F60] text-base">Coupon</span>
-
-                  <span className="bg-[#FFDAD6] text-[#BA1A1A] text-sm px-2 py-0.5 rounded">
-                    05:03:09
-                  </span>
-                </div>
-
-                <span className="text-[#BA1A1A] text-base">-$0.18</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-4">
-                <span className="text-[#5C5F60] text-base">Shipping Fee</span>
-
-                <span className="text-[#166534] font-semibold text-base">
-                  FREE
-                </span>
-              </div>
-
-              <div className="border-t border-[#E5E7EB] mt-5 pt-5">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-bold text-[#141D23]">
-                      Estimated Price
-                    </h3>
-
-                    <p className="text-sm text-[#5C5F60]">
-                      Final price confirmed at checkout
-                    </p>
-                  </div>
-
-                  <span className="text-xl font-bold text-[#78555E] leading-none">
-                    $81.00
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Buttons */}
-            <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 flex gap-4">
-              <button className="flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90  cursor-pointer transition">
-                ✓ Approve
-              </button>
-
-              <button className="flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition">
-                ✕ Reject
-              </button>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

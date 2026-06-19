@@ -11,15 +11,22 @@ import Dashboard from "../views/Dashboard";
 import OrderManagement from "../views/OrderManagement";
 import {
   PaymentsView,
-  BatchQueueView,
   TrackingView,
   CustomersView,
   ReportsView,
   SettingsView,
 } from "../views/PlaceholderViews";
+import BatchQueue from "../views/BatchQueue";
+import NewOrders from "../views/NewOrders";
+
+const isAuthenticated = () => {
+  return !!(localStorage.getItem("token") || sessionStorage.getItem("token"));
+};
 
 function AppRoutes() {
   const { pathname } = useLocation();
+  const isAuth = isAuthenticated();
+
   const authPaths = [
     "/login",
     "/forgot-password",
@@ -28,8 +35,20 @@ function AppRoutes() {
     "/register",
   ];
 
-  // If we are on any of the authentication pages, render the AuthPortal directly at the top level
-  if (authPaths.includes(pathname)) {
+  const isAuthPath = authPaths.includes(pathname);
+
+  // Redirect authenticated users away from login/register to dashboard
+  if (isAuth && isAuthPath) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Redirect unauthenticated users trying to access dashboard/inner pages to login
+  if (!isAuth && !isAuthPath) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Render auth pages
+  if (isAuthPath) {
     return <AuthPortal />;
   }
 
@@ -43,8 +62,9 @@ function AppRoutes() {
         {/* Sub Pages */}
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="orders" element={<OrderManagement />} />
+        <Route path="neworders" element={<NewOrders />} />
         <Route path="payments" element={<PaymentsView />} />
-        <Route path="batch-queue" element={<BatchQueueView />} />
+        <Route path="batch-queue" element={<BatchQueue />} />
         <Route path="tracking" element={<TrackingView />} />
         <Route path="customers" element={<CustomersView />} />
         <Route path="reports" element={<ReportsView />} />

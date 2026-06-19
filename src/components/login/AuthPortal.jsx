@@ -137,6 +137,8 @@ function Field({
   type = "text",
   placeholder,
   value,
+  name,
+  required,
   rightIcon,
   shellClassName = "h-[43px]",
 }) {
@@ -144,8 +146,12 @@ function Field({
     <label className="block">
       <span className="text-[12px] font-bold text-[#4f4446]">{label}</span>
       <span className={`${inputBase} ${shellClassName}`}>
-        <Icon name={icon} className="h-5 w-5 shrink-0 text-[#5f6872]" />
+        {icon && (
+          <Icon name={icon} className="h-5 w-5 shrink-0 text-[#5f6872]" />
+        )}
         <input
+          name={name}
+          required={required}
           className="min-w-0 flex-1 border-0 bg-transparent text-[15px] outline-none placeholder:text-[#98a2ab]"
           type={type}
           placeholder={placeholder}
@@ -170,9 +176,61 @@ function PrimaryButton({ children, arrow = false, className = "" }) {
     </button>
   );
 }
+function ErrorAlert({ message }) {
+  if (!message) return null;
+  return (
+    <div className="flex items-start gap-3 rounded bg-[#fff0f3] border border-[#ffc6d8] px-4 py-3 text-[13px] text-[#b32b53] shadow-sm">
+      <Icon name="info" className="mt-0.5 h-4 w-4 shrink-0 text-[#ee5d8d]" />
+      <p>{message}</p>
+    </div>
+  );
+}
 
 function LoginScreen() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const rememberMe = formData.get("rememberMe") === "on";
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        "https://shelynx.mediaclocksoft.com.au/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, rememberMe }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Login failed");
+
+      if (result.token) {
+        if (rememberMe) {
+          localStorage.setItem("token", result.token);
+          if (result.data)
+            localStorage.setItem("user", JSON.stringify(result.data));
+        } else {
+          sessionStorage.setItem("token", result.token);
+          if (result.data)
+            sessionStorage.setItem("user", JSON.stringify(result.data));
+        }
+      }
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-screen-2xl mx-auto px-5 py-5">
@@ -185,16 +243,13 @@ function LoginScreen() {
             Please enter your agent credentials to continue.
           </p>
 
-          <form
-            className="mt-5 space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              navigate("/dashboard");
-            }}
-          >
+          <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+            <ErrorAlert message={error} />
             <Field
               label="Email Address"
               div
+              name="email"
+              required
               icon="mail"
               placeholder="agent@shiplink.com"
               shellClassName="h-[38px]"
@@ -215,21 +270,36 @@ function LoginScreen() {
               <span className={`${inputBase} h-[38px]`}>
                 <Icon name="lock" className="h-4 w-4 shrink-0 text-[#6c737d]" />
                 <input
+                  name="password"
+                  required
                   className="min-w-0 flex-1 border-0 bg-transparent text-[14px] outline-none"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                 />
-                <Icon name="eye" className="h-4 w-4 shrink-0 text-[#6c737d]" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[#6c737d] hover:text-[#ff5f96]"
+                >
+                  <Icon
+                    name={showPassword ? "eye" : "eye"}
+                    className="h-4 w-4 shrink-0"
+                  />
+                </button>
               </span>
             </label>
 
             <label className="flex items-center gap-2 text-xs text-[#4f4446]">
-              <input className="h-3 w-3 accent-[#ff5f96]" type="checkbox" />
+              <input
+                name="rememberMe"
+                className="h-3 w-3 accent-[#ff5f96]"
+                type="checkbox"
+              />
               Stay logged in for 30 days
             </label>
 
             <PrimaryButton className="h-[38px] text-[13px]">
-              Login
+              {loading ? "Logging in..." : "Login"}
             </PrimaryButton>
           </form>
         </div>
@@ -417,6 +487,45 @@ function ResetScreen() {
 
 function RegisterScreen() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const name = formData.get("name");
+    const email = formData.get("email");
+    const countryCode = formData.get("countryCode");
+    const phone = formData.get("phone");
+    const password = formData.get("password");
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        "https://shelynx.mediaclocksoft.com.au/api/auth/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, countryCode, phone, password }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.message || "Registration failed");
+
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+        if (result.data)
+          localStorage.setItem("user", JSON.stringify(result.data));
+      }
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-[526px] rounded-md border border-[#78555e]/20 bg-white/95 px-9 py-10 shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
@@ -428,31 +537,46 @@ function RegisterScreen() {
           Join our logistics network as a verified proxy shopping agent.
         </p>
       </div>
-      <form
-        className="mt-8 space-y-5"
-        onSubmit={(event) => {
-          event.preventDefault();
-          navigate("/login");
-        }}
-      >
+      <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+        <ErrorAlert message={error} />
         <Field
           label="Full Name"
+          name="name"
+          required
           icon="user"
           placeholder="Enter your full legal name"
         />
         <Field
           label="Work Email Address"
+          name="email"
+          required
           icon="mail"
           placeholder="agent@shiplink.com"
         />
-        <Field
-          label="Phone Number"
-          icon="phone"
-          placeholder="+1 (555) 000-0000"
-        />
+        <div className="flex gap-2">
+          <div className="w-1/3">
+            <Field
+              label="Code"
+              name="countryCode"
+              placeholder="+961"
+              required
+            />
+          </div>
+          <div className="w-2/3">
+            <Field
+              label="Phone Number"
+              name="phone"
+              required
+              icon="phone"
+              placeholder="9898012345"
+            />
+          </div>
+        </div>
         <Field
           label="Secure Password"
           type="password"
+          name="password"
+          required
           icon="lock"
           placeholder="••••••••"
         />
@@ -468,7 +592,7 @@ function RegisterScreen() {
           </p>
         </div>
         <PrimaryButton arrow className="h-[54px] text-[14px]">
-          Register Account
+          {loading ? "Registering..." : "Register Account"}
         </PrimaryButton>
       </form>
       <p className="mt-9 text-center text-[18px] text-[#73787e]">

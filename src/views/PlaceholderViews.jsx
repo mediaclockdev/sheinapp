@@ -62,15 +62,6 @@ export function PaymentsView() {
   );
 }
 
-export function BatchQueueView() {
-  return (
-    <PagePlaceholder
-      title="Batch Queue"
-      description="Optimized shipping batches, volume discount tiers, and active batch configurations will be manageable from this view."
-    />
-  );
-}
-
 export function TrackingView() {
   return (
     <PagePlaceholder

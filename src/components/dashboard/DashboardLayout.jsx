@@ -1,9 +1,33 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    try {
+      const storedUser =
+        localStorage.getItem("user") || sessionStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (e) {
+      console.error("Failed to parse user data", e);
+    }
+  }, []);
+
+  const displayName = user?.name || "Sarah Chen";
+  const agentText = user?.id
+    ? `Verified Agent #${user.id}`
+    : "Verified Agent #48219";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
 
   return (
     <div className="flex bg-[#F8FAFF] min-h-screen text-[#17222B] font-sans antialiased">
@@ -54,20 +78,17 @@ const DashboardLayout = () => {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <span className="text-base font-bold text-[#141D23] hidden lg:block leading-tight">
-                  Sarah Chen
+                  {displayName}
                 </span>
                 <span className="text-xs font-medium text-[#5C5F60]/70 hidden lg:block">
-                  Verified Agent #48219
+                  {agentText}
                 </span>
               </div>
 
               {/* Profile Avatar Image */}
               <div className="h-10 w-10 rounded-full border border-[#dec9ce] overflow-hidden bg-[#FFE8EF] flex items-center justify-center font-bold text-[#D24D77] text-sm shadow-sm">
-                {/* Commented out img for user avatar */}
-                {/* <img src="sarah_chen.jpg" alt="Sarah Chen" className="h-full w-full object-cover" /> */}
-
                 {/* Visual Placeholder */}
-                <span>SC</span>
+                <span>{initials}</span>
               </div>
             </div>
           </div>
