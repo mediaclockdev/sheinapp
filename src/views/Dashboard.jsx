@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import newbatchicon from "../assets/newbatch.svg";
 import totalordersicon from "../assets/totalordericon.svg";
 import pendingreviewicon from "../assets/pendingreviewicon.svg";
@@ -11,121 +12,152 @@ import incomingordersreviewicon from "../assets/incomingorderreviewicon.svg";
 import filtericon from "../assets/filtericon.svg";
 import exporticon from "../assets/exporticon.svg";
 import dotmenu from "../assets/3dotmenu.svg";
-import dress1 from "../assets/dress1.svg";
-import dress2 from "../assets/dress2.svg";
-import dress3 from "../assets/dress3.svg";
 
-// Mock API Call simulating backend data loading
-const fetchDashboardData = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        agent: {
-          name: "Sarah",
-          newOrdersCount: 12,
-        },
-        stats: {
-          totalOrders: "1,284",
-          pendingReview: 12,
-          moneySavedThisMonth: "$1,842",
-          totalWeight: "428.5 kg",
-          ordersInBatch: 45,
-        },
-        activeDiscountBatches: [
-          {
-            id: "#15",
-            currentAmount: 420.0,
-            targetAmount: 500.0,
-            progress: 84, // 420 / 500 = 84%
-            discountPercent: 20,
-          },
-          {
-            id: "#16",
-            currentAmount: 820.0,
-            targetAmount: 1000.0,
-            progress: 82, // 820 / 1000 = 82%
-            discountPercent: 25,
-          },
-          {
-            id: "#17",
-            currentAmount: 140.0,
-            targetAmount: 300.0,
-            progress: 46, // 140 / 300 = 46%
-            discountPercent: 15,
-          },
-        ],
-        revenueAnalytics: {
-          grossEarnings: "$14,280.50",
-          grossEarningsGrowth: "+8.4%",
-          agentCommission: "$1,142.44",
-          agentCommissionRate: "8%",
-          netPayout: "$13,138.06",
-          netPayoutDate: "Aug 20, 2024",
-          chartData: [
-            { day: "Jul 20", value: 40 },
-            { day: "Jul 27", value: 85 },
-            { day: "Aug 03", value: 70 },
-            { day: "Aug 10", value: 120 },
-            { day: "Aug 17", value: 110 },
-          ],
-        },
-        recommendation: {
-          message:
-            "Move Order #1942 from Batch 7 to Batch 5. This unlocks the 20% discount immediately and saves $74.",
-        },
-        incomingOrders: [
-          {
-            id: "1",
-            productName: "Floral Midi Dress",
-            sku: "SKU: SH-29402",
-            image: dress1,
-            customerName: "Elena Rodriguez",
-            customerRisk: "Trusted",
-            size: "M",
-            color: "Sage Green",
-            weight: "0.35 kg",
-            couponBucket: "BATCH_JULY_A",
-            price: "$42.00",
-          },
-          {
-            id: "2",
-            productName: "Minimalist Canvas Tote",
-            sku: "SKU: SH-88219",
-            image: dress2,
-            customerName: "Mark Thompson",
-            customerRisk: "New Customer",
-            size: "Large",
-            color: "Beige",
-            weight: "0.20 kg",
-            couponBucket: "NEW_USER_B",
-            price: "$18.50",
-          },
-          {
-            id: "3",
-            productName: "Pointed-Toe Heels",
-            sku: "SKU: SH-10293",
-            image: dress3,
-            customerName: "Jessica Wu",
-            customerRisk: "Previous Delivery Refusal",
-            size: "38",
-            color: "Black",
-            weight: "0.85 kg",
-            couponBucket: "VIP_REFUND_LOCK",
-            price: "$125.00",
-          },
-        ],
-      });
-    }, 600); // 600ms network delay
+const API_ORIGIN = "https://shelynx.mediaclocksoft.com.au";
+const API_BASE_URL = `${API_ORIGIN}/api`;
+
+// photoUrl is a full CDN URL for SHEIN products, a relative path for uploads
+const imageUrl = (p) =>
+  !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
+
+const fetchApi = async (path) => {
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
+  if (!response.ok) throw new Error(`Failed to fetch ${path}`);
+  const json = await response.json();
+  return json.data;
 };
 
+const fetchCardData = () => fetchApi("/dashboard/card-data");
+
+// Risk labels arrive uppercase from the API; normalize to the badge strings
+const RISK_LABELS = { TRUSTED: "Trusted", "NEW CUSTOMER": "New Customer" };
+
+const fetchOrderData = async () => {
+  const data = await fetchApi("/dashboard/order-data");
+  return data.items.map((item) => ({
+    id: String(item.id),
+    productName: item.productName,
+    sku: `SKU: ${item.skuCode}`,
+    image: imageUrl(item.photoUrl),
+    customerName: item.customerName || "—",
+    customerRisk: RISK_LABELS[item.customerRisk] || item.customerRisk,
+    size: item.size,
+    color: item.color,
+    weight: typeof item.weight === "number" ? `${item.weight} kg` : item.weight,
+    couponBucket: item.couponBucket,
+    price: money(item.price ?? 0),
+  }));
+};
+
+const money = (n) =>
+  typeof n === "string"
+    ? n
+    : `$${Number(n).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+
+const fetchRevenueData = async (filter) => {
+  const d = await fetchApi(`/dashboard/revenue-data?filter=${filter}`);
+  return {
+    grossEarnings: money(d.grossEarning ?? 0),
+    grossEarningsGrowth: d.grossEarningsGrowth ?? "",
+    agentCommission: money(d.agentCommission ?? 0),
+    agentCommissionRate: d.agentCommissionRate ?? "",
+    netPayout: money(d.netPayout ?? 0),
+    netPayoutDate: d.netPayoutDate ?? "",
+    chartData: (d.chartData ?? []).map((p) => ({
+      day: p.date,
+      value: Number(p.amount ?? 0),
+    })),
+  };
+};
+
+const fetchBatchData = async () => {
+  const d = await fetchApi("/dashboard/batch-data");
+  const list = Array.isArray(d) ? d : (d.items ?? d.batches ?? []);
+  return list.map((b) => ({
+    id: String(b.id ?? b.batchId).startsWith("#")
+      ? String(b.id ?? b.batchId)
+      : `#${b.id ?? b.batchId}`,
+    currentAmount: Number(b.currentAmount ?? 0),
+    targetAmount: Number(b.targetAmount ?? 0),
+    progress: Math.min(
+      100,
+      Math.round(
+        b.progress ??
+          (b.targetAmount ? (b.currentAmount / b.targetAmount) * 100 : 0),
+      ),
+    ),
+    discountPercent: b.discountPercent ?? b.discount ?? 0,
+    itemCount: Number(b.itemCount ?? b.itemsCount ?? b._count?.items ?? 0),
+    orderCount: Number(b.orderCount ?? b.ordersCount ?? b._count?.order ?? 0),
+  }));
+};
+
+const ORDERS_PAGE_SIZE = 5;
+
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [revenueFilter, setRevenueFilter] = useState("last_30_days");
+  const [revenueApi, setRevenueApi] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData().then((result) => {
-      setData(result);
+    fetchRevenueData(revenueFilter)
+      .then(setRevenueApi)
+      .catch(() => {});
+  }, [revenueFilter]);
+
+  useEffect(() => {
+    let user = null;
+    try {
+      user = JSON.parse(
+        localStorage.getItem("user") || sessionStorage.getItem("user"),
+      );
+    } catch {
+      /* ignore bad stored user */
+    }
+
+    Promise.all([
+      fetchCardData().catch(() => null),
+      fetchOrderData().catch(() => null),
+      fetchBatchData().catch(() => null),
+    ]).then(([cards, orders, batches]) => {
+      setData({
+        agent: {
+          name: user?.name || "Agent",
+          newOrdersCount: cards?.pendingReviews ?? 0,
+        },
+        stats: {
+          totalOrders: (cards?.totalOrders ?? 0).toLocaleString(),
+          pendingReview: cards?.pendingReviews ?? 0,
+          moneySavedThisMonth: `$${(cards?.moneySaved ?? 0).toLocaleString()}`,
+          totalWeight: `${cards?.totalWeight ?? 0} kg`,
+          ordersInBatch: cards?.ordersInBatch ?? 0,
+        },
+        activeDiscountBatches: batches ?? [],
+        // shown only until the revenue-data call resolves
+        revenueAnalytics: {
+          grossEarnings: money(0),
+          grossEarningsGrowth: "",
+          agentCommission: money(0),
+          agentCommissionRate: "",
+          netPayout: money(0),
+          netPayoutDate: "",
+          chartData: [],
+        },
+        incomingOrders: orders ?? [],
+      });
       setLoading(false);
     });
   }, []);
@@ -143,6 +175,32 @@ const Dashboard = () => {
       </div>
     );
   }
+
+  const totalOrders = data.incomingOrders.length;
+  const totalOrderPages = Math.max(
+    1,
+    Math.ceil(totalOrders / ORDERS_PAGE_SIZE),
+  );
+  const pagedOrders = data.incomingOrders.slice(
+    (ordersPage - 1) * ORDERS_PAGE_SIZE,
+    ordersPage * ORDERS_PAGE_SIZE,
+  );
+
+  const revenueAnalytics = revenueApi ?? data.revenueAnalytics;
+
+  // Revenue chart geometry: scale points into the 400x120 viewBox
+  const chartData = revenueAnalytics.chartData;
+  const maxChartValue = Math.max(...chartData.map((p) => p.value), 1);
+  const chartPoints = chartData.map((p, i) => ({
+    x: chartData.length > 1 ? (i * 400) / (chartData.length - 1) : 200,
+    y: 115 - (p.value / maxChartValue) * 100,
+  }));
+  const chartLinePath = chartPoints
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+    .join(" ");
+  const chartAreaPath = chartLinePath
+    ? `${chartLinePath} L 400 120 L 0 120 Z`
+    : "";
 
   return (
     <div className="p-4 lg:p-8 bg-[#FFD1DC]/20 min-h-[calc(100vh-70px)] space-y-6">
@@ -162,7 +220,10 @@ const Dashboard = () => {
         </div>
 
         {/* New Batch Action button */}
-        <button className="w-[40%] lg:w-[15%] bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-5 py-2.5 rounded-xl text-base whitespace-nowrap cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
+        <button
+          onClick={() => navigate("/batch-queue")}
+          className="w-[40%] lg:w-[15%] bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-5 py-2.5 rounded-xl text-base whitespace-nowrap cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5"
+        >
           <img src={newbatchicon} alt="New Batch" className="h-4 w-4" />
           <span>New Batch</span>
         </button>
@@ -174,7 +235,6 @@ const Dashboard = () => {
         <div className="bg-white p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]">
           <div className="flex flex-col gap-3">
             <div className="h-9 w-9 ">
-              {/* Commented out img for stat icon */}
               <img
                 src={totalordersicon}
                 alt="Total Orders"
@@ -291,17 +351,17 @@ const Dashboard = () => {
                   className="h-5 w-5"
                 />
                 <h2 className="font-semibold text-[#141D23] text-xl">
-                  Active Discount Batches
+                  Active Batches
                 </h2>
               </div>
               <div className="flex items-center gap-3">
-                <div className="bg-[#78555E]/10 border border-[#78555E]/20 px-3 py-2 rounded-[12px] text-sm font-semibold text-[#78555E] flex items-center gap-1">
+                {/* <div className="bg-[#78555E]/10 border border-[#78555E]/20 px-3 py-2 rounded-[12px] text-sm font-semibold text-[#78555E] flex items-center gap-1">
                   <img
                     src={needunlockbatchicon}
                     alt="need to unlock batch icon"
                   />
                   <p>Need $80 more to unlock Batch #15</p>
-                </div>
+                </div> */}
                 <a
                   href="#batches"
                   className="text-[13px] font-semibold text-[#78555E] hover:underline"
@@ -319,8 +379,8 @@ const Dashboard = () => {
                     <th className="px-6 py-4">Batch ID</th>
                     <th className="px-6 py-4">Current Amount</th>
                     <th className="px-6 py-4">Target Amount</th>
-                    <th className="px-6 py-4">Item Amount</th>
-                    <th className="px-6 py-4">Discount %</th>
+                    <th className="px-6 py-4">Item Count</th>
+                    <th className="px-6 py-4">Order Count</th>
                     <th className="px-6 py-4 text-right">Action</th>
                   </tr>
                 </thead>
@@ -341,22 +401,25 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4 min-w-[150px]">
                         <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-[#EEF2F6] h-2.5 rounded-full overflow-hidden">
+                          {/* <div className="flex-1 bg-[#EEF2F6] h-2.5 rounded-full overflow-hidden">
                             <div
                               className="bg-[#78555E] h-full rounded-full transition-all duration-500"
                               style={{ width: `${batch.progress}%` }}
                             ></div>
-                          </div>
-                          {/* <p className="text-xl text-[#78555E] font-semibold">
-                            {batch.progress}%
-                          </p> */}
+                          </div> */}
+                          <p className="text-xl text-black font-semibold">
+                            {batch.itemCount}
+                          </p>
                         </div>
                       </td>
                       <td className="text-xl text-[#78555E] font-semibold px-6 py-4">
-                        {batch.discountPercent}%
+                        {batch.orderCount}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#141D23] px-4 py-2 rounded-lg text-[13px] transition duration-200">
+                        <button
+                          onClick={() => navigate("/batch-queue")}
+                          className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#141D23] px-4 py-2 rounded-lg text-[13px] transition duration-200 cursor-pointer"
+                        >
                           Add Order
                         </button>
                       </td>
@@ -381,12 +444,22 @@ const Dashboard = () => {
                 </p>
               </div>
               <div className="flex bg-[#F4F7FB] border border-[#E4E7ED] rounded-xl p-1 gap-1">
-                <button className="px-3 py-1 text-[10px] font-bold rounded-lg bg-white shadow-sm text-[#17222B]">
-                  Last 30 Days
-                </button>
-                <button className="px-3 py-1 text-[10px] font-bold rounded-lg text-[#8C959F] hover:text-[#17222B]">
-                  This Month
-                </button>
+                {[
+                  { value: "last_30_days", label: "Last 30 Days" },
+                  { value: "this_month", label: "This Month" },
+                ].map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setRevenueFilter(f.value)}
+                    className={
+                      revenueFilter === f.value
+                        ? "px-3 py-1 text-[10px] font-bold rounded-lg bg-white shadow-sm text-[#17222B]"
+                        : "px-3 py-1 text-[10px] font-bold rounded-lg text-[#8C959F] hover:text-[#17222B] cursor-pointer"
+                    }
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -395,15 +468,17 @@ const Dashboard = () => {
               {/* Gross Earnings */}
               <div className="bg-[#ECF5FE] border border-[#EEF2F8] p-3.5 rounded-xl">
                 <span className="text-[11px] font-bold text-[#8C959F] uppercase tracking-wider block">
-                  Gross Earnings
+                  Total Order Value
                 </span>
                 <p className="text-2xl font-semibold text-[#141D23] mt-1.5 leading-none">
-                  {data.revenueAnalytics.grossEarnings}
+                  {revenueAnalytics.grossEarnings}
                 </p>
-                <span className="text-xs text-[#15803D] font-bold mt-1.5 flex items-center gap-0.5">
-                  <span>▲</span>
-                  <span>{data.revenueAnalytics.grossEarningsGrowth}</span>
-                </span>
+                {revenueAnalytics.grossEarningsGrowth && (
+                  <span className="text-xs text-[#15803D] font-bold mt-1.5 flex items-center gap-0.5">
+                    <span>▲</span>
+                    <span>{revenueAnalytics.grossEarningsGrowth}</span>
+                  </span>
+                )}
               </div>
 
               {/* Agent Commission */}
@@ -412,12 +487,14 @@ const Dashboard = () => {
                   Agent Commission
                 </span>
                 <p className="text-2xl font-semibold text-[#141D23] mt-1.5 leading-none">
-                  {data.revenueAnalytics.agentCommission}
+                  {revenueAnalytics.agentCommission}
                 </p>
-                <span className="text-xs text-[#5C5F60]/60 font-medium mt-1.5 block leading-tight">
-                  Standard rate applied:
-                  {data.revenueAnalytics.agentCommissionRate}
-                </span>
+                {revenueAnalytics.agentCommissionRate && (
+                  <span className="text-xs text-[#5C5F60]/60 font-medium mt-1.5 block leading-tight">
+                    Standard rate applied:
+                    {revenueAnalytics.agentCommissionRate}
+                  </span>
+                )}
               </div>
 
               {/* Net Payout */}
@@ -426,11 +503,13 @@ const Dashboard = () => {
                   Net Payout
                 </span>
                 <p className="text-2xl font-semibold text-[#78555E] mt-1.5 leading-none">
-                  {data.revenueAnalytics.netPayout}
+                  {revenueAnalytics.netPayout}
                 </p>
-                <span className="text-xs text-[#78555E]/70 font-bold mt-1.5 block leading-tight">
-                  Scheduled for {data.revenueAnalytics.netPayoutDate}
-                </span>
+                {revenueAnalytics.netPayoutDate && (
+                  <span className="text-xs text-[#78555E]/70 font-bold mt-1.5 block leading-tight">
+                    Scheduled for {revenueAnalytics.netPayoutDate}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -461,14 +540,11 @@ const Dashboard = () => {
                 </defs>
 
                 {/* Shaded Area Under Line */}
-                <path
-                  d="M 0 120 L 0 90 Q 60 70 100 50 Q 150 70 200 60 Q 250 20 300 30 T 400 15 L 400 120 Z"
-                  fill="url(#chartGrad)"
-                />
+                <path d={chartAreaPath} fill="url(#chartGrad)" />
 
                 {/* Line Path */}
                 <path
-                  d="M 0 90 Q 60 70 100 50 Q 150 70 200 60 Q 250 20 300 30 T 400 15"
+                  d={chartLinePath}
                   fill="none"
                   stroke="#704154"
                   strokeWidth="2.5"
@@ -476,20 +552,17 @@ const Dashboard = () => {
                 />
 
                 {/* Data point dots */}
-                <circle cx="100" cy="50" r="3" fill="#D24D77" />
-                <circle cx="200" cy="60" r="3" fill="#D24D77" />
-                <circle cx="300" cy="30" r="3" fill="#D24D77" />
-                <circle cx="400" cy="15" r="3" fill="#D24D77" />
+                {chartPoints.map((p, i) => (
+                  <circle key={i} cx={p.x} cy={p.y} r="3" fill="#D24D77" />
+                ))}
               </svg>
             </div>
 
             {/* X-Axis Labels */}
             <div className="flex justify-between mt-1 text-[9px] font-bold text-[#8C959F]">
-              <span>Jul 20</span>
-              <span>Jul 27</span>
-              <span>Aug 03</span>
-              <span>Aug 10</span>
-              <span>Aug 17</span>
+              {chartData.map((p) => (
+                <span key={p.day}>{p.day}</span>
+              ))}
             </div>
           </div>
         </div>
@@ -549,17 +622,16 @@ const Dashboard = () => {
           </div>
 
           <div className="flex gap-3">
-            <button className="flex items-center gap-1.5 px-3 py-1 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
+            <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
               <img src={filtericon} alt="Filter" className="h-3.5 w-3.5" />
-
-              <p>Filter</p>
+              <span>Filter</span>
             </button>
             <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
               <img src={exporticon} alt="Export" className="h-3.5 w-3.5" />
 
               <span>Export</span>
             </button>
-            <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-4 py-2 rounded-xl text-xs transition duration-200 cursor-pointer">
+            <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-4 py-2 rounded-xl text-[13px] transition duration-200 cursor-pointer">
               See All
             </button>
           </div>
@@ -570,35 +642,44 @@ const Dashboard = () => {
           <table className="w-full text-left text-sm border-collapse">
             <thead>
               <tr className="border-b border-[#D3C3C5] text-[13px] uppercase font-semibold text-[#5C5F60] bg-[#DBE4ED]/30">
-                <th className="px-6 py-4">Product</th>
-                <th className="px-6 py-4">Customer Risk</th>
-                <th className="px-6 py-4">Size</th>
-                <th className="px-6 py-4">Color</th>
-                <th className="px-6 py-4">Weight</th>
-                <th className="px-6 py-4">Coupon Bucket</th>
-                <th className="px-6 py-4 text-right">Price</th>
-                <th className="px-6 py-4 text-center">Action</th>
+                <th className="px-4 py-4">Product</th>
+                <th className="px-4 py-4">Customer Risk</th>
+                <th className="px-4 py-4">Size</th>
+                <th className="px-4 py-4">Color</th>
+                <th className="px-4 py-4">Weight</th>
+                <th className="px-4 py-4">Coupon Bucket</th>
+                <th className="px-4 py-4 text-right">Price</th>
+                <th className="px-4 py-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F4F4F6] font-bold">
-              {data.incomingOrders.map((order) => (
+              {pagedOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50/30 transition">
                   {/* Product block */}
-                  <td className="px-6 py-4 min-w-[280px]">
+                  <td className="px-4 py-4 min-w-[240px]">
                     <div className="flex items-center gap-3">
                       {/* Product image thumbnail */}
                       <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200 shrink-0 overflow-hidden">
-                        <img
-                          src={order.image}
-                          alt={order.productName}
-                          className="h-full w-full object-cover"
-                        />
+                        {order.image ? (
+                          <img
+                            src={order.image}
+                            alt={order.productName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[9px] text-slate-400">
+                            No image
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#141D23] block leading-tight">
+                      <div className="min-w-0">
+                        <p
+                          className="text-sm font-semibold text-[#141D23] block leading-tight truncate max-w-[220px]"
+                          title={order.productName}
+                        >
                           {order.productName}
                         </p>
-                        <p className="text-xs font-normal text-[#5C5F60s] block mt-0.5">
+                        <p className="text-xs font-normal text-[#5C5F60] block mt-0.5">
                           {order.sku}
                         </p>
                       </div>
@@ -606,7 +687,7 @@ const Dashboard = () => {
                   </td>
 
                   {/* Customer Risk Badge */}
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     <div>
                       <p className="text-sm font-semibold text-[#141D23] block leading-tight">
                         {order.customerName}
@@ -637,34 +718,34 @@ const Dashboard = () => {
                   </td>
 
                   {/* Size */}
-                  <td className="px-6 py-4 text-sm font-normal text-[#141D23]">
+                  <td className="px-4 py-4 text-sm font-normal text-[#141D23]">
                     {order.size}
                   </td>
 
                   {/* Color */}
-                  <td className="px-6 py-4 text-sm font-normal text-[#141D23]">
+                  <td className="px-4 py-4 text-sm font-normal text-[#141D23]">
                     {order.color}
                   </td>
 
                   {/* Weight */}
-                  <td className="px-6 py-4 text-sm font-normal text-[#141D23]">
+                  <td className="px-4 py-4 text-sm font-normal text-[#141D23]">
                     {order.weight}
                   </td>
 
                   {/* Coupon Bucket */}
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     <span className="bg-[#E1E3E4] px-2.5 py-1 rounded-sm text-sm font-normal uppercase text-[#626566] tracking-wider">
                       {order.couponBucket}
                     </span>
                   </td>
 
                   {/* Price */}
-                  <td className="px-6 py-4 text-right text-[#141D23] font-semibold text-sm">
+                  <td className="px-4 py-4 text-right text-[#141D23] font-semibold text-sm">
                     {order.price}
                   </td>
 
                   {/* Actions column */}
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-4 py-4 text-center">
                     <button className="p-1 rounded hover:bg-slate-100 text-[#8C959F] hover:text-[#17222B] transition">
                       <img src={dotmenu} alt="Options" className="h-5 w-5" />
                     </button>
@@ -678,23 +759,40 @@ const Dashboard = () => {
         {/* Table Footer / Pagination */}
         <div className="p-6 border-t border-[#E8DFE1] bg-slate-50/20 flex flex-wrap justify-between items-center gap-4">
           <span className="text-xs font-semibold text-[#8C959F]">
-            Showing 1-10 of 42 pending reviews
+            Showing{" "}
+            {totalOrders === 0 ? 0 : (ordersPage - 1) * ORDERS_PAGE_SIZE + 1}-
+            {Math.min(ordersPage * ORDERS_PAGE_SIZE, totalOrders)} of{" "}
+            {totalOrders} pending reviews
           </span>
 
           <div className="flex items-center gap-1.5">
-            <button className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition">
+            <button
+              onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+              disabled={ordersPage === 1}
+              className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:pointer-events-none"
+            >
               ‹
             </button>
-            <button className="h-8 w-8 rounded-lg bg-[#FFE8EF] text-[#D24D77] border border-[#FFE8EF] flex items-center justify-center font-extrabold text-xs transition">
-              1
-            </button>
-            <button className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition">
-              2
-            </button>
-            <button className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition">
-              3
-            </button>
-            <button className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition">
+            {Array.from({ length: totalOrderPages }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setOrdersPage(i + 1)}
+                className={
+                  ordersPage === i + 1
+                    ? "h-8 w-8 rounded-lg bg-[#FFE8EF] text-[#D24D77] border border-[#FFE8EF] flex items-center justify-center font-extrabold text-xs transition"
+                    : "h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition"
+                }
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() =>
+                setOrdersPage((p) => Math.min(totalOrderPages, p + 1))
+              }
+              disabled={ordersPage === totalOrderPages}
+              className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:pointer-events-none"
+            >
               ›
             </button>
           </div>

@@ -17,6 +17,10 @@ const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const ORDERS_API_URL = `${API_BASE_URL}/api/orders`;
 const ORDER_DETAIL_API_URL = `${API_BASE_URL}/api/orders`;
 
+// photoUrl is a full CDN URL for SHEIN products, a relative path for uploads
+const imageUrl = (p) =>
+  !p ? null : p.startsWith("http") ? p : `${API_BASE_URL}${p}`;
+
 const getInitials = (name = "") =>
   name
     .split(" ")
@@ -166,10 +170,17 @@ const OrderManagement = () => {
       if (!prev) return prev;
       const items = prev.items.map((item) =>
         item.id === itemId
-          ? { ...item, quantity: Math.max(1, Number(item.quantity || 1) + delta) }
+          ? {
+              ...item,
+              quantity: Math.max(1, Number(item.quantity || 1) + delta),
+            }
           : item,
       );
-      return { ...prev, items, ...recalculateOrderTotals(items, prev.serviceFee) };
+      return {
+        ...prev,
+        items,
+        ...recalculateOrderTotals(items, prev.serviceFee),
+      };
     });
   };
 
@@ -177,27 +188,28 @@ const OrderManagement = () => {
     setSelectedOrder((prev) => {
       if (!prev) return prev;
       const items = prev.items.filter((item) => item.id !== itemId);
-      return { ...prev, items, ...recalculateOrderTotals(items, prev.serviceFee) };
+      return {
+        ...prev,
+        items,
+        ...recalculateOrderTotals(items, prev.serviceFee),
+      };
     });
   };
 
   const handleSaveOrderEdits = async (token) => {
-    const response = await fetch(
-      `${ORDERS_API_URL}/${selectedOrderId}/edit`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          items: selectedOrder.items.map((item) => ({
-            id: item.id,
-            quantity: Number(item.quantity),
-          })),
-        }),
+    const response = await fetch(`${ORDERS_API_URL}/${selectedOrderId}/edit`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-    );
+      body: JSON.stringify({
+        items: selectedOrder.items.map((item) => ({
+          id: item.id,
+          quantity: Number(item.quantity),
+        })),
+      }),
+    });
 
     const rawText = await response.text();
     let result = {};
@@ -208,7 +220,12 @@ const OrderManagement = () => {
     }
 
     if (!response.ok) {
-      console.error("Save order edits failed", response.status, result, rawText);
+      console.error(
+        "Save order edits failed",
+        response.status,
+        result,
+        rawText,
+      );
       throw new Error(
         result.message ||
           result.errors?.map((e) => e.message).join(", ") ||
@@ -867,7 +884,7 @@ const OrderManagement = () => {
                             <div className="w-20 h-20 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
                               {item.photoUrl ? (
                                 <img
-                                  src={`${API_BASE_URL}${item.photoUrl}`}
+                                  src={imageUrl(item.photoUrl)}
                                   alt={item.productName}
                                   className="w-full h-full object-cover"
                                 />
@@ -879,7 +896,10 @@ const OrderManagement = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <p className="font-bold text-sm text-[#141D23]">
+                              <p
+                                className="font-bold text-sm text-[#141D23] truncate max-w-[220px]"
+                                title={item.productName}
+                              >
                                 {item.productName}
                               </p>
 
