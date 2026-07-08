@@ -376,12 +376,12 @@ const Dashboard = () => {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-[#F4F4F6] text-[13px] uppercase font-bold text-[#5C5F60] bg-slate-50/50">
-                    <th className="px-6 py-4">Batch ID</th>
-                    <th className="px-6 py-4">Current Amount</th>
-                    <th className="px-6 py-4">Target Amount</th>
-                    <th className="px-6 py-4">Item Count</th>
-                    <th className="px-6 py-4">Order Count</th>
-                    <th className="px-6 py-4 text-right">Action</th>
+                    <th className="px-6 py-4 text-center">Batch ID</th>
+                    <th className="px-6 py-4 text-center">Current Amount</th>
+                    <th className="px-6 py-4 text-center">Target Amount</th>
+                    <th className="px-6 py-4 text-center">Item Count</th>
+                    <th className="px-6 py-4 text-center">Order Count</th>
+                    <th className="px-6 py-4 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F4F4F6] font-bold">
@@ -390,29 +390,29 @@ const Dashboard = () => {
                       key={batch.id}
                       className="hover:bg-slate-50/30 transition"
                     >
-                      <td className="px-6 py-4 text-[#141D23] font-medium">
+                      <td className="px-6 py-4 text-center text-[#141D23] font-semibold">
                         {batch.id}
                       </td>
-                      <td className="px-6 py-4 text-[#141D23] font-semibold">
+                      <td className="px-6 py-4 text-center text-[#141D23] font-semibold">
                         ${batch.currentAmount.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4  text-[#141D23] font-normal">
+                      <td className="px-6 py-4 text-center text-[#141D23] font-semibold">
                         ${batch.targetAmount.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 min-w-[150px]">
-                        <div className="flex items-center gap-3">
+                      <td className="px-6 py-4 min-w-[150px] text-center">
+                        <div className="flex items-center justify-center gap-3">
                           {/* <div className="flex-1 bg-[#EEF2F6] h-2.5 rounded-full overflow-hidden">
                             <div
                               className="bg-[#78555E] h-full rounded-full transition-all duration-500"
                               style={{ width: `${batch.progress}%` }}
                             ></div>
                           </div> */}
-                          <p className="text-xl text-black font-semibold">
+                          <p className=" text-[#141D23] font-semibold">
                             {batch.itemCount}
                           </p>
                         </div>
                       </td>
-                      <td className="text-xl text-[#78555E] font-semibold px-6 py-4">
+                      <td className=" text-[#141D23] font-semibold px-6 py-4 text-center">
                         {batch.orderCount}
                       </td>
                       <td className="px-6 py-4 text-right">

@@ -3,6 +3,8 @@ import { Calendar, RotateCcw, Eye, Plus, Minus, Trash2 } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
 import editicon from "../assets/editicon.svg";
 import exporticon from "../assets/exporticon.svg";
+import approve from "../assets/approveicon.svg";
+import reject from "../assets/rejecticon.svg";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import customermessage from "../assets/customermessage.svg";
@@ -448,6 +450,7 @@ const OrderManagement = () => {
                 onChange={(e) => setStatus(e.target.value)}
                 className="h-11 w-full sm:w-auto px-4 bg-[#ECF5FE] rounded-md border-none outline-none text-[#141D23] text-base font-normal min-w-[120px]"
               >
+                <option>All</option>
                 <option>Approved</option>
                 <option>Waiting</option>
                 <option>Purchased</option>
@@ -880,8 +883,8 @@ const OrderManagement = () => {
                       >
                         <div className="flex justify-between items-start">
                           {/* Left Side */}
-                          <div className="flex gap-4">
-                            <div className="w-20 h-20 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
+                          <div className="flex flex-1 min-w-0 gap-4 pr-4">
+                            <div className="w-20 h-20 shrink-0 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
                               {item.photoUrl ? (
                                 <img
                                   src={imageUrl(item.photoUrl)}
@@ -895,9 +898,9 @@ const OrderManagement = () => {
                               )}
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-2 flex-1 min-w-0">
                               <p
-                                className="font-bold text-sm text-[#141D23] truncate max-w-[220px]"
+                                className="font-bold text-sm text-[#141D23] truncate"
                                 title={item.productName}
                               >
                                 {item.productName}
@@ -915,7 +918,7 @@ const OrderManagement = () => {
                           </div>
 
                           {/* Right Side */}
-                          <div className="flex flex-col items-end justify-between h-20">
+                          <div className="flex flex-col items-end justify-between h-20 shrink-0">
                             <div className="flex items-center gap-3">
                               <p className="font-bold text-xs text-[#78555E]">
                                 ${Number(item.price).toFixed(2)}
@@ -1009,21 +1012,23 @@ const OrderManagement = () => {
                         <p className="text-sm text-red-600">{statusError}</p>
                       )}
                       <div className="flex gap-4">
-                        <button
+                        <div
+                          className="flex items-center gap-1 justify-center flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50"
                           onClick={() => handleUpdateOrderStatus("APPROVED")}
                           disabled={statusUpdating}
-                          className="flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50"
                         >
-                          ✓ Approve
-                        </button>
+                          <img src={approve} alt="approve icon" />
+                          <p>Approve</p>
+                        </div>
 
-                        <button
+                        <div
+                          className="flex items-center justify-center gap-1 flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50"
                           onClick={() => handleUpdateOrderStatus("REJECTED")}
                           disabled={statusUpdating}
-                          className="flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50"
                         >
-                          ✕ Reject
-                        </button>
+                          <img src={reject} alt="reject icon" />
+                          <p>Reject</p>
+                        </div>
                       </div>
                     </div>
                   )}

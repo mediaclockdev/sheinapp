@@ -126,7 +126,7 @@ function BrandLogo({ compact = false }) {
 
   return (
     <div className="pointer-events-none absolute left-5 top-5 z-10 flex flex-col items-center text-[#ff5f96] sm:left-8 sm:top-6">
-      <img src={logo2} alt="logo2" />
+      {/* <img src={logo2} alt="logo2" /> */}
     </div>
   );
 }
@@ -144,7 +144,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-[12px] font-bold text-[#4f4446]">{label}</span>
+      <span className="text-xs font-bold text-[#4f4446]">{label}</span>
       <span className={`${inputBase} ${shellClassName}`}>
         {icon && (
           <Icon name={icon} className="h-5 w-5 shrink-0 text-[#5f6872]" />
@@ -233,9 +233,9 @@ function LoginScreen() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-5 py-5">
+    <div className="max-w-screen-2xl mx-auto px-5 pt-4 pb-3">
       <div className="w-full max-w-[500px] rounded-md border border-[#78555e]/20 bg-white/95 shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
-        <div className="px-8 pb-7 pt-7">
+        <div className="px-8 pb-4 pt-4">
           <h1 className="text-2xl font-semibold tracking-tight text-[#17222b]">
             Welcome Back
           </h1>
@@ -298,12 +298,12 @@ function LoginScreen() {
               Stay logged in for 30 days
             </label>
 
-            <PrimaryButton className="h-[38px] text-[13px]">
+            <PrimaryButton className="h-[38px] text-sm cursor-pointer">
               {loading ? "Logging in..." : "Login"}
             </PrimaryButton>
           </form>
         </div>
-        <div className="rounded-b-md border-t border-[#d4e0ec] bg-[#eef7ff] px-8 py-5 text-center text-xs text-[#5c5f60]">
+        <div className="rounded-b-md border-t border-[#d4e0ec] bg-[#eef7ff] px-8 py-3 text-center text-xs text-[#5c5f60]">
           Don't have an account?{" "}
           <Link to="/register" className="font-bold text-[#78555e]">
             Sign Up
@@ -611,7 +611,7 @@ function StageFooter({ meta }) {
   return (
     <>
       {meta.footerNote && (
-        <p className="mt-7 text-center text-[10px] font-semibold text-[#75806f]">
+        <p className=" text-center text-[10px] font-semibold text-[#75806f]">
           {meta.footerNote === "Systems Operational" && (
             <span className="mr-1 inline-block h-2 w-2 rounded-full bg-[#48b35c]" />
           )}
@@ -648,7 +648,7 @@ function PortalLayout() {
       </header>
 
       <main
-        className={`relative flex min-h-[calc(100vh-92px)] flex-1 justify-center overflow-hidden border-b border-[#dbcbd0] bg-[#f8dce4] px-4 pb-12 ${meta.stageClass}`}
+        className={`relative flex min-h-[calc(100vh-90px)] flex-1 justify-center overflow-hidden border-b border-[#dbcbd0] bg-[#f8dce4] px-4 pb-4 pt-6`}
       >
         {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_52%_18%,rgba(255,255,255,0.58),transparent_31%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(153deg,rgba(255,255,255,0.68)_0_27%,transparent_27.2%)]" />
@@ -660,7 +660,7 @@ function PortalLayout() {
 
         <section className="relative z-[1] flex w-full max-w-[526px] flex-col items-center">
           {meta.kicker && (
-            <div className="mb-7 text-center text-sm font-semibold text-[#5c5f60]">
+            <div className="mb-1 text-center text-xl font-semibold text-[#5c5f60]">
               {meta.kicker}
             </div>
           )}
