@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SuccessToast from "../components/common/SuccessToast";
 import usericon from "../assets/CustomerInformationicon.svg";
@@ -199,34 +200,37 @@ const NewOrders = () => {
           <form className="space-y-5">
             <div className="flex flex-col gap-1">
               <label className="text-[#5C5F60] font-semibold text-sm">
-                Full Name
+                Full Name<span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={customer.fullName}
+                requireds
                 onChange={updateCustomer("fullName")}
                 placeholder="e.g. Eleanor Rigby"
-                className="placeholder:text-[#6B7280] text-[#6B7280] text-sm font-normal rounded-sm border border-[#D3C3C5] px-4 py-2.5 outline-none"
+                className="placeholder:text-[#6B7280] text-black text-sm font-normal rounded-sm border border-[#D3C3C5] px-4 py-2.5 outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[#5C5F60] font-semibold text-sm">
-                Phone Number
+                Phone Number<span className="text-red-500">*</span>
               </label>
               <input
                 label="Phone Number"
+                required
                 value={customer.phoneNumber}
                 onChange={updateCustomer("phoneNumber")}
-                placeholder="+44 20 7123 4567"
-                className="placeholder:text-[#6B7280] text-[#6B7280] text-sm font-normal rounded-sm border border-[#D3C3C5] px-4 py-2.5 outline-none"
+                placeholder="+61 20 7123 4567"
+                className="placeholder:text-[#6B7280] text-black text-sm font-normal rounded-sm border border-[#D3C3C5] px-4 py-2.5 outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[#5C5F60] font-semibold text-sm">
-                Shipping Address
+                Shipping Address<span className="text-red-500">*</span>
               </label>
               <textarea
                 rows={4}
+                required
                 value={customer.shippingAddress}
                 onChange={updateCustomer("shippingAddress")}
                 placeholder="Street, City, State, ZIP..."
@@ -235,10 +239,11 @@ const NewOrders = () => {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[#5C5F60] font-semibold text-sm">
-                Customer Message
+                Customer Message<span className="text-red-500">*</span>
               </label>
               <textarea
                 rows={3}
+                required
                 value={customer.customerMessage}
                 onChange={updateCustomer("customerMessage")}
                 placeholder="e.g. Please check the size guide..."
@@ -368,18 +373,24 @@ const NewOrders = () => {
                     Size<span className="text-red-500">*</span>
                   </label>
 
-                  <select
-                    value={product.size}
-                    onChange={updateProduct("size")}
-                    className="w-full h-12 px-5 border border-[#D3C3C5] rounded-md outline-none appearance-none bg-white cursor-pointer"
-                  >
-                    <option>XS</option>
-                    <option>S</option>
-                    <option>M</option>
-                    <option>L</option>
-                    <option>XL</option>
-                    <option>XXL</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={product.size}
+                      onChange={updateProduct("size")}
+                      className="w-full h-12 px-5 pr-10 border border-[#D3C3C5] rounded-md outline-none appearance-none bg-white cursor-pointer"
+                    >
+                      <option>XS</option>
+                      <option>S</option>
+                      <option>M</option>
+                      <option>L</option>
+                      <option>XL</option>
+                      <option>XXL</option>
+                    </select>
+                    <ChevronDown
+                      size={18}
+                      className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#5C5F60]"
+                    />
+                  </div>
                 </div>
 
                 <div className="col-span-4">
