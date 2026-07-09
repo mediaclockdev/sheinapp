@@ -101,7 +101,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 key={item.name}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                     isActive
                       ? "bg-[#FFE8EF] text-[#D24D77]"
                       : "text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B]"
@@ -184,7 +184,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* New Order Action Button */}
           <button
             onClick={() => navigate("/neworders")}
-            className="cursor-pointer w-full bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-bold py-2.5 rounded-xl text-base transition duration-200 shadow-sm flex items-center justify-center gap-1.5"
+            className="cursor-pointer w-full bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-semibold py-2.5 rounded-xl text-base transition duration-200 shadow-sm flex items-center justify-center gap-1.5"
           >
             {/* Commented out plus/batch icon */}
             {/* <img src="plus.svg" alt="Add" className="h-3.5 w-3.5" /> */}
@@ -195,7 +195,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* Help Center Item */}
           <a
             href="#help"
-            className="flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-bold text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B] transition duration-200"
+            className="flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B] transition duration-200"
           >
             <img src={helpicon} alt="Help" className="h-4 w-4" />
             <p>Help Center</p>
@@ -204,11 +204,9 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-bold text-[#D24D77] hover:bg-[#FFE8EF] transition duration-200"
+            className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#D24D77] hover:bg-[#FFE8EF] transition duration-200"
           >
-            <span className="flex h-4 w-4 items-center justify-center font-black">
-              ⎋
-            </span>
+            <span className="flex h-4 w-4 items-center justify-center font-black"></span>
             <span>Logout</span>
           </button>
         </div>

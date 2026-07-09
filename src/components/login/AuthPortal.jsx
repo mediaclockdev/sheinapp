@@ -8,7 +8,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import logo from "../../assets/logo.svg";
-import logo2 from "../../assets/logo2.svg";
+// import logo2 from "../../assets/logo2.svg";
 
 const screenMeta = {
   "/login": {

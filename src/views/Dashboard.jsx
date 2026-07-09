@@ -6,7 +6,7 @@ import pendingreviewicon from "../assets/pendingreviewicon.svg";
 import totalweighticon from "../assets/totalweighticon.svg";
 import orderinbatchicon from "../assets/orderbatchicon.svg";
 import activebatchesicon from "../assets/activediscountbatchesicon.svg";
-import needunlockbatchicon from "../assets/needtounlockbatchicon.svg";
+// import needunlockbatchicon from "../assets/needtounlockbatchicon.svg";
 import smartbatchicon from "../assets/smartbatchrecicon.svg";
 import incomingordersreviewicon from "../assets/incomingorderreviewicon.svg";
 import filtericon from "../assets/filtericon.svg";
@@ -207,10 +207,10 @@ const Dashboard = () => {
       {/* Header Info */}
       <div className="flex flex-col lg:flex-row gap-5 lg:justify-between lg:items-center">
         <div>
-          <h1 className="text-2xl lg:text-[32px] font-bold text-[#17222B] tracking-tight">
+          <h1 className="text-2xl lg:text-[32px] font-semibold text-[#17222B] tracking-tight">
             Welcome back, {data.agent.name}
           </h1>
-          <p className="text-base text-[#5C5F60]/80 mt-1 font-semibold">
+          <p className="text-base text-[#5C5F60]/80 mt-1 font-medium">
             You have{" "}
             <span className="text-[#78555E] font-bold">
               {data.agent.newOrdersCount} new orders
@@ -350,7 +350,7 @@ const Dashboard = () => {
                   alt="Batches"
                   className="h-5 w-5"
                 />
-                <h2 className="font-semibold text-[#141D23] text-xl">
+                <h2 className="font-medium text-[#141D23] text-xl">
                   Active Batches
                 </h2>
               </div>
@@ -418,7 +418,7 @@ const Dashboard = () => {
                       <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => navigate("/batch-queue")}
-                          className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#141D23] px-4 py-2 rounded-lg text-[13px] transition duration-200 cursor-pointer"
+                          className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#141D23]  font-medium px-4 py-2 rounded-lg text-[13px] transition duration-200 cursor-pointer"
                         >
                           Add Order
                         </button>
