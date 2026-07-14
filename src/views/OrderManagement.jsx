@@ -32,6 +32,20 @@ const getInitials = (name = "") =>
     .slice(0, 2)
     .toUpperCase() || "NA";
 
+const formatAddress = (addr) => {
+  if (typeof addr === "string") {
+    try {
+      addr = JSON.parse(addr);
+    } catch {
+      return addr; // plain text address
+    }
+  }
+  if (!addr || typeof addr !== "object") return addr ?? "";
+  return [addr.addressLine, addr.city, addr.state, addr.zipCode]
+    .filter(Boolean)
+    .join(", ");
+};
+
 const mapOrder = (order) => {
   const customerName =
     order.customer?.fullName ||
@@ -845,7 +859,7 @@ const OrderManagement = () => {
                     </p>
                     <div className="space-y-2">
                       <p className="text-[#5C5F60] font-normal text-xs">
-                        Shipping: {selectedOrder.shippingAddress}
+                        Shipping: {formatAddress(selectedOrder.shippingAddress)}
                       </p>
                       <p className="text-[#5C5F60] font-normal text-xs">
                         Phone: {selectedOrder.customerPhone}
