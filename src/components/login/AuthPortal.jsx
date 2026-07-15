@@ -91,6 +91,7 @@ function Icon({ name, className = "h-5 w-5" }) {
         <path d="M12 7h.01" />
       </>
     ),
+    chevron: <path d="m6 9 6 6 6-6" />,
     arrow: (
       <>
         <path d="M5 12h14" />
@@ -557,7 +558,14 @@ const countryCodes = [
   ["44", "UK"],
 ];
 
-function validateRegister({ name, email, countryCode, phone, password }) {
+function validateRegister({
+  name,
+  email,
+  countryCode,
+  phone,
+  password,
+  confirmPassword,
+}) {
   const errors = {};
   if (!name?.trim()) errors.name = "Full name is required.";
   if (!email?.trim()) errors.email = "Email address is required.";
@@ -577,6 +585,10 @@ function validateRegister({ name, email, countryCode, phone, password }) {
     if (missing.length)
       errors.password = `Password must contain ${missing.join(", ")}.`;
   }
+  if (!confirmPassword)
+    errors.confirmPassword = "Please confirm your password.";
+  else if (password && confirmPassword !== password)
+    errors.confirmPassword = "Passwords do not match.";
   return errors;
 }
 
@@ -595,6 +607,7 @@ function RegisterScreen() {
     const countryCode = formData.get("countryCode")?.trim().replace(/^\+/, "");
     const phone = formData.get("phone");
     const password = formData.get("password");
+    const confirmPassword = formData.get("confirmPassword");
 
     const errors = validateRegister({
       name,
@@ -602,6 +615,7 @@ function RegisterScreen() {
       countryCode,
       phone,
       password,
+      confirmPassword,
     });
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
@@ -688,12 +702,15 @@ function RegisterScreen() {
                     <span className="text-[#98a2ab]">Select</span>
                   )}
                 </span>
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <Icon name="chevron" className="h-4 w-4 text-[#6c737d]" />
+                </span>
                 <select
                   name="countryCode"
                   required
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="min-w-0 flex-1 border-0 bg-transparent text-[15px] text-transparent outline-none [&>option]:text-[#26333d]"
+                  className="min-w-0 flex-1 appearance-none border-0 bg-transparent text-[15px] text-transparent outline-none [&>option]:text-[#26333d]"
                 >
                   <option value="" disabled>
                     Select
@@ -731,6 +748,15 @@ function RegisterScreen() {
           icon="lock"
           placeholder="••••••••"
           error={fieldErrors.password}
+        />
+        <Field
+          label="Confirm Password"
+          type="password"
+          name="confirmPassword"
+          required
+          icon="lock"
+          placeholder="••••••••"
+          error={fieldErrors.confirmPassword}
         />
         <div className="flex gap-3 rounded bg-[#eef7ff] px-5 py-5 text-[12px] font-semibold leading-5 text-[#4e5963]">
           <Icon
