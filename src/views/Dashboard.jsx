@@ -11,7 +11,6 @@ import smartbatchicon from "../assets/smartbatchrecicon.svg";
 import incomingordersreviewicon from "../assets/incomingorderreviewicon.svg";
 import filtericon from "../assets/filtericon.svg";
 import exporticon from "../assets/exporticon.svg";
-import dotmenu from "../assets/3dotmenu.svg";
 
 const API_ORIGIN = "https://shelynx.mediaclocksoft.com.au";
 const API_BASE_URL = `${API_ORIGIN}/api`;
@@ -232,7 +231,10 @@ const Dashboard = () => {
       {/* Stats Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {/* Card 1: Total Orders */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]">
+        <div
+          onClick={() => navigate("/orders")}
+          className="bg-white cursor-pointer p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]"
+        >
           <div className="flex flex-col gap-3">
             <div className="h-9 w-9 ">
               <img
@@ -291,7 +293,7 @@ const Dashboard = () => {
         </div>
 
         {/* Card 4: Total Weight */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]">
+        <div className="bg-white cursor-pointer p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]">
           <div>
             <div className="flex flex-col  gap-2">
               <div className="flex justify-between">
@@ -318,7 +320,10 @@ const Dashboard = () => {
         </div>
 
         {/* Card 5: Orders in Batch */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]">
+        <div
+          onClick={() => navigate("/batch-queue")}
+          className="bg-white cursor-pointer p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]"
+        >
           <div className="flex flex-col gap-2">
             <div className="h-9 w-9 ">
               <img
@@ -363,7 +368,7 @@ const Dashboard = () => {
                   <p>Need $80 more to unlock Batch #15</p>
                 </div> */}
                 <a
-                  href="#batches"
+                  href="/batch-queue"
                   className="text-[13px] font-semibold text-[#78555E] hover:underline"
                 >
                   View All Batches
@@ -631,7 +636,10 @@ const Dashboard = () => {
 
               <span>Export</span>
             </button>
-            <button className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-4 py-2 rounded-xl text-[13px] transition duration-200 cursor-pointer">
+            <button
+              onClick={() => navigate("/orders")}
+              className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-4 py-2 rounded-xl text-[13px] transition duration-200 cursor-pointer"
+            >
               See All
             </button>
           </div>
@@ -649,7 +657,7 @@ const Dashboard = () => {
                 <th className="px-4 py-4">Weight</th>
                 <th className="px-4 py-4">Coupon Bucket</th>
                 <th className="px-4 py-4 text-right">Price</th>
-                <th className="px-4 py-4 text-center">Action</th>
+                {/* <th className="px-4 py-4 text-center">Action</th> */}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F4F4F6] font-bold">
@@ -745,11 +753,11 @@ const Dashboard = () => {
                   </td>
 
                   {/* Actions column */}
-                  <td className="px-4 py-4 text-center">
+                  {/* <td className="px-4 py-4 text-center">
                     <button className="p-1 rounded hover:bg-slate-100 text-[#8C959F] hover:text-[#17222B] transition">
                       <img src={dotmenu} alt="Options" className="h-5 w-5" />
                     </button>
-                  </td>
+                  </td> */}
                 </tr>
               ))}
             </tbody>
@@ -799,13 +807,13 @@ const Dashboard = () => {
         </div>
 
         {/* Floating Action Button inside table container */}
-        <div className="absolute right-6 bottom-16">
+        {/* <div className="absolute right-6 bottom-16">
           <button className="h-12 w-12 bg-[#704154] hover:bg-[#593342] text-white rounded-full flex items-center justify-center shadow-lg transition duration-200 transform hover:-translate-y-0.5">
-            {/* Commented out img for FAB icon */}
-            {/* <img src="fab_plus.svg" alt="Add" className="h-5 w-5" /> */}
+            Commented out img for FAB icon
+            <img src="fab_plus.svg" alt="Add" className="h-5 w-5" />
             <span className="text-xl font-bold">+</span>
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -140,12 +140,22 @@ function Field({
   name,
   required,
   rightIcon,
+  error,
   shellClassName = "h-[43px]",
 }) {
+  const [show, setShow] = useState(false);
+  const isPassword = type === "password";
   return (
     <label className="block">
-      <span className="text-xs font-bold text-[#4f4446]">{label}</span>
-      <span className={`${inputBase} ${shellClassName}`}>
+      <span className="text-xs font-bold text-[#4f4446]">
+        {label}
+        {required && <span className="text-[#e02954]"> *</span>}
+      </span>
+      <span
+        className={`${inputBase} ${shellClassName} ${
+          error ? "!border-[#e02954]" : ""
+        }`}
+      >
         {icon && (
           <Icon name={icon} className="h-5 w-5 shrink-0 text-[#5f6872]" />
         )}
@@ -153,14 +163,31 @@ function Field({
           name={name}
           required={required}
           className="min-w-0 flex-1 border-0 bg-transparent text-[15px] outline-none placeholder:text-[#98a2ab]"
-          type={type}
+          type={isPassword && show ? "text" : type}
           placeholder={placeholder}
           defaultValue={value}
         />
-        {rightIcon && (
-          <Icon name={rightIcon} className="h-5 w-5 shrink-0 text-[#6c737d]" />
+        {isPassword ? (
+          <button
+            type="button"
+            onClick={() => setShow(!show)}
+            className="text-[#6c737d] hover:text-[#ff5f96]"
+            aria-label={show ? "Hide password" : "Show password"}
+          >
+            <Icon name="eye" className="h-5 w-5 shrink-0" />
+          </button>
+        ) : (
+          rightIcon && (
+            <Icon
+              name={rightIcon}
+              className="h-5 w-5 shrink-0 text-[#6c737d]"
+            />
+          )
         )}
       </span>
+      {error && (
+        <span className="mt-1 block text-xs text-[#e02954]">{error}</span>
+      )}
     </label>
   );
 }
@@ -191,6 +218,7 @@ function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -198,6 +226,14 @@ function LoginScreen() {
     const email = formData.get("email");
     const password = formData.get("password");
     const rememberMe = formData.get("rememberMe") === "on";
+
+    const errors = {};
+    if (!email?.trim()) errors.email = "Email address is required.";
+    else if (!/^\S+@\S+\.\S+$/.test(email))
+      errors.email = "Enter a valid email address (e.g. agent@shiplink.com).";
+    if (!password) errors.password = "Password is required.";
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) return;
 
     setLoading(true);
     setError(null);
@@ -211,7 +247,15 @@ function LoginScreen() {
         },
       );
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Login failed");
+      if (!response.ok) {
+        if (Array.isArray(result.errors) && result.errors.length) {
+          setFieldErrors(
+            Object.fromEntries(result.errors.map((e) => [e.field, e.message])),
+          );
+          return;
+        }
+        throw new Error(result.message || "Login failed");
+      }
 
       if (result.token) {
         if (rememberMe) {
@@ -243,31 +287,29 @@ function LoginScreen() {
             Please enter your agent credentials to continue.
           </p>
 
-          <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+          <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
             <ErrorAlert message={error} />
             <Field
               label="Email Address"
-              div
               name="email"
               required
               icon="mail"
-              placeholder="agent@shiplink.com"
+              placeholder="agent@example.com"
               shellClassName="h-[38px]"
+              error={fieldErrors.email}
             />
 
             <label className="block">
               <span className="mb-1 flex items-center justify-between">
                 <span className="text-[13px] font-bold text-[#4f4446]">
-                  Password
+                  Password<span className="text-[#e02954]"> *</span>
                 </span>
-                <Link
-                  to="/forgot-password"
-                  className="text-[13px] font-semibold text-[#78555e] hover:text-[#ff5f96]"
-                >
-                  Forgot Password?
-                </Link>
               </span>
-              <span className={`${inputBase} h-[38px]`}>
+              <span
+                className={`${inputBase} h-[38px] ${
+                  fieldErrors.password ? "!border-[#e02954]" : ""
+                }`}
+              >
                 <Icon name="lock" className="h-4 w-4 shrink-0 text-[#6c737d]" />
                 <input
                   name="password"
@@ -287,15 +329,30 @@ function LoginScreen() {
                   />
                 </button>
               </span>
+              {fieldErrors.password && (
+                <span className="mt-1 block text-xs text-[#e02954]">
+                  {fieldErrors.password}
+                </span>
+              )}
             </label>
 
-            <label className="flex items-center gap-2 text-xs text-[#4f4446]">
-              <input
-                name="rememberMe"
-                className="h-3 w-3 accent-[#ff5f96]"
-                type="checkbox"
-              />
-              Stay logged in for 30 days
+            <label className="flex items-center justify-between text-xs text-[#4f4446] block">
+              <div className="flex items-center gap-1">
+                <input
+                  name="rememberMe"
+                  className="h-3 w-3 accent-[#ff5f96]"
+                  type="checkbox"
+                />
+                Stay logged in for 30 days
+              </div>
+              <div>
+                <Link
+                  to="/forgot-password"
+                  className="text-[13px] font-semibold text-[#78555e] hover:text-[#ff5f96]"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
             </label>
 
             <PrimaryButton className="h-[38px] text-sm cursor-pointer">
@@ -485,19 +542,69 @@ function ResetScreen() {
   );
 }
 
+const countryCodes = [
+  ["1", "US / Canada"],
+  ["61", "Australia"],
+  ["971", "UAE"],
+  ["966", "Saudi Arabia"],
+  ["974", "Qatar"],
+  ["965", "Kuwait"],
+  ["973", "Bahrain"],
+  ["968", "Oman"],
+  ["962", "Jordan"],
+  ["961", "Lebanon"],
+  ["91", "India"],
+  ["44", "UK"],
+];
+
+function validateRegister({ name, email, countryCode, phone, password }) {
+  const errors = {};
+  if (!name?.trim()) errors.name = "Full name is required.";
+  if (!email?.trim()) errors.email = "Email address is required.";
+  else if (!/^\S+@\S+\.\S+$/.test(email))
+    errors.email = "Enter a valid email address (e.g. agent@shiplink.com).";
+  if (!countryCode) errors.countryCode = "Select a country code.";
+  if (!phone?.trim()) errors.phone = "Phone number is required.";
+  else if (!/^\d{6,15}$/.test(phone.trim()))
+    errors.phone = "Enter digits only (6-15 digits).";
+  if (!password) errors.password = "Password is required.";
+  else {
+    const missing = [];
+    if (password.length < 8) missing.push("at least 8 characters");
+    if (!/[a-zA-Z]/.test(password)) missing.push("a letter");
+    if (!/\d/.test(password)) missing.push("a number");
+    if (!/[^a-zA-Z0-9]/.test(password)) missing.push("a special symbol");
+    if (missing.length)
+      errors.password = `Password must contain ${missing.join(", ")}.`;
+  }
+  return errors;
+}
+
 function RegisterScreen() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [code, setCode] = useState("");
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const name = formData.get("name");
     const email = formData.get("email");
-    const countryCode = formData.get("countryCode");
+    const countryCode = formData.get("countryCode")?.trim().replace(/^\+/, "");
     const phone = formData.get("phone");
     const password = formData.get("password");
+
+    const errors = validateRegister({
+      name,
+      email,
+      countryCode,
+      phone,
+      password,
+    });
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) return;
 
     setLoading(true);
     setError(null);
@@ -511,8 +618,15 @@ function RegisterScreen() {
         },
       );
       const result = await response.json();
-      if (!response.ok)
+      if (!response.ok) {
+        if (Array.isArray(result.errors) && result.errors.length) {
+          setFieldErrors(
+            Object.fromEntries(result.errors.map((e) => [e.field, e.message])),
+          );
+          return;
+        }
         throw new Error(result.message || "Registration failed");
+      }
 
       if (result.token) {
         localStorage.setItem("token", result.token);
@@ -534,10 +648,10 @@ function RegisterScreen() {
           Create Agent Account
         </h1>
         <p className="mx-auto mt-2 max-w-[420px] text-[18px] leading-6 text-[#626973]">
-          Join our logistics network as a verified proxy shopping agent.
+          Join our logistics network as a verified Shein shopping agent.
         </p>
       </div>
-      <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+      <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
         <ErrorAlert message={error} />
         <Field
           label="Full Name"
@@ -545,22 +659,58 @@ function RegisterScreen() {
           required
           icon="user"
           placeholder="Enter your full legal name"
+          error={fieldErrors.name}
         />
         <Field
           label="Work Email Address"
           name="email"
           required
           icon="mail"
-          placeholder="agent@shiplink.com"
+          placeholder="agent@example.com"
+          error={fieldErrors.email}
         />
         <div className="flex gap-2">
           <div className="w-1/3">
-            <Field
-              label="Code"
-              name="countryCode"
-              placeholder="+961"
-              required
-            />
+            <label className="block">
+              <span className="text-xs font-bold text-[#4f4446]">
+                Code<span className="text-[#e02954]"> *</span>
+              </span>
+              <span
+                className={`${inputBase} relative h-[43px] ${
+                  fieldErrors.countryCode ? "!border-[#e02954]" : ""
+                }`}
+              >
+                {/* selected value shown here; select's own text is transparent so the closed field shows only the code */}
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[15px]">
+                  {code ? (
+                    `+${code}`
+                  ) : (
+                    <span className="text-[#98a2ab]">Select</span>
+                  )}
+                </span>
+                <select
+                  name="countryCode"
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="min-w-0 flex-1 border-0 bg-transparent text-[15px] text-transparent outline-none [&>option]:text-[#26333d]"
+                >
+                  <option value="" disabled>
+                    Select
+                  </option>
+                  {countryCodes.map(([c, country]) => (
+                    <option key={c} value={c}>
+                      +{c} {country}
+                    </option>
+                  ))}
+                </select>
+              </span>
+              {fieldErrors.countryCode && (
+                <span className="mt-1 block text-xs text-[#e02954]">
+                  {fieldErrors.countryCode}
+                </span>
+              )}
+            </label>
           </div>
           <div className="w-2/3">
             <Field
@@ -568,7 +718,8 @@ function RegisterScreen() {
               name="phone"
               required
               icon="phone"
-              placeholder="9898012345"
+              placeholder="4560 123 456"
+              error={fieldErrors.phone}
             />
           </div>
         </div>
@@ -579,6 +730,7 @@ function RegisterScreen() {
           required
           icon="lock"
           placeholder="••••••••"
+          error={fieldErrors.password}
         />
         <div className="flex gap-3 rounded bg-[#eef7ff] px-5 py-5 text-[12px] font-semibold leading-5 text-[#4e5963]">
           <Icon

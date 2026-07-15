@@ -293,6 +293,17 @@ const OrderManagement = () => {
       setStatusUpdating(false);
     }
   };
+  const handleRejectClick = () => {
+    if (statusUpdating) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to reject the order?\n\nThe order will be removed from the list.",
+    );
+
+    if (confirmed) {
+      handleUpdateOrderStatus("REJECTED");
+    }
+  };
 
   const getStatusClass = (s) => {
     switch (s) {
@@ -1037,7 +1048,7 @@ const OrderManagement = () => {
 
                         <div
                           className="flex items-center justify-center gap-1 flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50"
-                          onClick={() => handleUpdateOrderStatus("REJECTED")}
+                          onClick={handleRejectClick}
                           disabled={statusUpdating}
                         >
                           <img src={reject} alt="reject icon" />
