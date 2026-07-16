@@ -18,6 +18,7 @@ import {
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const ORDERS_API_URL = `${API_BASE_URL}/api/orders`;
 const ORDER_DETAIL_API_URL = `${API_BASE_URL}/api/orders`;
+const SETTINGS_API_URL = `${API_BASE_URL}/api/settings`;
 
 // photoUrl is a full CDN URL for SHEIN products, a relative path for uploads
 const imageUrl = (p) =>
@@ -133,10 +134,37 @@ const OrderManagement = () => {
   const [statusError, setStatusError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
+  // Pricing settings (price per kg + discount tiers) loaded once from the API
+  const [settings, setSettings] = useState({
+    pricePerKg: 0,
+    discountRules: [],
+  });
+  const [estimatedWeight, setEstimatedWeight] = useState("");
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+    fetch(SETTINGS_API_URL, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then(({ data }) =>
+        setSettings({
+          pricePerKg: Number(data?.pricePerKg) || 0,
+          discountRules: data?.discountRules || [],
+        }),
+      )
+      .catch((err) => console.error("Failed to load settings:", err));
+  }, []);
+
   const handleViewOrder = async (id, { moderate = false } = {}) => {
     if (!id) return;
     setSelectedOrderId(id);
     setSelectedOrder(null);
+    setEstimatedWeight("");
     setCanModerate(moderate);
     setStatusError(null);
     setDetailLoading(true);
@@ -157,7 +185,24 @@ const OrderManagement = () => {
       if (!response.ok)
         throw new Error(result.message || "Failed to fetch order details");
 
-      setSelectedOrder(result.data || result);
+      const order = result.data || result;
+      setSelectedOrder(order);
+      if (order?.totalWeight != null && parseFloat(order.totalWeight) > 0) {
+        setEstimatedWeight(String(order.totalWeight));
+      } else if (
+        order?.estimatedWeight != null &&
+        parseFloat(order.estimatedWeight) > 0
+      ) {
+        setEstimatedWeight(String(order.estimatedWeight));
+      } else {
+        const items = order.items || [];
+        const totalW = items.reduce(
+          (sum, item) =>
+            sum + (parseFloat(item.weight) || 0) * (Number(item.quantity) || 1),
+          0,
+        );
+        setEstimatedWeight(String(totalW));
+      }
     } catch (err) {
       setDetailError(err.message);
     } finally {
@@ -252,6 +297,10 @@ const OrderManagement = () => {
 
   const handleUpdateOrderStatus = async (newStatus) => {
     if (!selectedOrderId) return;
+    if (newStatus === "APPROVED" && !(parseFloat(estimatedWeight) > 0)) {
+      setStatusError("Please enter the estimated weight before approving.");
+      return;
+    }
     setStatusUpdating(true);
     setStatusError(null);
     try {
@@ -270,7 +319,12 @@ const OrderManagement = () => {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({
+            status: newStatus,
+            ...(newStatus === "APPROVED"
+              ? { estimatedWeight: parseFloat(estimatedWeight) }
+              : {}),
+          }),
         },
       );
 
@@ -279,7 +333,15 @@ const OrderManagement = () => {
         throw new Error(result.message || "Failed to update order status");
 
       setSelectedOrder((prev) =>
-        prev ? { ...prev, status: newStatus } : prev,
+        prev
+          ? {
+              ...prev,
+              status: newStatus,
+              ...(newStatus === "APPROVED"
+                ? { totalWeight: parseFloat(estimatedWeight) }
+                : {}),
+            }
+          : prev,
       );
       setSuccessMessage(
         newStatus === "APPROVED"
@@ -304,6 +366,53 @@ const OrderManagement = () => {
       handleUpdateOrderStatus("REJECTED");
     }
   };
+
+  // Order summary pricing: shipping from weight × pricePerKg, discount from matched rule
+  const weightKg = parseFloat(estimatedWeight) || 0;
+
+  const itemSubtotal =
+    (selectedOrder?.items || []).reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+      0,
+    ) ||
+    Number(selectedOrder?.itemSubtotal) ||
+    0;
+
+  const shippingCost = canModerate
+    ? weightKg * settings.pricePerKg
+    : Number(selectedOrder?.shippingFee) ||
+      Number(selectedOrder?.shippingCost) ||
+      Number(selectedOrder?.shipping) ||
+      weightKg * settings.pricePerKg;
+
+  const baseAmount = canModerate
+    ? itemSubtotal + shippingCost
+    : Number(selectedOrder?.baseAmount) || itemSubtotal + shippingCost;
+
+  // Highest tier whose minimum is reached — spending past the top tier's max
+  // still earns that tier's discount
+  const matchedRule = settings.discountRules
+    .filter((r) => baseAmount >= Number(r.minOrderAmount))
+    .sort((a, b) => Number(b.minOrderAmount) - Number(a.minOrderAmount))[0];
+
+  const discountRate = canModerate
+    ? Number(matchedRule?.discountRate) || 0
+    : Number(selectedOrder?.discountPercentage) ||
+      Number(selectedOrder?.discountRate) ||
+      Number(matchedRule?.discountRate) ||
+      0;
+
+  const discountAmount = canModerate
+    ? (baseAmount * discountRate) / 100
+    : Number(selectedOrder?.discountAmount) ||
+      (baseAmount * discountRate) / 100;
+
+  const totalAmount = canModerate
+    ? baseAmount - discountAmount
+    : Number(selectedOrder?.grandTotal) ||
+      Number(selectedOrder?.totalAmount) ||
+      Number(selectedOrder?.total) ||
+      baseAmount - discountAmount;
 
   const getStatusClass = (s) => {
     switch (s) {
@@ -935,7 +1044,7 @@ const OrderManagement = () => {
                                 SKU: {item.skuCode}
                               </p>
 
-                              <div className="flex gap-4 text-[#5C5F60] text-xs font-normal">
+                              <div className="flex gap-4 text-[#5C5F60] text-xs font-normal flex-wrap">
                                 <span>Size: {item.size}</span>
                                 <span>Color: {item.color}</span>
                               </div>
@@ -995,39 +1104,98 @@ const OrderManagement = () => {
                   </div>
                 </div>
 
-                {/* retail price */}
+                {/* Order Summary */}
                 <div className="border-t border-[#E5D6D8]">
                   <div className="p-6">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-base font-bold text-[#141D23]">
-                        Item Subtotal
-                      </h3>
+                    {/* Estimated Weight */}
+                    <span className="text-[10px] font-bold text-[#98A2AB] uppercase tracking-wider block mb-2">
+                      Total Estimated Weight
+                    </span>
+                    <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
                       <span className="text-base font-bold text-[#141D23]">
-                        ${Number(selectedOrder.itemSubtotal).toFixed(2)}
+                        Estimated Weight
                       </span>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-5">
-                      <span className="text-[#5C5F60] text-base">
-                        Service Fee
-                      </span>
-                      <span className="text-[#141D23] text-base">
-                        ${Number(selectedOrder.serviceFee).toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="border-t border-[#E5E7EB] mt-5 pt-5">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-xl font-bold text-[#141D23]">
-                            Grand Total
-                          </h3>
-                        </div>
-
-                        <span className="text-xl font-bold text-[#78555E] leading-none">
-                          ${Number(selectedOrder.grandTotal).toFixed(2)}
+                      <div className="flex items-center gap-1.5">
+                        {canModerate ? (
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={estimatedWeight}
+                            onChange={(e) => setEstimatedWeight(e.target.value)}
+                            placeholder="0"
+                            className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base font-bold text-[#78555E] outline-none"
+                          />
+                        ) : (
+                          <span className="text-base font-bold text-[#78555E]">
+                            {weightKg}
+                          </span>
+                        )}
+                        <span className="text-base font-bold text-[#78555E]">
+                          KG
                         </span>
                       </div>
+                    </div>
+
+                    <h3 className="text-base font-bold text-[#141D23] mb-4">
+                      Order Summary
+                    </h3>
+
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#5C5F60]">Item Subtotal</span>
+                        <span className="text-[#141D23] font-semibold">
+                          ${itemSubtotal.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#5C5F60]">Weight</span>
+                        <span className="text-[#141D23] font-semibold">
+                          {weightKg} KG
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#5C5F60]">Price Per Kg</span>
+                        <span className="text-[#141D23] font-semibold">
+                          ${settings.pricePerKg.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#5C5F60]">Shipping</span>
+                        <span className="text-[#141D23] font-semibold">
+                          ${shippingCost.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="border-t border-[#E5E7EB] pt-3 flex justify-between items-center">
+                        <span className="text-[#141D23] font-bold">
+                          Base Amount
+                        </span>
+                        <span className="text-[#141D23] font-bold">
+                          ${baseAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#5C5F60]">Discount Applied</span>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#FFE8EF] text-[#D24D77]">
+                          {discountRate}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#5C5F60]">Discount Amount</span>
+                        <span className="text-red-600 font-semibold">
+                          -${discountAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-4">
+                      <span className="text-lg font-bold text-[#141D23]">
+                        Total Amount
+                      </span>
+                      <span className="text-xl font-bold text-green-600">
+                        ${totalAmount.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                   {/* Footer Buttons */}

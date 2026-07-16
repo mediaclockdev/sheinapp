@@ -14,8 +14,8 @@ import {
   TrackingView,
   CustomersView,
   ReportsView,
-  SettingsView,
 } from "../views/PlaceholderViews";
+import Settings from "../views/Settings";
 import BatchQueue from "../views/BatchQueue";
 import NewOrders from "../views/NewOrders";
 
@@ -68,7 +68,7 @@ function AppRoutes() {
         <Route path="tracking" element={<TrackingView />} />
         <Route path="customers" element={<CustomersView />} />
         <Route path="reports" element={<ReportsView />} />
-        <Route path="settings" element={<SettingsView />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       {/* Fallback Catch-all -> redirects to dashboard */}

@@ -121,16 +121,16 @@ const Sidebar = ({ isOpen, onClose }) => {
           </nav>
 
           {/* Order Journey Card */}
-          {pathname.startsWith("/orders") && (
+          {/* {pathname.startsWith("/orders") && (
             <div className="bg-[#EEF4FB]/30 border border-[#D3C3C5]/50 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)] mt-2 mb-2">
               <span className="text-[10px] font-bold text-[#8A6A72] uppercase tracking-wider block mb-3">
                 Order Journey
               </span>
               <div className="relative pl-7 space-y-4">
-                {/* Vertical timeline line */}
+            
                 <div className="absolute left-[9px] top-2 bottom-2 w-[1.5px] bg-[#D3C3C5]" />
 
-                {/* Step 1 */}
+      
                 <div className="relative flex flex-col justify-center min-h-5">
                   <div className="absolute -left-7 top-0 flex items-center justify-center w-5 h-5 rounded-full bg-[#78555E] text-white text-[10px] font-bold">
                     ✓
@@ -145,7 +145,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                {/* Step 2 */}
+
                 <div className="relative flex flex-col justify-center min-h-5">
                   <div className="absolute -left-7 top-0 flex items-center justify-center w-5 h-5 rounded-full bg-[#78555E] text-white text-[10px] font-bold">
                     ✓
@@ -160,7 +160,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                {/* Step 3 */}
+
                 <div className="relative flex flex-col justify-center min-h-5">
                   <div className="absolute -left-7 top-0.5 flex items-center justify-center w-5 h-5 rounded-full border-[1.5px] border-[#78555E] bg-[#EEF4FB]/50">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#78555E]" />
@@ -176,7 +176,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Bottom Section */}
@@ -193,13 +193,13 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button> */}
 
           {/* Help Center Item */}
-          <a
+          {/* <a
             href="#help"
             className="flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B] transition duration-200"
           >
             <img src={helpicon} alt="Help" className="h-4 w-4" />
             <p>Help Center</p>
-          </a>
+          </a> */}
 
           {/* Logout Button */}
           <button
