@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import logo2 from "../../assets/logo2.svg";
-import tick from "../../assets/tickicon.svg";
+
 import dashboardicon from "../../assets/dashboardicon.svg";
 import ordericon from "../../assets/ordericon.svg";
 import paymentsicon from "../../assets/paymentsicon.svg";
@@ -9,7 +9,7 @@ import trackingicon from "../../assets/trackingicon.svg";
 import customericon from "../../assets/customersicon.svg";
 import reportsicon from "../../assets/reportsicon.svg";
 import settingsicon from "../../assets/settingsicon.svg";
-import helpicon from "../../assets/helpicon.svg";
+import { LogOut } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { pathname } = useLocation();
@@ -54,7 +54,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               <img
                 src={logo2}
                 alt="Shelynx Logo"
-                className="h-32 w-32 object-cover"
+                className="h-full w-full object-cover"
               />
             </div>
             <p className="text-[13px] font-semibold text-[#5C5F60] mt-3.5">
@@ -67,29 +67,6 @@ const Sidebar = ({ isOpen, onClose }) => {
             >
               <span className="text-lg font-bold">✕</span>
             </button>
-          </div>
-
-          {/* Trust Score Card */}
-          <div className="bg-[#FFD1DC]/10 rounded-xl border border-[#FFD1DC]/50 p-3 shadow-[0_4px_16px_rgba(255,95,150,0.02)]">
-            <span className="text-[10px] font-bold text-[#98A2AB] uppercase tracking-wider block">
-              Trust Score
-            </span>
-            <div className="flex items-center gap-1.5 mt-1">
-              {/* Commented out img for star icon */}
-              {/* <img src="star.svg" alt="Star" className="h-4 w-4" /> */}
-              <span className="text-yellow-400 text-sm">★</span>
-              <span className="text-base  font-extrabold text-[#141D23]">
-                4.9
-              </span>
-              <span className="text-xs text-[#5C5F60]/60">(128 reviews)</span>
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <img src={tick} alt="Verified" className="h-3 w-3" />
-
-              <p className="text-[#78555E] font-bold text-[10px]">
-                TOP RATED AGENT
-              </p>
-            </div>
           </div>
 
           {/* Menu Items */}
@@ -202,9 +179,9 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#D24D77] hover:bg-[#FFE8EF] transition duration-200"
+            className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#D24D77] border hover:bg-[#FFE8EF] transition duration-200"
           >
-            <span className="flex h-4 w-4 items-center justify-center font-black"></span>
+            <LogOut size={20} />
             <span>Logout</span>
           </button>
         </div>

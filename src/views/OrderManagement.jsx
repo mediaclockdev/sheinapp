@@ -68,6 +68,7 @@ const mapOrder = (order) => {
               0,
           ) || 0,
     status: (order.status || "SUBMITTED").toUpperCase(),
+    date: order.createdAt || order.orderDate || order.date || null,
     raw: order,
   };
 };
@@ -76,6 +77,17 @@ const fmtDate = (d) =>
   d
     ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
     : null;
+
+const fmtDisplayDate = (value) => {
+  const d = value ? new Date(value) : null;
+  return d && !isNaN(d)
+    ? d.toLocaleDateString("en-AU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+};
 
 const OrderManagement = () => {
   const [status, setStatus] = useState("All");
@@ -388,21 +400,23 @@ const OrderManagement = () => {
           : "Order rejected successfully!",
       );
       fetchOrders();
+      return true;
     } catch (err) {
       setStatusError(err.message);
+      return false;
     } finally {
       setStatusUpdating(false);
     }
   };
-  const handleRejectClick = () => {
+  const handleRejectClick = async () => {
     if (statusUpdating) return;
 
     const confirmed = window.confirm(
       "Are you sure you want to reject the order?",
     );
 
-    if (confirmed) {
-      handleUpdateOrderStatus("REJECTED");
+    if (confirmed && (await handleUpdateOrderStatus("REJECTED"))) {
+      closeOrderDetails();
     }
   };
 
@@ -532,6 +546,15 @@ const OrderManagement = () => {
         ),
       },
       {
+        accessorKey: "date",
+        header: "DATE",
+        cell: ({ getValue }) => (
+          <span className="text-sm text-[#444]">
+            {fmtDisplayDate(getValue())}
+          </span>
+        ),
+      },
+      {
         id: "actions",
         header: "ACTIONS",
         cell: ({ row }) => (
@@ -619,7 +642,11 @@ const OrderManagement = () => {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="h-11 w-full sm:w-auto px-4  bg-[#ECF5FE] rounded-md border border-black/20 cursor-pointer  outline-none text-[#141D23] text-base font-normal min-w-[120px]"
+                className="h-11 w-full sm:w-auto pl-4 pr-10 bg-[#ECF5FE] rounded-md border border-black/20 cursor-pointer outline-none text-[#141D23] text-base font-normal min-w-[120px] appearance-none bg-no-repeat bg-[right_0.75rem_center]"
+                style={{
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235C5F60' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+                }}
               >
                 <option>All</option>
                 <option>Approved</option>
@@ -833,6 +860,11 @@ const OrderManagement = () => {
                     {row.original.items} items
                   </span>
                 </div>
+
+                {/* Date */}
+                <p className="text-[11px] text-[#5C5F60]">
+                  {fmtDisplayDate(row.original.date)}
+                </p>
 
                 {/* Actions */}
                 <div className="flex justify-end gap-2 pt-1 border-t border-[#ECECEC]/50">
@@ -1177,23 +1209,28 @@ const OrderManagement = () => {
                         <p className="text-sm text-red-600">{statusError}</p>
                       )}
                       <div className="flex gap-4">
-                        <div
-                          className="flex items-center gap-1 justify-center flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50"
-                          onClick={() => handleUpdateOrderStatus("APPROVED")}
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 justify-center flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={async () => {
+                            if (await handleUpdateOrderStatus("APPROVED"))
+                              closeOrderDetails();
+                          }}
                           disabled={statusUpdating}
                         >
-                          <img src={approve} alt="approve icon" />
-                          <p>Approve</p>
-                        </div>
+                          <img src={approve} alt="" />
+                          <span>Approve</span>
+                        </button>
 
-                        <div
-                          className="flex items-center justify-center gap-1 flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50"
+                        <button
+                          type="button"
+                          className="flex items-center justify-center gap-1 flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={handleRejectClick}
                           disabled={statusUpdating}
                         >
-                          <img src={reject} alt="reject icon" />
-                          <p>Reject</p>
-                        </div>
+                          <img src={reject} alt="" />
+                          <span>Reject</span>
+                        </button>
                       </div>
                     </div>
                   )}

@@ -281,7 +281,7 @@ function LoginScreen() {
     <div className="max-w-screen-2xl mx-auto px-5 pt-4 pb-3">
       <div className="w-full max-w-[500px] rounded-md border border-[#78555e]/20 bg-white/95 shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
         <div className="px-8 pb-4 pt-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-[#17222b]">
+          <h1 className="text-2xl font-semibold tracking-tight text-[#17222b] text-center">
             Welcome Back
           </h1>
           <p className="mt-1 text-sm text-[#5c5f60]">
@@ -395,7 +395,7 @@ function ForgotScreen() {
           <Field
             label="Email Address"
             icon="mail"
-            placeholder="agent@shiplink.com"
+            placeholder="agent@example.com"
             shellClassName="h-[58px]"
           />
           <PrimaryButton arrow className="h-[62px] text-[16px]">
