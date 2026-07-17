@@ -1,8 +1,22 @@
 import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 
+const PAGE_TITLES = {
+  "/dashboard": "Dashboard",
+  "/orders": "Order Management",
+  "/neworders": "New Orders",
+  "/payments": "Payments",
+  "/batch-queue": "Batch Queue",
+  "/tracking": "Tracking",
+  "/customers": "Customers",
+  "/reports": "Reports",
+  "/settings": "Settings",
+};
+
 const DashboardLayout = () => {
+  const { pathname } = useLocation();
+  const title = PAGE_TITLES[pathname] || "Dashboard";
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -47,18 +61,12 @@ const DashboardLayout = () => {
             <span className="text-xl">☰</span>
           </button>
 
-          {/* Search Bar */}
-          <div className="flex items-center gap-3 bg-[#F4F7FB] border border-[#DCDFE6] rounded-xl px-4 py-2 w-full max-w-[720px] focus-within:border-[#ff5f96] focus-within:ring-2 focus-within:ring-pink-100 transition duration-200">
-            {/* Commented out img for search icon */}
-            {/* <img src="search.svg" alt="Search" className="h-4 w-4 text-[#8C959F]" /> */}
-            <span className="text-gray-400 text-sm">🔍</span>
-            <input
-              type="text"
-              placeholder="Search orders, customers, or batches..."
-              className="bg-transparent text-sm text-[#17222B] placeholder-[#98A2AB] outline-none w-full"
-            />
+          {/* Page Title (replaces search bar) */}
+          <div className="min-w-0">
+            <h1 className="text-2xl lg:text-[32px] font-bold text-[#17222B] tracking-tight">
+              {title}
+            </h1>
           </div>
-
           {/* User profile & Notifications */}
           <div className="flex items-center gap-3 lg:gap-6">
             {/* Notification Bell */}

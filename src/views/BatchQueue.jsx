@@ -17,9 +17,9 @@ const mapApprovedOrder = (order) => ({
   id: order.id,
   displayId: order.orderId || order.id,
   user: order.customerName || order.customer?.fullName || "Unknown",
-  items: Number(
-    order._count?.items ?? order.itemsCount ?? order.itemCount ?? 0,
-  ) || countOrderItems(order),
+  items:
+    Number(order._count?.items ?? order.itemsCount ?? order.itemCount ?? 0) ||
+    countOrderItems(order),
   value: Number(order.grandTotal ?? order.value ?? 0),
 });
 
@@ -501,17 +501,17 @@ export default function BatchQueue() {
       />
       {/* Header */}
       <div className="space-y-1">
-        <div className="flex items-center gap-4">
+        {/* <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold text-[#7A4E5B] tracking-tight">
             Batch Queue
           </h1>
-        </div>
+        </div> */}
         <div className="flex items-center gap-3">
-          <p className="text-[#5C5F60] text-sm">
+          <p className="text-[#5C5F60] text-xl">
             Smart grouping active based on discount thresholds.
           </p>
-          <span className="flex items-center gap-1 text-xs font-semibold text-[#A25F6E] bg-[#FFD1DC]/40 px-2 py-1 rounded-sm border border-[#FFD1DC]">
-            <Info size={12} />
+          <span className="flex items-center gap-1 text-base font-semibold text-[#A25F6E] bg-[#FFD1DC]/40 px-2 py-1 rounded-sm border border-[#FFD1DC]">
+            <Info size={18} />
             Manual overrides enabled
           </span>
         </div>

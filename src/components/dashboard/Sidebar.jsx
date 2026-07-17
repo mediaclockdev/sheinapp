@@ -23,8 +23,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", iconSrc: dashboardicon },
     { name: "Orders", path: "/orders", iconSrc: ordericon },
-    { name: "Payments", path: "/payments", iconSrc: paymentsicon },
     { name: "Batch Queue", path: "/batch-queue", iconSrc: batchqueueicon },
+    { name: "Payments", path: "/payments", iconSrc: paymentsicon },
     { name: "Tracking", path: "/tracking", iconSrc: trackingicon },
     { name: "Customers", path: "/customers", iconSrc: customericon },
     { name: "Reports", path: "/reports", iconSrc: reportsicon },
@@ -49,19 +49,17 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Top Section */}
         <div className="flex flex-col gap-6">
           {/* Logo and Brand Title */}
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="h-32 w-32 overflow-hidden">
-                <img
-                  src={logo2}
-                  alt="Shelynx Logo"
-                  className="h-32 w-32 object-cover"
-                />
-              </div>
-              <p className="text-[13px] font-semibold text-[#5C5F60] mt-3.5">
-                Agent Portal
-              </p>
+          <div>
+            <div className="h-32 w-32 overflow-hidden mt-[-20px]">
+              <img
+                src={logo2}
+                alt="Shelynx Logo"
+                className="h-32 w-32 object-cover"
+              />
             </div>
+            <p className="text-[13px] font-semibold text-[#5C5F60] mt-3.5">
+              Agent Portal
+            </p>
             <button
               onClick={onClose}
               className="lg:hidden p-1.5 rounded-lg hover:bg-slate-200 text-[#5C5F60] transition-colors"

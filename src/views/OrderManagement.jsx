@@ -12,7 +12,6 @@ import {
   useReactTable,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
 } from "@tanstack/react-table";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
@@ -20,7 +19,6 @@ const ORDERS_API_URL = `${API_BASE_URL}/api/orders`;
 const ORDER_DETAIL_API_URL = `${API_BASE_URL}/api/orders`;
 const SETTINGS_API_URL = `${API_BASE_URL}/api/settings`;
 
-// photoUrl is a full CDN URL for SHEIN products, a relative path for uploads
 const imageUrl = (p) =>
   !p ? null : p.startsWith("http") ? p : `${API_BASE_URL}${p}`;
 
@@ -74,21 +72,37 @@ const mapOrder = (order) => {
   };
 };
 
+const fmtDate = (d) =>
+  d
+    ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+    : null;
+
 const OrderManagement = () => {
-  const [status, setStatus] = useState("Submitted");
+  const [status, setStatus] = useState("All");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [rowSelection, setRowSelection] = useState({});
   const today = new Date();
 
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 7);
-
-  const [dateRange, setDateRange] = useState([sevenDaysAgo, today]);
+  const [dateRange, setDateRange] = useState([null, null]);
 
   const [startDate, endDate] = dateRange;
 
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState(null);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 15 });
+  const [totalRows, setTotalRows] = useState(0);
+
+  // Debounce search typing, and reset to page 1 whenever any filter changes
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [search, status, startDate, endDate]);
 
   const fetchOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -97,7 +111,16 @@ const OrderManagement = () => {
       const token =
         localStorage.getItem("token") || sessionStorage.getItem("token");
 
-      const response = await fetch(ORDERS_API_URL, {
+      const params = new URLSearchParams({
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+      });
+      if (search) params.set("search", search);
+      if (status !== "All") params.set("status", status.toUpperCase());
+      if (startDate) params.set("startDate", fmtDate(startDate));
+      if (endDate) params.set("endDate", fmtDate(endDate));
+
+      const response = await fetch(`${ORDERS_API_URL}?${params.toString()}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -113,13 +136,29 @@ const OrderManagement = () => {
       const mapped = Array.isArray(list) ? list.map(mapOrder) : [];
       console.log("Orders fetched:", list, "Mapped:", mapped);
       setOrders(mapped);
+      setTotalRows(
+        Number(
+          result.total ??
+            result.totalCount ??
+            result.pagination?.total ??
+            result.meta?.total ??
+            mapped.length,
+        ),
+      );
     } catch (err) {
       setOrdersError(err.message);
       setOrders([]);
     } finally {
       setOrdersLoading(false);
     }
-  }, []);
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    search,
+    status,
+    startDate,
+    endDate,
+  ]);
 
   useEffect(() => {
     fetchOrders();
@@ -359,7 +398,7 @@ const OrderManagement = () => {
     if (statusUpdating) return;
 
     const confirmed = window.confirm(
-      "Are you sure you want to reject the order?\n\nThe order will be removed from the list.",
+      "Are you sure you want to reject the order?",
     );
 
     if (confirmed) {
@@ -418,8 +457,8 @@ const OrderManagement = () => {
     switch (s) {
       case "WAITING":
         return "bg-[#FEF3C7] text-[#F59E0B]";
-      case "PURCHASED":
-        return "bg-[#DCFCE7] text-[#166534]";
+      case "REJECTED":
+        return "bg-[#FA8072] text-[#420D09]";
       default:
         "APPROVED";
         return "bg-[#DBEAFE] text-[#1E40AF]";
@@ -528,19 +567,17 @@ const OrderManagement = () => {
   const table = useReactTable({
     data: orders,
     columns,
-    state: { rowSelection },
+    state: { rowSelection, pagination },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    manualPagination: true,
+    rowCount: totalRows,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageSize: 15 },
-    },
   });
 
   // Pagination helpers
   const { pageIndex, pageSize } = table.getState().pagination;
-  const totalRows = orders.length;
   const startRow = pageIndex * pageSize + 1;
   const endRow = Math.min((pageIndex + 1) * pageSize, totalRows);
   const pageCount = table.getPageCount();
@@ -555,11 +592,11 @@ const OrderManagement = () => {
       {/* Header Info */}
       <div className="flex flex-col lg:flex-row gap-4 justify-between lg:items-center">
         <div>
-          <h1 className="text-2xl lg:text-[32px] font-bold text-[#17222B] tracking-tight">
+          {/* <h1 className="text-2xl lg:text-[32px] font-bold text-[#17222B] tracking-tight">
             Order Management
-          </h1>
-          <p className="text-sm lg:text-base text-[#5C5F60]/80 mt-1 font-semibold">
-            Review and approve customer link submissions.
+          </h1> */}
+          <p className="text-sm lg:text-xl text-[#5C5F60]/80 mt-1 font-semibold">
+            Review and Approve Customers Order
           </p>
         </div>
         <button className="w-[40%] lg:w-[15%] bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl whitespace-nowrap text-sm lg:text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
@@ -582,12 +619,12 @@ const OrderManagement = () => {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="h-11 w-full sm:w-auto px-4 bg-[#ECF5FE] rounded-md border-none outline-none text-[#141D23] text-base font-normal min-w-[120px]"
+                className="h-11 w-full sm:w-auto px-4  bg-[#ECF5FE] rounded-md border border-black/20 cursor-pointer  outline-none text-[#141D23] text-base font-normal min-w-[120px]"
               >
                 <option>All</option>
                 <option>Approved</option>
                 <option>Waiting</option>
-                <option>Purchased</option>
+                <option>Rejected</option>
               </select>
             </div>
 
@@ -596,24 +633,41 @@ const OrderManagement = () => {
               <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
                 Date Range
               </p>
-              <div className="flex items-center gap-2 bg-[#ECF5FE] px-3 py-1.5 w-full sm:w-[220px] rounded-md">
+              <div className="flex items-center gap-2 border border-black/20 bg-[#ECF5FE] px-3 py-1.5 w-full sm:w-[220px] rounded-md">
                 <Calendar className="text-[#5C5F60] shrink-0" size={18} />
                 <DatePicker
                   selectsRange
                   startDate={startDate}
                   endDate={endDate}
                   onChange={(update) => setDateRange(update)}
+                  maxDate={today}
+                  isClearable
+                  placeholderText="Select date range"
                   dateFormat="MMM d"
                   className="focus:outline-none text-base font-normal bg-transparent w-full"
                 />
               </div>
+            </div>
+
+            {/* Search bar */}
+            <div className="w-full lg:w-[280px]">
+              <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
+                Search
+              </p>
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search by customer or order ID"
+                className="h-11 w-full px-4 bg-[#ECF5FE] rounded-md border border-black/20 outline-none text-[#141D23] text-base font-normal placeholder:text-[#5C5F60]/60"
+              />
             </div>
           </div>
 
           {/* Right Side */}
           <div className="flex items-center gap-4">
             <span className="text-[#5C5F60] font-normal text-base">
-              {orders.length} Orders
+              {totalRows} Orders
             </span>
 
             <button
@@ -635,88 +689,6 @@ const OrderManagement = () => {
 
       {/* main content */}
       <div className="flex flex-col lg:flex-row gap-5 ">
-        {/* ============================================================ OLD
-        HAND-BUILT TABLE (COMMENTED OUT) Replaced with TanStack React Table
-        below for proper pagination, row selection, and scalable data handling.
-        Original code preserved here for reference.
-        ================================================================ */}
-        {/* <div className="bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full lg:w-[60%]">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F3F4F6] border-b border-[#D8D8D8]">
-                <th className="w-12 px-3 py-4">
-                  <input type="checkbox" />
-                </th>
-                <th className="text-left text-xs font-semibold text-[#666] py-4">
-                  ORDER ID
-                </th>
-                <th className="text-left text-xs font-semibold text-[#666] py-4">
-                  CUSTOMER
-                </th>
-                <th className="text-left text-xs font-semibold text-[#666] py-4">
-                  ITEMS
-                </th>
-                <th className="text-left text-xs font-semibold text-[#666] py-4">
-                  STATUS
-                </th>
-                <th className="text-center text-xs font-semibold text-[#666] py-4">
-                  ACTIONS
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order, index) => (
-                <tr
-                  key={order.id}
-                  className="border-b border-[#ECECEC] hover:bg-gray-50"
-                >
-                  <td className="px-3 py-4">
-                    <input
-                      type="checkbox"
-                      defaultChecked={index === 1}
-                      className="accent-[#7A5C69]"
-                    />
-                  </td>
-                  <td className="py-4">
-                    <p className="font-semibold text-[#2D2D2D] leading-5">
-                      {order.id.split("-")[0]}-
-                      <br />
-                      {order.id.split("-")[1]}
-                    </p>
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
-                        {order.initials}
-                      </div>
-                      <span className="text-sm text-[#333]">
-                        {order.customer}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 text-sm text-[#444]">
-                    {order.items} items
-                  </td>
-                  <td className="py-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusClass(
-                        order.status,
-                      )}`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-center">
-                    <button className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center mx-auto hover:bg-[#F9F5F6]">
-                      <Eye size={16} className="text-[#7A5C69]" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div> */}
-
         {/* ── NEW TABLE — TanStack React Table with Pagination ──────── */}
         <div
           className={`bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full flex flex-col transition-all ${
@@ -1155,13 +1127,13 @@ const OrderManagement = () => {
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Price Per Kg</span>
+                        <span className="text-[#5C5F60]">Shipping Rate</span>
                         <span className="text-[#141D23] font-semibold">
-                          ${settings.pricePerKg.toFixed(2)}
+                          ${settings.pricePerKg.toFixed(2)}/Kg
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Shipping</span>
+                        <span className="text-[#5C5F60]">Shipping Cost</span>
                         <span className="text-[#141D23] font-semibold">
                           ${shippingCost.toFixed(2)}
                         </span>
