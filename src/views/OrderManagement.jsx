@@ -507,7 +507,7 @@ const OrderManagement = () => {
           const val = getValue();
           const parts = val.split("-");
           return (
-            <p className="font-semibold text-[#2D2D2D] leading-5">
+            <p className="font-normal  ">
               {parts[0]}-
               <br />
               {parts[1]}
@@ -519,7 +519,7 @@ const OrderManagement = () => {
         accessorKey: "customer",
         header: "CUSTOMER",
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-2">
             <div className="w-7 h-7 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
               {row.original.initials}
             </div>
@@ -734,12 +734,10 @@ const OrderManagement = () => {
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className={`py-4 text-xs font-semibold text-[#666] ${
+                        className={`py-4 text-xs lg:text-sm font-bold text-[#666] ${
                           header.column.id === "select"
                             ? "w-12 px-3"
-                            : header.column.id === "actions"
-                              ? "text-center px-3"
-                              : "text-left"
+                            : "text-center px-3"
                         }`}
                       >
                         {header.isPlaceholder
@@ -788,9 +786,7 @@ const OrderManagement = () => {
                         className={`py-4 ${
                           cell.column.id === "select"
                             ? "px-3"
-                            : cell.column.id === "actions"
-                              ? "text-center"
-                              : ""
+                            : "text-center"
                         }`}
                       >
                         {flexRender(

@@ -62,7 +62,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             </p>
             <button
               onClick={onClose}
-              className="lg:hidden p-1.5 rounded-lg hover:bg-slate-200 text-[#5C5F60] transition-colors"
+              className="lg:hidden absolute top-4 right-4 p-1.5 rounded-lg hover:bg-slate-200 text-[#5C5F60] transition-colors"
               aria-label="Close Sidebar"
             >
               <span className="text-lg font-bold">✕</span>

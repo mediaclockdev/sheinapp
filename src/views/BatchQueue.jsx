@@ -506,8 +506,8 @@ export default function BatchQueue() {
             Batch Queue
           </h1>
         </div> */}
-        <div className="flex items-center gap-3">
-          <p className="text-[#5C5F60] text-xl">
+        <div className="flex flex-col lg:flex-row items-center gap-3">
+          <p className="text-[#5C5F60] text-base lg:text-xl">
             Smart grouping active based on discount thresholds.
           </p>
           <span className="flex items-center gap-1 text-base font-semibold text-[#A25F6E] bg-[#FFD1DC]/40 px-2 py-1 rounded-sm border border-[#FFD1DC]">
