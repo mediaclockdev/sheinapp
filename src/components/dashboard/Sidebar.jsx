@@ -94,6 +94,13 @@ const Sidebar = ({ isOpen, onClose }) => {
               </NavLink>
             ))}
           </nav>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#D24D77] border hover:bg-[#FFE8EF] transition duration-200 cursor-pointer"
+          >
+            <LogOut size={20} />
+            <span>Logout</span>
+          </button>
 
           {/* Order Journey Card */}
           {/* {pathname.startsWith("/orders") && (
@@ -177,13 +184,13 @@ const Sidebar = ({ isOpen, onClose }) => {
           </a> */}
 
           {/* Logout Button */}
-          <button
+          {/* <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#D24D77] border hover:bg-[#FFE8EF] transition duration-200"
           >
             <LogOut size={20} />
             <span>Logout</span>
-          </button>
+          </button> */}
         </div>
       </div>
     </>
