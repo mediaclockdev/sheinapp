@@ -426,7 +426,9 @@ const OrderManagement = () => {
     }
   };
 
-  // Order summary pricing: shipping from weight × pricePerKg, discount from matched rule
+  const orderCustomFee = Number(settings.customfee) || 0;
+  const orderDeliveryFee = Number(settings.deliveryfee) || 0;
+
   const weightKg = parseFloat(estimatedWeight) || 0;
 
   const itemSubtotal =
@@ -437,45 +439,20 @@ const OrderManagement = () => {
     Number(selectedOrder?.itemSubtotal) ||
     0;
 
-  const shippingCost = canModerate
-    ? weightKg * settings.pricePerKg
-    : Number(selectedOrder?.shippingFee) ||
-      Number(selectedOrder?.shippingCost) ||
-      Number(selectedOrder?.shipping) ||
-      weightKg * settings.pricePerKg;
+  const shippingCost = weightKg * settings.pricePerKg;
 
-  const orderCustomFee = Number(settings.customfee) || 0;
-  const orderDeliveryFee = Number(settings.deliveryfee) || 0;
+  const baseAmount =
+    itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee;
 
-  const baseAmount = canModerate
-    ? itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee
-    : Number(selectedOrder?.baseAmount) ||
-      itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee;
-
-  // Highest tier whose minimum is reached — spending past the top tier's max
-  // still earns that tier's discount
   const matchedRule = settings.discountRules
     .filter((r) => baseAmount >= Number(r.minOrderAmount))
     .sort((a, b) => Number(b.minOrderAmount) - Number(a.minOrderAmount))[0];
 
-  const discountRate = canModerate
-    ? Number(matchedRule?.discountRate) || 0
-    : Number(selectedOrder?.discountPercentage) ||
-      Number(selectedOrder?.discountRate) ||
-      Number(matchedRule?.discountRate) ||
-      0;
+  const discountRate = Number(matchedRule?.discountRate) || 0;
 
-  const discountAmount = canModerate
-    ? (baseAmount * discountRate) / 100
-    : Number(selectedOrder?.discountAmount) ||
-      (baseAmount * discountRate) / 100;
+  const discountAmount = (baseAmount * discountRate) / 100;
 
-  const totalAmount = canModerate
-    ? baseAmount - discountAmount
-    : Number(selectedOrder?.grandTotal) ||
-      Number(selectedOrder?.totalAmount) ||
-      Number(selectedOrder?.total) ||
-      baseAmount - discountAmount;
+  const totalAmount = baseAmount - discountAmount;
 
   const getStatusClass = (s) => {
     switch (s) {
@@ -993,9 +970,9 @@ const OrderManagement = () => {
                 handleViewOrder(row.original.raw?.id ?? row.original.id)
               }
               title="View Details"
-              className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6]"
+              className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6] cursor-pointer"
             >
-              <Eye size={16} className="text-[#7A5C69]" />
+              <Eye size={16} className="text-[#7A5C69] " />
             </button>
             <button
               onClick={() =>
@@ -1004,9 +981,9 @@ const OrderManagement = () => {
                 })
               }
               title="Approve / Reject"
-              className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6]"
+              className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6] cursor-pointer"
             >
-              <img src={editicon} alt="edit icon" className="size-3.5" />
+              <img src={editicon} alt="edit icon" className="size-3.5 " />
             </button>
           </div>
         ),
