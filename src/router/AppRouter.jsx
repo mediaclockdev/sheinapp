@@ -30,7 +30,7 @@ function AppRoutes() {
   const authPaths = [
     "/login",
     "/forgot-password",
-    "/verify-otp",
+    // "/verify-otp",
     "/reset-password",
     "/register",
   ];

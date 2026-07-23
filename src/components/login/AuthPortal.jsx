@@ -6,6 +6,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 // import logo2 from "../../assets/logo2.svg";
@@ -14,7 +15,7 @@ const screenMeta = {
   "/login": {
     kicker: "Agent Portal",
     footerNote: "Systems Operational",
-    copyright: "2026 ShipLink Logistics. v2.4.0-release",
+    copyright: "2026 Shelynx Logistics. v2.4.0-release",
     stageClass: "pt-[86px]",
   },
   "/forgot-password": {
@@ -23,7 +24,7 @@ const screenMeta = {
   },
   "/verify-otp": {
     footerNote: "Secure Encryption    Privacy Guaranteed",
-    copyright: "2026 ShipLink Logistics. v2.4.0-release",
+    copyright: "2026 Shelynx Logistics. v2.4.0-release",
     stageClass: "pt-[70px]",
   },
   "/reset-password": {
@@ -55,6 +56,14 @@ function Icon({ name, className = "h-5 w-5" }) {
       <>
         <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
         <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    eyeOff: (
+      <>
+        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+        <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+        <line x1="2" y1="2" x2="22" y2="22" />
       </>
     ),
     user: (
@@ -138,6 +147,7 @@ function Field({
   type = "text",
   placeholder,
   value,
+  onChange,
   name,
   required,
   rightIcon,
@@ -167,6 +177,7 @@ function Field({
           type={isPassword && show ? "text" : type}
           placeholder={placeholder}
           defaultValue={value}
+          onChange={onChange}
         />
         {isPassword ? (
           <button
@@ -175,7 +186,7 @@ function Field({
             className="text-[#6c737d] hover:text-[#ff5f96]"
             aria-label={show ? "Hide password" : "Show password"}
           >
-            <Icon name="eye" className="h-5 w-5 shrink-0" />
+            <Icon name={show ? "eyeOff" : "eye"} className="h-5 w-5 shrink-0" />
           </button>
         ) : (
           rightIcon && (
@@ -231,7 +242,7 @@ function LoginScreen() {
     const errors = {};
     if (!email?.trim()) errors.email = "Email address is required.";
     else if (!/^\S+@\S+\.\S+$/.test(email))
-      errors.email = "Enter a valid email address (e.g. agent@shiplink.com).";
+      errors.email = "Enter a valid email address (e.g. agent@shelynx.com).";
     if (!password) errors.password = "Password is required.";
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
@@ -323,9 +334,10 @@ function LoginScreen() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="text-[#6c737d] hover:text-[#ff5f96]"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   <Icon
-                    name={showPassword ? "eye" : "eye"}
+                    name={showPassword ? "eyeOff" : "eye"}
                     className="h-4 w-4 shrink-0"
                   />
                 </button>
@@ -373,8 +385,43 @@ function LoginScreen() {
 }
 
 function ForgotScreen() {
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  const handleForgotPassword = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    const formData = new FormData(event.target);
+    const email = formData.get("email");
+    if (!email?.trim()) {
+      setError("Email is required.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://shelynx.mediaclocksoft.com.au/api/auth/forgot-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to send reset link");
+      }
+      setSuccess("Password reset link has been sent to your email. Please check your inbox.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <>
       <div className="mb-7 h-1 w-2 rounded-full bg-[#ffc6d8]" />
@@ -383,23 +430,28 @@ function ForgotScreen() {
           Forgot Password?
         </h1>
         <p className="mt-2 text-[14px] text-[#626973]">
-          Enter your email to receive an OTP code.
+          Enter your email to receive a password reset link.
         </p>
-        <form
-          className="mt-7 space-y-6"
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate("/verify-otp");
-          }}
-        >
+        <div className="mt-4">
+          {error && <ErrorAlert message={error} />}
+
+          {success && (
+            <div className="rounded border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {success}
+            </div>
+          )}
+        </div>
+        <form className="mt-7 space-y-6" onSubmit={handleForgotPassword}>
           <Field
             label="Email Address"
+            name="email"
+            required
             icon="mail"
             placeholder="agent@example.com"
             shellClassName="h-[58px]"
           />
           <PrimaryButton arrow className="h-[62px] text-[16px]">
-            Send Code
+            {loading ? "Sending..." : "Send Reset Link"}
           </PrimaryButton>
         </form>
         <div className="mt-9 text-center">
@@ -415,65 +467,142 @@ function ForgotScreen() {
   );
 }
 
-function OtpScreen() {
-  const navigate = useNavigate();
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+// function OtpScreen() {
+//   const navigate = useNavigate();
+//   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
-  const updateOtp = (index, value) => {
-    const next = [...otp];
-    next[index] = value.slice(-1).replace(/\D/g, "");
-    setOtp(next);
-  };
+//   const updateOtp = (index, value) => {
+//     const next = [...otp];
+//     next[index] = value.slice(-1).replace(/\D/g, "");
+//     setOtp(next);
+//   };
 
-  return (
-    <>
-      <div className="w-full max-w-[456px] rounded-lg border border-[#78555e]/20 bg-white/95 px-9 py-10 text-center shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
-        <div className="mx-auto grid h-[70px] w-[70px] place-items-center rounded-xl bg-[#ffc6d8] text-[#7a4e5b]">
-          <Icon name="shield" className="h-8 w-8" />
-        </div>
-        <h1 className="mt-8 text-[36px] font-extrabold tracking-tight text-[#17222b]">
-          Verify OTP
-        </h1>
-        <p className="mt-2 text-[15px] text-[#626973]">Sent to your email</p>
-        <form
-          className="mt-9"
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate("/dashboard");
-          }}
-        >
-          <div className="grid grid-cols-6 gap-3">
-            {otp.map((digit, index) => (
-              <input
-                key={index}
-                className="h-[62px] rounded border border-[#c9cfd6] bg-[#f7fbff] text-center text-2xl font-bold outline-none focus:border-[#ff5f96] focus:ring-2 focus:ring-pink-100"
-                inputMode="numeric"
-                maxLength="1"
-                value={digit}
-                onChange={(event) => updateOtp(index, event.target.value)}
-              />
-            ))}
-          </div>
-          <PrimaryButton className="mt-8 h-[54px] text-[14px]">
-            Verify and Continue
-          </PrimaryButton>
-        </form>
-        <p className="mt-10 text-[13px] text-[#80848a]">
-          Didn't receive the code?
-        </p>
-        <Link
-          to="/forgot-password"
-          className="mt-3 inline-block text-[14px] font-bold text-[#7a4e5b]"
-        >
-          Resend code
-        </Link>
-      </div>
-    </>
-  );
+//   return (
+//     <>
+//       <div className="w-full max-w-[456px] rounded-lg border border-[#78555e]/20 bg-white/95 px-9 py-10 text-center shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
+//         <div className="mx-auto grid h-[70px] w-[70px] place-items-center rounded-xl bg-[#ffc6d8] text-[#7a4e5b]">
+//           <Icon name="shield" className="h-8 w-8" />
+//         </div>
+//         <h1 className="mt-8 text-[36px] font-extrabold tracking-tight text-[#17222b]">
+//           Verify OTP
+//         </h1>
+//         <p className="mt-2 text-[15px] text-[#626973]">Sent to your email</p>
+//         <form
+//           className="mt-9"
+//           onSubmit={(event) => {
+//             event.preventDefault();
+//             navigate("/dashboard");
+//           }}
+//         >
+//           <div className="grid grid-cols-6 gap-3">
+//             {otp.map((digit, index) => (
+//               <input
+//                 key={index}
+//                 className="h-[62px] rounded border border-[#c9cfd6] bg-[#f7fbff] text-center text-2xl font-bold outline-none focus:border-[#ff5f96] focus:ring-2 focus:ring-pink-100"
+//                 inputMode="numeric"
+//                 maxLength="1"
+//                 value={digit}
+//                 onChange={(event) => updateOtp(index, event.target.value)}
+//               />
+//             ))}
+//           </div>
+//           <PrimaryButton className="mt-8 h-[54px] text-[14px]">
+//             Verify and Continue
+//           </PrimaryButton>
+//         </form>
+//         <p className="mt-10 text-[13px] text-[#80848a]">
+//           Didn't receive the code?
+//         </p>
+//         <Link
+//           to="/forgot-password"
+//           className="mt-3 inline-block text-[14px] font-bold text-[#7a4e5b]"
+//         >
+//           Resend code
+//         </Link>
+//       </div>
+//     </>
+//   );
+// }
+
+function getPasswordStrength(password) {
+  if (!password) return { score: 0, label: "None", color: "bg-[#d7dee6]" };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[a-zA-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+  if (score <= 1) return { score: 1, label: "Weak", color: "bg-[#e02954]" };
+  if (score === 2) return { score: 2, label: "Fair", color: "bg-[#eab308]" };
+  if (score === 3) return { score: 3, label: "Good", color: "bg-[#3b82f6]" };
+  return { score: 4, label: "Strong", color: "bg-[#07a57a]" };
 }
 
 function ResetScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const [newPasswordVal, setNewPasswordVal] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!token) {
+      setError("Reset token is missing or invalid. Please request a new reset link.");
+      return;
+    }
+    const formData = new FormData(e.target);
+    const passVal = formData.get("newPassword");
+    const confirmPassword = formData.get("confirmPassword");
+
+    if (!passVal) {
+      setError("New password is required.");
+      return;
+    }
+
+    if (passVal !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://shelynx.mediaclocksoft.com.au/api/auth/reset-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            newPassword: passVal,
+            token,
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to reset password");
+      }
+      setSuccess("Password updated successfully! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const strength = getPasswordStrength(newPasswordVal);
 
   return (
     <>
@@ -487,40 +616,54 @@ function ResetScreen() {
         <p className="mt-2 text-[12px] text-[#626973]">
           Please enter your new security credentials below.
         </p>
-        <form
-          className="mt-7 space-y-5 text-left"
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate("/login");
-          }}
-        >
+
+        <div className="mt-4 text-left">
+          {error && <ErrorAlert message={error} />}
+
+          {success && (
+            <div className="rounded border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {success}
+            </div>
+          )}
+        </div>
+
+        <form className="mt-7 space-y-5 text-left" onSubmit={handleSubmit}>
           <div>
             <Field
+              required
               label="New Password"
+              name="newPassword"
               type="password"
               icon="key"
-              rightIcon="eye"
               placeholder="••••••••"
               shellClassName="h-10"
+              onChange={(e) => setNewPasswordVal(e.target.value)}
             />
-            <div className="mt-2 flex items-center">
-              <span className="h-1 flex-1 rounded bg-[#07a57a]" />
-              <span className="h-1 flex-1 rounded bg-[#07a57a]" />
-              <span className="h-1 flex-1 rounded bg-[#d7dee6]" />
+            <div className="mt-2 flex items-center gap-1">
+              {[1, 2, 3, 4].map((step) => (
+                <span
+                  key={step}
+                  className={`h-1 flex-1 rounded transition-colors ${
+                    step <= strength.score ? strength.color : "bg-[#d7dee6]"
+                  }`}
+                />
+              ))}
               <span className="ml-2 text-[12px] text-[#73787e]">
-                Strength: Weak
+                Strength: {strength.label}
               </span>
             </div>
           </div>
           <Field
+            required
             label="Confirm New Password"
+            name="confirmPassword"
             type="password"
             icon="lock"
             placeholder="••••••••"
             shellClassName="h-10"
           />
           <PrimaryButton arrow className="!mt-8 h-[54px] text-[14px]">
-            Update Password
+            {loading ? "Updating..." : "Update Password"}
           </PrimaryButton>
         </form>
         <div className="mt-9 text-center">
@@ -845,7 +988,7 @@ function PortalLayout() {
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/forgot-password" element={<ForgotScreen />} />
-            <Route path="/verify-otp" element={<OtpScreen />} />
+            {/* <Route path="/verify-otp" element={<OtpScreen />} /> */}
             <Route path="/reset-password" element={<ResetScreen />} />
             <Route path="/register" element={<RegisterScreen />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
