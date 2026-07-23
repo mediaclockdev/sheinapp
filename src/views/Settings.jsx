@@ -110,21 +110,21 @@ export default function Settings() {
 
   return (
     <div className="flex-1 bg-[#fdf5f7] min-h-[calc(100vh-70px)]">
-      <div className="p-8 max-w-6xl">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-8 max-w-6xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-[32px] font-bold text-[#141D23] tracking-tight">
+            <h1 className="text-2xl sm:text-[32px] font-bold text-[#141D23] tracking-tight">
               Shipping &amp; Pricing Rules
             </h1>
-            <p className="text-base text-[#5C5F60] mt-1">
-              Configure your shipping costs, weight conversion units, custom &amp; delivery fees, and
+            <p className="text-sm sm:text-base font-no text-[#5C5F60] mt-1">
+              Configure your shipping costs, weight conversion units, and
               automatic discount tiers.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
             {saveStatus === "saved" && (
               <span className="text-sm font-semibold text-green-600">
-                ✓ Saved successfully!
+                Saved!
               </span>
             )}
             {saveStatus === "error" && (
@@ -135,7 +135,7 @@ export default function Settings() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 bg-[#ffe8ef] hover:bg-[#ffd4e1] text-[#d24d77] font-semibold text-sm px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="flex items-center justify-center gap-2 bg-[#ffe8ef] hover:bg-[#ffd4e1] text-[#d24d77] font-semibold text-sm px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full sm:w-auto"
             >
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : "Save Changes"}
@@ -155,7 +155,7 @@ export default function Settings() {
               </h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-[13px] font-semibold text-[#4F4446] block mb-1.5">
                   Price Per Kilogram (USD)
@@ -214,9 +214,9 @@ export default function Settings() {
           </div>
 
           {/* Card 2: Coupon Discount Rules */}
-          <div className="bg-white rounded-2xl border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="bg-white rounded-lg border border-[#D3C3C5] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
-              <span className="h-7 w-7 rounded-lg bg-[#ffe8ef] text-[#d24d77] text-sm font-bold flex items-center justify-center">
+              <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
                 2
               </span>
               <h2 className="text-xl font-semibold text-[#141D23]">
@@ -225,16 +225,17 @@ export default function Settings() {
             </div>
 
             <div className="border border-[#D3C3C5] rounded-lg overflow-hidden">
-              <div className="flex justify-between bg-[#ECF5FE] px-4 py-2.5 text-xs font-bold text-[#5c5f60]">
+              <div className="hidden sm:flex justify-between bg-[#ECF5FE] px-4 py-2.5 text-xs font-bold text-[#5c5f60]">
                 <span>Order Amount (USD)</span>
                 <span>Discount</span>
               </div>
               {tiers.map((t, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[#e5e9ef] text-sm text-[#17222b]"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-t border-[#e5e9ef] text-sm text-[#17222b]"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                    <span className="text-xs font-bold text-[#5c5f60] sm:hidden">Range:</span>
                     <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-24">
                       <span className="text-xs text-[#5c5f60] mr-1">$</span>
                       <input
@@ -259,28 +260,31 @@ export default function Settings() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-20 shrink-0">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={t.discount}
-                      onChange={(e) =>
-                        updateTier(i, "discount", e.target.value)
-                      }
-                      className="w-full bg-transparent text-sm text-[#17222b] outline-none"
-                    />
-                    <span className="text-xs text-[#5c5f60] ml-1">%</span>
+                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                    <span className="text-xs font-bold text-[#5c5f60] sm:hidden">Discount:</span>
+                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-20 shrink-0">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={t.discount}
+                        onChange={(e) =>
+                          updateTier(i, "discount", e.target.value)
+                        }
+                        className="w-full bg-transparent text-sm text-[#17222b] outline-none"
+                      />
+                      <span className="text-xs text-[#5c5f60] ml-1">%</span>
+                    </div>
+                    {tiers.length > 1 && (
+                      <button
+                        onClick={() => removeTier(i)}
+                        className="p-1 rounded text-[#98a2ab] hover:text-[#d24d77] hover:bg-[#ffe8ef] transition shrink-0 cursor-pointer"
+                        aria-label="Remove tier"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
-                  {tiers.length > 1 && (
-                    <button
-                      onClick={() => removeTier(i)}
-                      className="p-1 rounded text-[#98a2ab] hover:text-[#d24d77] hover:bg-[#ffe8ef] transition shrink-0 cursor-pointer"
-                      aria-label="Remove tier"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
@@ -302,62 +306,60 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Card 3: Custom and Delivery Fee Calculation */}
-          <div className="bg-white rounded-2xl border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          {/* Card 3 : Custom and delivery fee  */}
+          <div className="bg-white rounded-lg border border-[#D3C3C5] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
-              <span className="h-7 w-7 rounded-lg bg-[#ffe8ef] text-[#d24d77] text-sm font-bold flex items-center justify-center">
+              <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
                 3
               </span>
               <h2 className="text-xl font-semibold text-[#141D23]">
-                Custom &amp; Delivery Fee Calculation
+                Custom and Delivery Fee Calculation
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="custom-fee-input" className="text-[13px] font-semibold text-[#4F4446] block mb-1.5">
-                  Custom Fee (USD)
-                </label>
-                <div className="flex items-center bg-[#ECF5FE] border border-[#D3C3C5] rounded-sm px-3 py-2">
-                  <span className="text-sm text-[#5c5f60] mr-1">$</span>
-                  <input
-                    id="custom-fee-input"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={customFee}
-                    onChange={(e) => setCustomFee(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-transparent text-sm text-[#17222b] outline-none"
-                  />
+            <div className="border border-[#D3C3C5] rounded-lg overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 py-3 border-t border-[#e5e9ef] text-sm text-[#17222b]">
+                <div className="flex flex-col gap-4 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div>
+                      <label htmlFor="custom-fee-input" className="font-semibold sm:font-normal">Custom Fee</label>
+                    </div>
+                    <span className="text-[#98a2ab] hidden sm:inline">-</span>
+                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-full sm:w-24">
+                      <span className="text-xs text-[#5c5f60] mr-1">$</span>
+                      <input
+                        id="custom-fee-input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={customFee}
+                        onChange={(e) => setCustomFee(e.target.value)}
+                        placeholder="$10"
+                        className="w-full bg-transparent text-sm text-[#17222b] outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div>
+                      <label htmlFor="delivery-fee-input" className="font-semibold sm:font-normal">Delivery Fee</label>
+                    </div>
+                    <span className="text-[#98a2ab] hidden sm:inline">-</span>
+                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-full sm:w-24">
+                      <span className="text-xs text-[#5c5f60] mr-1">$</span>
+                      <input
+                        id="delivery-fee-input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={deliveryFee}
+                        onChange={(e) => setDeliveryFee(e.target.value)}
+                        placeholder="$10"
+                        className="w-full bg-transparent text-sm text-[#17222b] outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div>
-                <label htmlFor="delivery-fee-input" className="text-[13px] font-semibold text-[#4F4446] block mb-1.5">
-                  Delivery Fee (USD)
-                </label>
-                <div className="flex items-center bg-[#ECF5FE] border border-[#D3C3C5] rounded-sm px-3 py-2">
-                  <span className="text-sm text-[#5c5f60] mr-1">$</span>
-                  <input
-                    id="delivery-fee-input"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={deliveryFee}
-                    onChange={(e) => setDeliveryFee(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-transparent text-sm text-[#17222b] outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 flex gap-2 bg-[#eef4fb] border border-[#d9e4f2] rounded-lg p-3">
-              <Info className="h-4 w-4 text-[#5c5f60] shrink-0 mt-0.5" />
-              <p className="text-xs text-[#5c5f60] leading-relaxed">
-                Custom and delivery fees are applied per order during final invoice calculation.
-              </p>
             </div>
           </div>
         </div>

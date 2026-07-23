@@ -449,7 +449,8 @@ const OrderManagement = () => {
 
   const baseAmount = canModerate
     ? itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee
-    : Number(selectedOrder?.baseAmount) || itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee;
+    : Number(selectedOrder?.baseAmount) ||
+      itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee;
 
   // Highest tier whose minimum is reached — spending past the top tier's max
   // still earns that tier's discount
@@ -502,7 +503,7 @@ const OrderManagement = () => {
     const csvContent = [
       headers.join(","),
       ...rows.map((r) =>
-        r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")
+        r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","),
       ),
     ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -512,6 +513,399 @@ const OrderManagement = () => {
     link.download = `orders_export_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const renderOrderDetails = (isMobile = false) => {
+    if (!selectedOrderId) return null;
+    return (
+      <div
+        className={`w-full border border-[#D3C3C5] rounded-lg ${isMobile ? "mt-3 lg:hidden" : "hidden lg:block lg:w-[40%]"}`}
+      >
+        <div className="px-4 py-4 flex items-start justify-between gap-1 bg-[#ECF5FE] border-b border-b-[#D3C3C5]">
+          <div className="flex flex-col gap-1">
+            <p className="text-[#141D23] font-normal text-lg">Order Details</p>
+            <div className="flex items-center gap-3">
+              <p className="text-[#78555E] font-bold text-xs">
+                {selectedOrder?.orderId || `#${selectedOrderId}`}
+              </p>
+              <p className="text-[#5C5F60] font-bold text-xs">
+                {orderItems.length} ITEMS
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={closeOrderDetails}
+            className="text-[#5C5F60] hover:text-[#141D23] text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {detailLoading && (
+          <p className="p-4 text-sm text-[#8C959F]">Loading order details...</p>
+        )}
+
+        {detailError && (
+          <p className="p-4 text-sm text-red-600">{detailError}</p>
+        )}
+
+        {!detailLoading && !detailError && selectedOrder && (
+          <>
+            {/* customer context */}
+            <div className="p-4">
+              <p className="text-[#5C5F60] font-bold text-xs mb-2">
+                CUSTOMER CONTEXT
+              </p>
+              <div className="bg-[#ECF5FE] p-4 border border-[#D3C3C5]/30 rounded-lg space-y-2">
+                <p className="text-[#141D23] text-base font-bold">
+                  {selectedOrder.customerName}
+                </p>
+                <div className="space-y-2">
+                  <p className="text-[#5C5F60] font-normal text-xs">
+                    Shipping: {formatAddress(selectedOrder.shippingAddress)}
+                  </p>
+                  <p className="text-[#5C5F60] font-normal text-xs">
+                    Phone: {selectedOrder.customerPhone}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* customer message */}
+            {selectedOrder.customerMessage && (
+              <div className="p-4">
+                <p className="text-[#5C5F60] font-bold text-xs mb-2">
+                  CUSTOMER MESSAGE
+                </p>
+                <div className="bg-[#FFD1DC]/10 p-4 rounded-lg border border-[#FFD1DC]/30 flex items-center gap-2">
+                  <img src={customermessage} alt="customer message icon" />
+                  <p className="text-[#4F4446] font-medium text-xs">
+                    "{selectedOrder.customerMessage}"
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* product */}
+            <div className="p-4">
+              <p className="text-[#5C5F60] text-xs font-bold mb-2">
+                PRODUCTS ({orderItems.length})
+              </p>
+
+              <div className="space-y-4">
+                {orderItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border border-[#D3C3C5] rounded-xl bg-white p-4"
+                  >
+                    {isMobile ? (
+                      <>
+                        {/* mobile: image + title/price row, details full-width below */}
+                        <div className="flex gap-4 items-start">
+                          <div className="w-20 h-20 shrink-0 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
+                            {item.photoUrl ? (
+                              <img
+                                src={imageUrl(item.photoUrl)}
+                                alt={item.productName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-[10px] text-[#8C959F]">
+                                No image
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 flex justify-between items-start gap-2">
+                            <p
+                              className="font-bold text-sm text-[#141D23] break-words line-clamp-2 pr-1"
+                              title={item.productName}
+                            >
+                              {item.productName}
+                            </p>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <p className="font-bold text-xs text-[#78555E]">
+                                ${Number(item.price).toFixed(2)}
+                              </p>
+                              {canModerate && (
+                                <button
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  title="Remove item"
+                                >
+                                  <Trash2
+                                    size={16}
+                                    className="text-[#5C5F60] hover:text-red-600"
+                                  />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-2 text-[#5C5F60] text-xs font-normal">
+                          <p className="break-all">SKU: {item.skuCode}</p>
+                          <div className="flex justify-between items-center gap-4">
+                            <div className="flex gap-4 flex-wrap">
+                              <span>Size: {item.size}</span>
+                              <span>Color: {item.color}</span>
+                            </div>
+                            {canModerate ? (
+                              <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden shrink-0">
+                                <button
+                                  onClick={() =>
+                                    handleItemQuantityChange(item.id, -1)
+                                  }
+                                  className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                                >
+                                  <Minus size={12} />
+                                </button>
+                                <span className="px-3 font-bold text-[10px] text-[#141D23]">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    handleItemQuantityChange(item.id, 1)
+                                  }
+                                  className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                                >
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="px-4 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] py-1 shrink-0">
+                                Qty: {item.quantity}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      /* desktop: original layout */
+                      <div className="flex justify-between items-start">
+                        {/* Left Side */}
+                        <div className="flex flex-1 min-w-0 gap-4 pr-4">
+                          <div className="w-20 h-20 shrink-0 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
+                            {item.photoUrl ? (
+                              <img
+                                src={imageUrl(item.photoUrl)}
+                                alt={item.productName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-[10px] text-[#8C959F]">
+                                No image
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 flex-1 min-w-0">
+                            <p
+                              className="font-bold text-sm text-[#141D23] truncate"
+                              title={item.productName}
+                            >
+                              {item.productName}
+                            </p>
+
+                            <p className="text-[#5C5F60] text-xs font-normal">
+                              SKU: {item.skuCode}
+                            </p>
+
+                            <div className="flex gap-4 text-[#5C5F60] text-xs font-normal flex-wrap">
+                              <span>Size: {item.size}</span>
+                              <span>Color: {item.color}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Side */}
+                        <div className="flex flex-col items-end justify-between h-20 shrink-0">
+                          <div className="flex items-center gap-3">
+                            <p className="font-bold text-xs text-[#78555E]">
+                              ${Number(item.price).toFixed(2)}
+                            </p>
+                            {canModerate && (
+                              <button
+                                onClick={() => handleDeleteItem(item.id)}
+                                title="Remove item"
+                              >
+                                <Trash2
+                                  size={16}
+                                  className="text-[#5C5F60] hover:text-red-600"
+                                />
+                              </button>
+                            )}
+                          </div>
+
+                          {canModerate ? (
+                            <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden">
+                              <button
+                                onClick={() =>
+                                  handleItemQuantityChange(item.id, -1)
+                                }
+                                className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                              >
+                                <Minus size={12} />
+                              </button>
+                              <span className="px-3 font-bold text-[10px] text-[#141D23]">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  handleItemQuantityChange(item.id, 1)
+                                }
+                                className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                              >
+                                <Plus size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="px-4 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] py-1">
+                              Qty: {item.quantity}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="border-t border-[#E5D6D8]">
+              <div className="p-6">
+                {/* Estimated Weight */}
+                <span className="text-[10px] font-bold text-[#98A2AB] uppercase tracking-wider block mb-2">
+                  Total Estimated Weight
+                </span>
+                <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
+                  <span className="text-base font-bold text-[#141D23]">
+                    Estimated Weight
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {canModerate ? (
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={estimatedWeight}
+                        onChange={(e) => setEstimatedWeight(e.target.value)}
+                        placeholder="0"
+                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base font-bold text-[#78555E] outline-none"
+                      />
+                    ) : (
+                      <span className="text-base font-bold text-[#78555E]">
+                        {weightKg}
+                      </span>
+                    )}
+                    <span className="text-base font-bold text-[#78555E]">
+                      KG
+                    </span>
+                  </div>
+                </div>
+
+                <h3 className="text-base font-bold text-[#141D23] mb-4">
+                  Order Summary
+                </h3>
+
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Item Subtotal</span>
+                    <span className="text-[#141D23] font-semibold">
+                      ${itemSubtotal.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Weight</span>
+                    <span className="text-[#141D23] font-semibold">
+                      {weightKg} KG
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Shipping Rate</span>
+                    <span className="text-[#141D23] font-semibold">
+                      ${shippingCost.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Custom Fee</span>
+                    <span className="text-[#141D23] font-semibold">
+                      ${orderCustomFee.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Delivery Fee</span>
+                    <span className="text-[#141D23] font-semibold">
+                      ${orderDeliveryFee.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="border-t border-[#E5E7EB] pt-3 flex justify-between items-center">
+                    <span className="text-[#141D23] font-bold">
+                      Base Amount
+                    </span>
+                    <span className="text-[#141D23] font-bold">
+                      ${baseAmount.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Discount Applied</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#FFE8EF] text-[#D24D77]">
+                      {discountRate}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Discount Amount</span>
+                    <span className="text-red-600 font-semibold">
+                      -${discountAmount.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-4">
+                  <span className="text-lg font-bold text-[#141D23]">
+                    Total Amount
+                  </span>
+                  <span className="text-xl font-bold text-green-600">
+                    ${totalAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              {/* Footer Buttons */}
+              {canModerate && (
+                <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 space-y-3">
+                  {statusError && (
+                    <p className="text-sm text-red-600">{statusError}</p>
+                  )}
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 justify-center flex-1 h-14 rounded-xl border border-[#EEB1D7] bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={async () => {
+                        if (await handleUpdateOrderStatus("APPROVED"))
+                          closeOrderDetails();
+                      }}
+                      disabled={statusUpdating}
+                    >
+                      <img src={approve} alt="" />
+                      <span>Approve</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="flex items-center justify-center gap-1 flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleRejectClick}
+                      disabled={statusUpdating}
+                    >
+                      <img src={reject} alt="" />
+                      <span>Reject</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
   };
 
   // ── TanStack Table – column definitions ────────────────────────────
@@ -852,78 +1246,93 @@ const OrderManagement = () => {
               </label>
             </div>
 
-            {table.getRowModel().rows.map((row) => (
-              <div
-                key={row.id}
-                className={`p-4 rounded-xl border border-[#ECECEC] space-y-3 bg-white hover:bg-gray-50 transition relative ${
-                  row.getIsSelected() ? "bg-[#FFF8FA] border-[#FFD1DC]" : ""
-                }`}
-              >
-                {/* Header: Select checkbox + Order ID + Status */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={row.getIsSelected()}
-                      onChange={row.getToggleSelectedHandler()}
-                      className="accent-[#7A5C69] h-4 w-4"
-                    />
-                    <span className="font-extrabold text-[#2D2D2D] text-sm">
-                      {row.original.id}
-                    </span>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusClass(row.original.status)}`}
+            {table.getRowModel().rows.map((row) => {
+              const rowId = row.original.raw?.id ?? row.original.id;
+              const isSelected = selectedOrderId === rowId;
+              return (
+                <div key={row.id} className="space-y-3">
+                  <div
+                    className={`p-4 rounded-xl border border-[#ECECEC] space-y-3 bg-white hover:bg-gray-50 transition relative ${
+                      row.getIsSelected() ? "bg-[#FFF8FA] border-[#FFD1DC]" : ""
+                    }`}
                   >
-                    {row.original.status}
-                  </span>
-                </div>
-
-                {/* Body: Customer & Items */}
-                <div className="flex items-center justify-between text-xs text-[#5C5F60]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[8px] font-semibold text-[#4B5563]">
-                      {row.original.initials}
+                    {/* Header: Select checkbox + Order ID + Status */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={row.getIsSelected()}
+                          onChange={row.getToggleSelectedHandler()}
+                          className="accent-[#7A5C69] h-4 w-4"
+                        />
+                        <span className="font-extrabold text-[#2D2D2D] text-sm">
+                          {row.original.id}
+                        </span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusClass(row.original.status)}`}
+                      >
+                        {row.original.status}
+                      </span>
                     </div>
-                    <span className="font-bold text-[#333]">
-                      {row.original.customer}
-                    </span>
+
+                    {/* Body: Customer & Items */}
+                    <div className="flex items-center justify-between text-xs text-[#5C5F60]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[8px] font-semibold text-[#4B5563]">
+                          {row.original.initials}
+                        </div>
+                        <span className="font-bold text-[#333]">
+                          {row.original.customer}
+                        </span>
+                      </div>
+                      <span className="font-medium bg-[#ECF5FE] text-[#1D4ED8] px-2 py-0.5 rounded-md">
+                        {row.original.items} items
+                      </span>
+                    </div>
+
+                    {/* Date */}
+                    <p className="text-[11px] text-[#5C5F60]">
+                      {fmtDisplayDate(row.original.date)}
+                    </p>
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-2 pt-1 border-t border-[#ECECEC]/50">
+                      <button
+                        onClick={() =>
+                          handleViewOrder(
+                            row.original.raw?.id ?? row.original.id,
+                          )
+                        }
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition"
+                      >
+                        <Eye size={14} />
+                        <span>View Details</span>
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleViewOrder(
+                            row.original.raw?.id ?? row.original.id,
+                            {
+                              moderate: true,
+                            },
+                          )
+                        }
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition"
+                      >
+                        <img
+                          src={editicon}
+                          alt="edit icon"
+                          className="size-3.5"
+                        />
+                        <span>Edit</span>
+                      </button>
+                    </div>
                   </div>
-                  <span className="font-medium bg-[#ECF5FE] text-[#1D4ED8] px-2 py-0.5 rounded-md">
-                    {row.original.items} items
-                  </span>
+                  {isSelected && renderOrderDetails(true)}
                 </div>
-
-                {/* Date */}
-                <p className="text-[11px] text-[#5C5F60]">
-                  {fmtDisplayDate(row.original.date)}
-                </p>
-
-                {/* Actions */}
-                <div className="flex justify-end gap-2 pt-1 border-t border-[#ECECEC]/50">
-                  <button
-                    onClick={() =>
-                      handleViewOrder(row.original.raw?.id ?? row.original.id)
-                    }
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition"
-                  >
-                    <Eye size={14} />
-                    <span>View Details</span>
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleViewOrder(row.original.raw?.id ?? row.original.id, {
-                        moderate: true,
-                      })
-                    }
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition"
-                  >
-                    <img src={editicon} alt="edit icon" className="size-3.5" />
-                    <span>Edit</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="px-4 py-3 border-t border-[#ECECEC] bg-[#FBF7F8] flex items-center justify-between">
@@ -949,7 +1358,8 @@ const OrderManagement = () => {
                 const maxVisible = 5;
                 let start = Math.max(0, pageIndex - Math.floor(maxVisible / 2));
                 let end = Math.min(pageCount, start + maxVisible);
-                if (end - start < maxVisible) start = Math.max(0, end - maxVisible);
+                if (end - start < maxVisible)
+                  start = Math.max(0, end - maxVisible);
 
                 if (start > 0) {
                   pages.push(0);
@@ -963,7 +1373,12 @@ const OrderManagement = () => {
 
                 return pages.map((p, idx) =>
                   p === "..." ? (
-                    <span key={`ellipsis-${idx}`} className="h-8 w-8 flex items-center justify-center text-xs text-[#5c5f60] hidden sm:flex">…</span>
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="h-8 w-8 flex items-center justify-center text-xs text-[#5c5f60] hidden sm:flex"
+                    >
+                      …
+                    </span>
                   ) : (
                     <button
                       key={p}
@@ -976,7 +1391,7 @@ const OrderManagement = () => {
                     >
                       {p + 1}
                     </button>
-                  )
+                  ),
                 );
               })()}
 
@@ -991,315 +1406,7 @@ const OrderManagement = () => {
           </div>
         </div>
         {/* order details */}
-        {selectedOrderId && (
-          <div className="w-full lg:w-[40%] border border-[#D3C3C5] rounded-lg">
-            <div className="px-4 py-4 flex items-start justify-between gap-1 bg-[#ECF5FE] border-b border-b-[#D3C3C5]">
-              <div className="flex flex-col gap-1">
-                <p className="text-[#141D23] font-normal  text-lg ">
-                  Order Details
-                </p>
-                <div className="flex items-center gap-3">
-                  <p className="text-[#78555E] font-bold text-xs">
-                    {selectedOrder?.orderId || `#${selectedOrderId}`}
-                  </p>
-                  <p className="text-[#5C5F60] font-bold text-xs">
-                    {orderItems.length} ITEMS
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={closeOrderDetails}
-                className="text-[#5C5F60] hover:text-[#141D23] text-lg leading-none"
-              >
-                ✕
-              </button>
-            </div>
-
-            {detailLoading && (
-              <p className="p-4 text-sm text-[#8C959F]">
-                Loading order details...
-              </p>
-            )}
-
-            {detailError && (
-              <p className="p-4 text-sm text-red-600">{detailError}</p>
-            )}
-
-            {!detailLoading && !detailError && selectedOrder && (
-              <>
-                {/* customer context */}
-                <div className="p-4 ">
-                  <p className="text-[#5C5F60] font-bold text-xs mb-2">
-                    CUSTOMER CONTEXT
-                  </p>
-                  <div className="bg-[#ECF5FE] p-4 border border-[#D3C3C5]/30 rounded-lg space-y-2">
-                    <p className="text-[#141D23] text-base font-bold">
-                      {selectedOrder.customerName}
-                    </p>
-                    <div className="space-y-2">
-                      <p className="text-[#5C5F60] font-normal text-xs">
-                        Shipping: {formatAddress(selectedOrder.shippingAddress)}
-                      </p>
-                      <p className="text-[#5C5F60] font-normal text-xs">
-                        Phone: {selectedOrder.customerPhone}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* customer message */}
-                {selectedOrder.customerMessage && (
-                  <div className="p-4">
-                    <p className="text-[#5C5F60] font-bold text-xs mb-2">
-                      CUSTOMER MESSAGE
-                    </p>
-                    <div className="bg-[#FFD1DC]/10 p-4 rounded-lg border border-[#FFD1DC]/30 flex items-center gap-2">
-                      <img src={customermessage} alt="customer message icon" />
-                      <p className="text-[#4F4446] font-medium text-xs">
-                        "{selectedOrder.customerMessage}"
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* product */}
-                <div className="p-4">
-                  <p className="text-[#5C5F60] text-xs font-bold mb-2">
-                    PRODUCTS ({orderItems.length})
-                  </p>
-
-                  <div className="space-y-4">
-                    {orderItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="border border-[#D3C3C5] rounded-xl bg-white p-4"
-                      >
-                        <div className="flex justify-between items-start">
-                          {/* Left Side */}
-                          <div className="flex flex-1 min-w-0 gap-4 pr-4">
-                            <div className="w-20 h-20 shrink-0 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
-                              {item.photoUrl ? (
-                                <img
-                                  src={imageUrl(item.photoUrl)}
-                                  alt={item.productName}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-[10px] text-[#8C959F]">
-                                  No image
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="space-y-2 flex-1 min-w-0">
-                              <p
-                                className="font-bold text-sm text-[#141D23] truncate"
-                                title={item.productName}
-                              >
-                                {item.productName}
-                              </p>
-
-                              <p className="text-[#5C5F60] text-xs font-normal">
-                                SKU: {item.skuCode}
-                              </p>
-
-                              <div className="flex gap-4 text-[#5C5F60] text-xs font-normal flex-wrap">
-                                <span>Size: {item.size}</span>
-                                <span>Color: {item.color}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Right Side */}
-                          <div className="flex flex-col items-end justify-between h-20 shrink-0">
-                            <div className="flex items-center gap-3">
-                              <p className="font-bold text-xs text-[#78555E]">
-                                ${Number(item.price).toFixed(2)}
-                              </p>
-                              {canModerate && (
-                                <button
-                                  onClick={() => handleDeleteItem(item.id)}
-                                  title="Remove item"
-                                >
-                                  <Trash2
-                                    size={16}
-                                    className="text-[#5C5F60] hover:text-red-600"
-                                  />
-                                </button>
-                              )}
-                            </div>
-
-                            {canModerate ? (
-                              <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden">
-                                <button
-                                  onClick={() =>
-                                    handleItemQuantityChange(item.id, -1)
-                                  }
-                                  className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
-                                >
-                                  <Minus size={12} />
-                                </button>
-                                <span className="px-3 font-bold text-[10px] text-[#141D23]">
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  onClick={() =>
-                                    handleItemQuantityChange(item.id, 1)
-                                  }
-                                  className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
-                                >
-                                  <Plus size={12} />
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="px-4 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] py-1">
-                                Qty: {item.quantity}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Order Summary */}
-                <div className="border-t border-[#E5D6D8]">
-                  <div className="p-6">
-                    {/* Estimated Weight */}
-                    <span className="text-[10px] font-bold text-[#98A2AB] uppercase tracking-wider block mb-2">
-                      Total Estimated Weight
-                    </span>
-                    <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
-                      <span className="text-base font-bold text-[#141D23]">
-                        Estimated Weight
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {canModerate ? (
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            value={estimatedWeight}
-                            onChange={(e) => setEstimatedWeight(e.target.value)}
-                            placeholder="0"
-                            className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base font-bold text-[#78555E] outline-none"
-                          />
-                        ) : (
-                          <span className="text-base font-bold text-[#78555E]">
-                            {weightKg}
-                          </span>
-                        )}
-                        <span className="text-base font-bold text-[#78555E]">
-                          KG
-                        </span>
-                      </div>
-                    </div>
-
-                    <h3 className="text-base font-bold text-[#141D23] mb-4">
-                      Order Summary
-                    </h3>
-
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Item Subtotal</span>
-                        <span className="text-[#141D23] font-semibold">
-                          ${itemSubtotal.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Weight</span>
-                        <span className="text-[#141D23] font-semibold">
-                          {weightKg} KG
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Shipping Rate</span>
-                        <span className="text-[#141D23] font-semibold">
-                          ${shippingCost.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Custom Fee</span>
-                        <span className="text-[#141D23] font-semibold">
-                          ${orderCustomFee.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Delivery Fee</span>
-                        <span className="text-[#141D23] font-semibold">
-                          ${orderDeliveryFee.toFixed(2)}
-                        </span>
-                      </div>
-
-                      <div className="border-t border-[#E5E7EB] pt-3 flex justify-between items-center">
-                        <span className="text-[#141D23] font-bold">
-                          Base Amount
-                        </span>
-                        <span className="text-[#141D23] font-bold">
-                          ${baseAmount.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Discount Applied</span>
-                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#FFE8EF] text-[#D24D77]">
-                          {discountRate}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Discount Amount</span>
-                        <span className="text-red-600 font-semibold">
-                          -${discountAmount.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-4">
-                      <span className="text-lg font-bold text-[#141D23]">
-                        Total Amount
-                      </span>
-                      <span className="text-xl font-bold text-green-600">
-                        ${totalAmount.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                  {/* Footer Buttons */}
-                  {canModerate && (
-                    <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 space-y-3">
-                      {statusError && (
-                        <p className="text-sm text-red-600">{statusError}</p>
-                      )}
-                      <div className="flex gap-4">
-                        <button
-                          type="button"
-                          className="flex items-center gap-1 justify-center flex-1 h-14 rounded-xl bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={async () => {
-                            if (await handleUpdateOrderStatus("APPROVED"))
-                              closeOrderDetails();
-                          }}
-                          disabled={statusUpdating}
-                        >
-                          <img src={approve} alt="" />
-                          <span>Approve</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="flex items-center justify-center gap-1 flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-[#FFFFFF] text-[#5C5F60] font-medium hover:bg-gray-50 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={handleRejectClick}
-                          disabled={statusUpdating}
-                        >
-                          <img src={reject} alt="" />
-                          <span>Reject</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        {renderOrderDetails(false)}
       </div>
     </div>
   );
