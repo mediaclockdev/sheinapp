@@ -189,6 +189,8 @@ const OrderManagement = () => {
   const [settings, setSettings] = useState({
     pricePerKg: 0,
     discountRules: [],
+    deliveryfee: 0,
+    customfee: 0,
   });
   const [estimatedWeight, setEstimatedWeight] = useState("");
 
@@ -206,6 +208,8 @@ const OrderManagement = () => {
         setSettings({
           pricePerKg: Number(data?.pricePerKg) || 0,
           discountRules: data?.discountRules || [],
+          deliveryfee: Number(data?.deliveryfee ?? data?.deliveryFee) || 0,
+          customfee: Number(data?.customfee ?? data?.customFee) || 0,
         }),
       )
       .catch((err) => console.error("Failed to load settings:", err));
@@ -280,7 +284,8 @@ const OrderManagement = () => {
   const handleItemQuantityChange = (itemId, delta) => {
     setSelectedOrder((prev) => {
       if (!prev) return prev;
-      const items = prev.items.map((item) =>
+      const currentItems = prev.items || prev.products || [];
+      const items = currentItems.map((item) =>
         item.id === itemId
           ? {
               ...item,
@@ -299,7 +304,8 @@ const OrderManagement = () => {
   const handleDeleteItem = (itemId) => {
     setSelectedOrder((prev) => {
       if (!prev) return prev;
-      const items = prev.items.filter((item) => item.id !== itemId);
+      const currentItems = prev.items || prev.products || [];
+      const items = currentItems.filter((item) => item.id !== itemId);
       return {
         ...prev,
         items,
@@ -438,9 +444,12 @@ const OrderManagement = () => {
       Number(selectedOrder?.shipping) ||
       weightKg * settings.pricePerKg;
 
+  const orderCustomFee = Number(settings.customfee) || 0;
+  const orderDeliveryFee = Number(settings.deliveryfee) || 0;
+
   const baseAmount = canModerate
-    ? itemSubtotal + shippingCost
-    : Number(selectedOrder?.baseAmount) || itemSubtotal + shippingCost;
+    ? itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee
+    : Number(selectedOrder?.baseAmount) || itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee;
 
   // Highest tier whose minimum is reached — spending past the top tier's max
   // still earns that tier's discount
@@ -473,10 +482,36 @@ const OrderManagement = () => {
         return "bg-[#FEF3C7] text-[#F59E0B]";
       case "REJECTED":
         return "bg-[#FA8072] text-[#420D09]";
+      case "APPROVED":
+        return "bg-[#DBEAFE] text-[#1E40AF]";
       default:
-        "APPROVED";
         return "bg-[#DBEAFE] text-[#1E40AF]";
     }
+  };
+
+  const handleExportCSV = () => {
+    if (!orders.length) return;
+    const headers = ["Order ID", "Customer", "Items", "Status", "Date"];
+    const rows = orders.map((o) => [
+      o.id,
+      o.customer,
+      o.items,
+      o.status,
+      fmtDisplayDate(o.date),
+    ]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((r) =>
+        r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `orders_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   // ── TanStack Table – column definitions ────────────────────────────
@@ -622,7 +657,11 @@ const OrderManagement = () => {
             Review and Approve Customers Order
           </p>
         </div>
-        <button className="w-[40%] lg:w-[15%] bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl whitespace-nowrap text-sm lg:text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5">
+        <button
+          onClick={handleExportCSV}
+          disabled={!orders.length}
+          className="w-[40%] lg:w-[15%] bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl whitespace-nowrap text-sm lg:text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <img src={exporticon} alt="export csv icon" className="h-4 w-4" />
           <span>Export CSV</span>
         </button>
@@ -784,9 +823,7 @@ const OrderManagement = () => {
                       <td
                         key={cell.id}
                         className={`py-4 ${
-                          cell.column.id === "select"
-                            ? "px-3"
-                            : "text-center"
+                          cell.column.id === "select" ? "px-3" : "text-center"
                         }`}
                       >
                         {flexRender(
@@ -907,19 +944,41 @@ const OrderManagement = () => {
                 Page {pageIndex + 1} of {pageCount}
               </span>
 
-              {Array.from({ length: pageCount }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => table.setPageIndex(i)}
-                  className={`h-8 w-8 rounded-lg border flex items-center justify-center font-extrabold text-xs transition hidden sm:flex ${
-                    pageIndex === i
-                      ? "bg-[#FFE8EF] text-[#D24D77] border-[#FFE8EF]"
-                      : "border-[#E8DFE1] text-[#5c5f60] hover:bg-slate-100"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {(() => {
+                const pages = [];
+                const maxVisible = 5;
+                let start = Math.max(0, pageIndex - Math.floor(maxVisible / 2));
+                let end = Math.min(pageCount, start + maxVisible);
+                if (end - start < maxVisible) start = Math.max(0, end - maxVisible);
+
+                if (start > 0) {
+                  pages.push(0);
+                  if (start > 1) pages.push("...");
+                }
+                for (let i = start; i < end; i++) pages.push(i);
+                if (end < pageCount) {
+                  if (end < pageCount - 1) pages.push("...");
+                  pages.push(pageCount - 1);
+                }
+
+                return pages.map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="h-8 w-8 flex items-center justify-center text-xs text-[#5c5f60] hidden sm:flex">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => table.setPageIndex(p)}
+                      className={`h-8 w-8 rounded-lg border flex items-center justify-center font-extrabold text-xs transition hidden sm:flex ${
+                        pageIndex === p
+                          ? "bg-[#FFE8EF] text-[#D24D77] border-[#FFE8EF]"
+                          : "border-[#E8DFE1] text-[#5c5f60] hover:bg-slate-100"
+                      }`}
+                    >
+                      {p + 1}
+                    </button>
+                  )
+                );
+              })()}
 
               <button
                 onClick={() => table.nextPage()}
@@ -1157,13 +1216,19 @@ const OrderManagement = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-[#5C5F60]">Shipping Rate</span>
                         <span className="text-[#141D23] font-semibold">
-                          ${settings.pricePerKg.toFixed(2)}/Kg
+                          ${shippingCost.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#5C5F60]">Shipping Cost</span>
+                        <span className="text-[#5C5F60]">Custom Fee</span>
                         <span className="text-[#141D23] font-semibold">
-                          ${shippingCost.toFixed(2)}
+                          ${orderCustomFee.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#5C5F60]">Delivery Fee</span>
+                        <span className="text-[#141D23] font-semibold">
+                          ${orderDeliveryFee.toFixed(2)}
                         </span>
                       </div>
 
