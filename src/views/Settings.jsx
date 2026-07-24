@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Save, Info, Plus, X } from "lucide-react";
+import { toast } from "../components/Toast";
 
 const SETTINGS_API_URL = "https://shelynx.mediaclocksoft.com.au/api/settings";
 
@@ -96,10 +97,12 @@ export default function Settings() {
       }
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus(null), 3000);
+      toast.success("Settings saved");
     } catch (err) {
       console.error("Failed to save settings:", err);
       setSaveStatus("error");
       setTimeout(() => setSaveStatus(null), 4000);
+      toast.error("Failed to save settings");
     } finally {
       setSaving(false);
     }

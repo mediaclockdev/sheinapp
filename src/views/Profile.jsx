@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { ChevronRight, BadgeCheck, Pencil, Ban } from "lucide-react";
+import { ChevronRight, BadgeCheck, Pencil, Eye, EyeOff } from "lucide-react";
+import tick from "../assets/tickicon.svg";
+import { toast } from "../components/Toast";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
@@ -96,6 +98,13 @@ export default function Profile() {
     announcements: true,
   });
   const [saved, setSaved] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   useEffect(() => {
     fetch(PROFILE_API_URL, { headers: authHeaders() })
@@ -147,8 +156,27 @@ export default function Profile() {
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      toast.success("Profile updated");
     } catch (err) {
       console.error("Failed to update profile:", err);
+      toast.error("Failed to update profile");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      const res = await fetch(`${PROFILE_API_URL}/password`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(passwordForm),
+      });
+      if (!res.ok) throw new Error(`Password change failed (${res.status})`);
+      setPasswordForm({ currentPassword: "", newPassword: "" });
+      setShowPasswordForm(false);
+      toast.success("Password changed");
+    } catch (err) {
+      console.error("Failed to change password:", err);
+      toast.error("Failed to change password");
     }
   };
 
@@ -171,8 +199,10 @@ export default function Profile() {
         result.data?.avatarUrl || result.avatarUrl || URL.createObjectURL(file);
       setProfile((p) => ({ ...(p || {}), avatarUrl }));
       onAvatarChange?.(avatarUrl);
+      toast.success("Photo uploaded");
     } catch (err) {
       console.error("Failed to upload photo:", err);
+      toast.error("Failed to upload photo");
     } finally {
       e.target.value = "";
     }
@@ -317,7 +347,10 @@ export default function Profile() {
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
-            <button className="flex items-center justify-between gap-4 border border-[#E8DFE1] rounded-xl px-4 py-3 text-left hover:bg-slate-50 transition">
+            <button
+              onClick={() => setShowPasswordForm((s) => !s)}
+              className="flex items-center justify-between gap-4 border border-[#E8DFE1] rounded-xl px-4 py-3 text-left hover:bg-slate-50 transition w-full sm:w-auto"
+            >
               <span>
                 <span className="block text-sm font-bold text-[#141D23]">
                   Change Password
@@ -332,9 +365,85 @@ export default function Profile() {
               onClick={handleUpdate}
               className="flex items-center gap-2 bg-[#FFD1DC] hover:bg-[#f7bfce] text-[#6B4A52] font-bold text-sm px-6 py-3 rounded-xl transition"
             >
-              <Ban size={14} /> {saved ? "Saved!" : "Update Profile"}
+              <img src={tick} alt="tick icon" className="size-4" />
+              {saved ? "Saved!" : "Update Profile"}
             </button>
           </div>
+
+          {showPasswordForm && (
+            <div className="mt-4 border-t border-[#E8DFE1] pt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+              <div>
+                <label className="block text-xs font-bold text-[#5C5F60] mb-1.5">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    className={`${inputClass} pr-10`}
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm((p) => ({
+                        ...p,
+                        currentPassword: e.target.value,
+                      }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#98A2AB] hover:text-[#5C5F60]"
+                    aria-label={
+                      showCurrentPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#5C5F60] mb-1.5">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    className={`${inputClass} pr-10`}
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordForm.newPassword}
+                    onChange={(e) =>
+                      setPasswordForm((p) => ({
+                        ...p,
+                        newPassword: e.target.value,
+                      }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#98A2AB] hover:text-[#5C5F60]"
+                    aria-label={
+                      showNewPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showNewPassword ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleChangePassword}
+                className="flex items-center gap-2 bg-[#FFD1DC] hover:bg-[#f7bfce] text-[#6B4A52] font-bold text-sm px-6 py-3 rounded-xl transition w-fit sm:col-span-2"
+              >
+                Update Password
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Notification Preferences */}
