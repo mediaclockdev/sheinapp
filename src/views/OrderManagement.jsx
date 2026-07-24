@@ -1066,23 +1066,47 @@ const OrderManagement = () => {
             </div>
 
             {/* Date Range */}
-            <div className="w-full sm:w-auto">
-              <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
-                Date Range
-              </p>
-              <div className="flex items-center gap-2 border border-black/20 bg-[#ECF5FE] px-3 py-1.5 w-full sm:w-[220px] rounded-md">
-                <Calendar className="text-[#5C5F60] shrink-0" size={18} />
-                <DatePicker
-                  selectsRange
-                  startDate={startDate}
-                  endDate={endDate}
-                  onChange={(update) => setDateRange(update)}
-                  maxDate={today}
-                  isClearable
-                  placeholderText="Select date range"
-                  dateFormat="MMM d"
-                  className="focus:outline-none text-base font-normal bg-transparent w-full"
-                />
+            <div className="w-full sm:w-auto flex gap-2">
+              <div className="w-full sm:w-auto">
+                <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
+                  Start Date
+                </p>
+                <div className="flex items-center gap-2 border border-black/20 bg-[#ECF5FE] px-3 py-1.5 w-full sm:w-[130px] rounded-md">
+                  <Calendar className="text-[#5C5F60] shrink-0" size={18} />
+                  <DatePicker
+                    selectsStart
+                    startDate={startDate}
+                    endDate={endDate}
+                    selected={startDate}
+                    onChange={(date) => setDateRange([date, endDate])}
+                    maxDate={endDate || today}
+                    isClearable
+                    placeholderText="Start date"
+                    dateFormat="MMM d"
+                    className="focus:outline-none text-base font-normal bg-transparent w-full"
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:w-auto">
+                <p className="text-[10px] font-bold uppercase text-[#5C5F60] mb-1">
+                  End Date
+                </p>
+                <div className="flex items-center gap-2 border border-black/20 bg-[#ECF5FE] px-3 py-1.5 w-full sm:w-[130px] rounded-md">
+                  <Calendar className="text-[#5C5F60] shrink-0" size={18} />
+                  <DatePicker
+                    selectsEnd
+                    startDate={startDate}
+                    endDate={endDate}
+                    selected={endDate}
+                    onChange={(date) => setDateRange([startDate, date])}
+                    minDate={startDate}
+                    maxDate={today}
+                    isClearable
+                    placeholderText="End date"
+                    dateFormat="MMM d"
+                    className="focus:outline-none text-base font-normal bg-transparent w-full"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1108,7 +1132,11 @@ const OrderManagement = () => {
             </span>
 
             <button
-              onClick={fetchOrders}
+              onClick={() => {
+                setStatus("All");
+                setDateRange([null, null]);
+                setSearchInput("");
+              }}
               disabled={ordersLoading}
               className="text-[#8B6575] hover:rotate-180 transition-transform duration-300 disabled:opacity-50"
             >

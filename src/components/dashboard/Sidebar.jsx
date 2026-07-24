@@ -75,6 +75,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               <NavLink
                 key={item.name}
                 to={item.path}
+                onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                     isActive
@@ -95,7 +96,10 @@ const Sidebar = ({ isOpen, onClose }) => {
             ))}
           </nav>
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              handleLogout();
+              onClose();
+            }}
             className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#D24D77] border hover:bg-[#FFE8EF] transition duration-200 cursor-pointer"
           >
             <LogOut size={20} />

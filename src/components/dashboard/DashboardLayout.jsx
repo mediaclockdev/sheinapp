@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Link } from "react-router-dom";
 import Sidebar from "./Sidebar";
 
 const PAGE_TITLES = {
@@ -12,6 +12,7 @@ const PAGE_TITLES = {
   "/customers": "Customers",
   "/reports": "Reports",
   "/settings": "Settings",
+  "/profile": "Profile",
 };
 
 const DashboardLayout = () => {
@@ -83,7 +84,7 @@ const DashboardLayout = () => {
             <div className="h-8 w-px bg-slate-200"></div>
 
             {/* User Profile Info */}
-            <div className="flex items-center gap-3">
+            <Link to="/profile" className="flex items-center gap-3">
               <div className="text-right">
                 <span className="text-base font-bold text-[#141D23] hidden lg:block leading-tight">
                   {displayName}
@@ -98,7 +99,7 @@ const DashboardLayout = () => {
                 {/* Visual Placeholder */}
                 <span>{initials}</span>
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 

@@ -214,29 +214,29 @@ export default function Settings() {
           </div>
 
           {/* Card 2: Coupon Discount Rules */}
-          <div className="bg-white rounded-lg border border-[#D3C3C5] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="order-3 lg:order-2 bg-white rounded-lg border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
               <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
-                2
+                <span className="lg:hidden">3</span>
+                <span className="hidden lg:inline">2</span>
               </span>
               <h2 className="text-xl font-semibold text-[#141D23]">
                 Coupon Discount Rules
               </h2>
             </div>
 
-            <div className="border border-[#D3C3C5] rounded-lg overflow-hidden">
-              <div className="hidden sm:flex justify-between bg-[#ECF5FE] px-4 py-2.5 text-xs font-bold text-[#5c5f60]">
+            <div className="border border-[#D3C3C5] rounded-lg overflow-x-auto">
+              <div className="flex justify-between bg-[#ECF5FE] px-2 sm:px-4 py-2.5 text-xs font-bold text-[#5c5f60] min-w-max sm:min-w-0">
                 <span>Order Amount (USD)</span>
                 <span>Discount</span>
               </div>
               {tiers.map((t, i) => (
                 <div
                   key={i}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-t border-[#e5e9ef] text-sm text-[#17222b]"
+                  className="flex items-center justify-between gap-1.5 sm:gap-3 px-2 sm:px-4 py-3 border-t border-[#e5e9ef] text-sm text-[#17222b] min-w-max sm:min-w-0"
                 >
-                  <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
-                    <span className="text-xs font-bold text-[#5c5f60] sm:hidden">Range:</span>
-                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-24">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-16 sm:w-24 flex-none">
                       <span className="text-xs text-[#5c5f60] mr-1">$</span>
                       <input
                         type="number"
@@ -244,11 +244,11 @@ export default function Settings() {
                         value={t.min}
                         onChange={(e) => updateTier(i, "min", e.target.value)}
                         placeholder="Min"
-                        className="w-full bg-transparent text-sm text-[#17222b] outline-none"
+                        className="w-full min-w-0 bg-transparent text-sm text-[#17222b] outline-none"
                       />
                     </div>
-                    <span className="text-[#98a2ab]">-</span>
-                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-24">
+                    <span className="text-[#98a2ab] shrink-0">-</span>
+                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-16 sm:w-24 flex-none">
                       <span className="text-xs text-[#5c5f60] mr-1">$</span>
                       <input
                         type="number"
@@ -256,13 +256,12 @@ export default function Settings() {
                         value={t.max}
                         onChange={(e) => updateTier(i, "max", e.target.value)}
                         placeholder="Max"
-                        className="w-full bg-transparent text-sm text-[#17222b] outline-none"
+                        className="w-full min-w-0 bg-transparent text-sm text-[#17222b] outline-none"
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-                    <span className="text-xs font-bold text-[#5c5f60] sm:hidden">Discount:</span>
-                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-20 shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-16 sm:w-20 shrink-0">
                       <input
                         type="number"
                         min="0"
@@ -307,10 +306,11 @@ export default function Settings() {
           </div>
 
           {/* Card 3 : Custom and delivery fee  */}
-          <div className="bg-white rounded-lg border border-[#D3C3C5] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="order-2 lg:order-3 bg-white rounded-lg border border-[#D3C3C5] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
               <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
-                3
+                <span className="lg:hidden">2</span>
+                <span className="hidden lg:inline">3</span>
               </span>
               <h2 className="text-xl font-semibold text-[#141D23]">
                 Custom and Delivery Fee Calculation
@@ -322,7 +322,12 @@ export default function Settings() {
                 <div className="flex flex-col gap-4 w-full sm:w-auto">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <div>
-                      <label htmlFor="custom-fee-input" className="font-semibold sm:font-normal">Custom Fee</label>
+                      <label
+                        htmlFor="custom-fee-input"
+                        className="font-semibold sm:font-normal"
+                      >
+                        Custom Fee
+                      </label>
                     </div>
                     <span className="text-[#98a2ab] hidden sm:inline">-</span>
                     <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-full sm:w-24">
@@ -334,14 +339,19 @@ export default function Settings() {
                         min="0"
                         value={customFee}
                         onChange={(e) => setCustomFee(e.target.value)}
-                        placeholder="$10"
+                        placeholder="10"
                         className="w-full bg-transparent text-sm text-[#17222b] outline-none"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <div>
-                      <label htmlFor="delivery-fee-input" className="font-semibold sm:font-normal">Delivery Fee</label>
+                      <label
+                        htmlFor="delivery-fee-input"
+                        className="font-semibold sm:font-normal"
+                      >
+                        Delivery Fee
+                      </label>
                     </div>
                     <span className="text-[#98a2ab] hidden sm:inline">-</span>
                     <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-full sm:w-24">
@@ -353,7 +363,7 @@ export default function Settings() {
                         min="0"
                         value={deliveryFee}
                         onChange={(e) => setDeliveryFee(e.target.value)}
-                        placeholder="$10"
+                        placeholder="10"
                         className="w-full bg-transparent text-sm text-[#17222b] outline-none"
                       />
                     </div>
