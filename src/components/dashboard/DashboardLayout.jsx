@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { Outlet, useLocation, Link } from "react-router-dom";
 import Sidebar from "./Sidebar";
 
+const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
+const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
+
 const PAGE_TITLES = {
   "/dashboard": "Dashboard",
   "/orders": "Order Management",
@@ -20,6 +23,7 @@ const DashboardLayout = () => {
   const title = PAGE_TITLES[pathname] || "Dashboard";
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
 
   useEffect(() => {
     try {
@@ -31,6 +35,15 @@ const DashboardLayout = () => {
     } catch (e) {
       console.error("Failed to parse user data", e);
     }
+
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+    fetch(PROFILE_API_URL, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then(({ data }) => setAvatarUrl(data?.avatarUrl || null))
+      .catch((err) => console.error("Failed to load agent avatar:", err));
   }, []);
 
   const displayName = user?.name || "Sarah Chen";
@@ -96,8 +109,19 @@ const DashboardLayout = () => {
 
               {/* Profile Avatar Image */}
               <div className="h-10 w-10 rounded-full border border-[#dec9ce] overflow-hidden bg-[#FFE8EF] flex items-center justify-center font-bold text-[#D24D77] text-sm shadow-sm">
-                {/* Visual Placeholder */}
-                <span>{initials}</span>
+                {avatarUrl ? (
+                  <img
+                    src={
+                      avatarUrl.startsWith("http")
+                        ? avatarUrl
+                        : `${API_BASE_URL}${avatarUrl}`
+                    }
+                    alt={displayName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>{initials}</span>
+                )}
               </div>
             </Link>
           </div>
@@ -105,7 +129,7 @@ const DashboardLayout = () => {
 
         {/* Dynamic Route Content */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <Outlet context={{ onAvatarChange: setAvatarUrl }} />
         </main>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { ChevronRight, BadgeCheck, Pencil, Ban } from "lucide-react";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
@@ -79,10 +80,12 @@ const Toggle = ({ on, onClick }) => (
 );
 
 export default function Profile() {
+  const { onAvatarChange } = useOutletContext() ?? {};
   const [profile, setProfile] = useState(null); // raw API data
   const [form, setForm] = useState({
     name: "",
     email: "",
+    countryCode: "",
     phone: "",
     agentCode: "",
   });
@@ -103,9 +106,8 @@ export default function Profile() {
         setForm({
           name: data.name || "",
           email: data.email || "",
-          phone: data.countryCode
-            ? `+${data.countryCode} ${data.phone || ""}`
-            : data.phone || "",
+          countryCode: data.countryCode || "",
+          phone: data.phone || "",
           agentCode: `AGT${String(data.id).padStart(5, "0")}`,
         });
         const apiPrefs = prefsFromApi(data.notificationPreferences);
@@ -119,15 +121,13 @@ export default function Profile() {
 
   const handleUpdate = async () => {
     try {
-      // strip "+91 " prefix back into phone/countryCode
-      const match = form.phone.trim().match(/^\+(\d{1,4})\s*(.*)$/);
       const res = await fetch(`${PROFILE_API_URL}/update`, {
         method: "PATCH",
         headers: authHeaders(),
         body: JSON.stringify({
           name: form.name,
-          phone: match ? match[2] : form.phone.trim(),
-          ...(match ? { countryCode: match[1] } : {}),
+          phone: form.phone.trim(),
+          countryCode: form.countryCode.trim(),
         }),
       });
       if (!res.ok) throw new Error(`Update failed (${res.status})`);
@@ -138,9 +138,8 @@ export default function Profile() {
       setForm((f) => ({
         ...f,
         name: updated.name ?? f.name,
-        phone: updated.countryCode
-          ? `+${updated.countryCode} ${updated.phone || ""}`
-          : (updated.phone ?? f.phone),
+        countryCode: updated.countryCode ?? f.countryCode,
+        phone: updated.phone ?? f.phone,
       }));
       const apiPrefs = prefsFromApi(updated.notificationPreferences);
       if (apiPrefs) setPrefs((p) => ({ ...p, ...apiPrefs }));
@@ -171,6 +170,7 @@ export default function Profile() {
       const avatarUrl =
         result.data?.avatarUrl || result.avatarUrl || URL.createObjectURL(file);
       setProfile((p) => ({ ...(p || {}), avatarUrl }));
+      onAvatarChange?.(avatarUrl);
     } catch (err) {
       console.error("Failed to upload photo:", err);
     } finally {
@@ -290,11 +290,19 @@ export default function Profile() {
               <label className="block text-xs font-bold text-[#5C5F60] mb-1.5">
                 Phone Number
               </label>
-              <input
-                className={inputClass}
-                value={form.phone}
-                onChange={set("phone")}
-              />
+              <div className="flex gap-2">
+                <input
+                  className={`${inputClass.replace("w-full", "w-20")} shrink-0`}
+                  value={form.countryCode}
+                  onChange={set("countryCode")}
+                  placeholder="+61"
+                />
+                <input
+                  className={inputClass}
+                  value={form.phone}
+                  onChange={set("phone")}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-bold text-[#5C5F60] mb-1.5">
