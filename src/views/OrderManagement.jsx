@@ -467,29 +467,31 @@ const OrderManagement = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    if (!orders.length) return;
-    const headers = ["Order ID", "Customer", "Items", "Status", "Date"];
-    const rows = orders.map((o) => [
-      o.id,
-      o.customer,
-      o.items,
-      o.status,
-      fmtDisplayDate(o.date),
-    ]);
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((r) =>
-        r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","),
-      ),
-    ].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `orders_export_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExportCSV = async () => {
+    const selectedIds = table
+      .getSelectedRowModel()
+      .rows.map((row) => row.original.raw?.id ?? row.original.id);
+    if (!selectedIds.length) return;
+    try {
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await fetch(
+        `${ORDERS_API_URL}/export?ids=${selectedIds.join(",")}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+      if (!response.ok) throw new Error(`Export failed (${response.status})`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orders_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export orders:", err);
+    }
   };
 
   const renderOrderDetails = (isMobile = false) => {
@@ -1010,6 +1012,7 @@ const OrderManagement = () => {
   const startRow = pageIndex * pageSize + 1;
   const endRow = Math.min((pageIndex + 1) * pageSize, totalRows);
   const pageCount = table.getPageCount();
+  const selectedCount = table.getSelectedRowModel().rows.length;
 
   const orderItems = selectedOrder?.items || [];
   return (
@@ -1030,11 +1033,11 @@ const OrderManagement = () => {
         </div>
         <button
           onClick={handleExportCSV}
-          disabled={!orders.length}
+          disabled={!selectedCount}
           className="w-[40%] lg:w-[15%] bg-[#FFFFFF]/2 hover:bg-[#FFFFFF]/50 text-[#5C5F60] border border-[#D3C3C5] font-normal px-5 py-2.5 rounded-xl whitespace-nowrap text-sm lg:text-base cursor-pointer transition duration-200 shadow-sm flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <img src={exporticon} alt="export csv icon" className="h-4 w-4" />
-          <span>Export CSV</span>
+          <span>Export CSV{selectedCount ? ` (${selectedCount})` : ""}</span>
         </button>
       </div>
 
