@@ -312,8 +312,8 @@ export default function Settings() {
           <div className="order-2 lg:order-3 bg-white rounded-2xl border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
               <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
-                <span className="lg:hidden">2</span>
-                <span className="hidden lg:inline">3</span>
+
+                <span className="hidden lg:inline">2</span>
               </span>
               <h2 className="text-xl font-semibold text-[#141D23]">
                 Custom and Delivery Fee Calculation

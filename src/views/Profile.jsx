@@ -105,6 +105,8 @@ export default function Profile() {
   });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
+  const [passwordError, setPasswordError] = useState(null);
 
   useEffect(() => {
     fetch(PROFILE_API_URL, { headers: authHeaders() })
@@ -125,8 +127,10 @@ export default function Profile() {
       .catch((err) => console.error("Failed to load profile:", err));
   }, []);
 
-  const set = (field) => (e) =>
+  const set = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
+    setFormErrors((errs) => (errs[field] ? { ...errs, [field]: null } : errs));
+  };
 
   const handleUpdate = async () => {
     try {
@@ -139,8 +143,23 @@ export default function Profile() {
           countryCode: form.countryCode.trim(),
         }),
       });
-      if (!res.ok) throw new Error(`Update failed (${res.status})`);
       const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const fieldErrors = (result.errors || []).reduce(
+          (acc, e) => ({ ...acc, [e.field]: e.message }),
+          {},
+        );
+        setFormErrors(fieldErrors);
+        toast.error(
+          result.errors?.[0]?.message ||
+            result.message ||
+            "Failed to update profile",
+        );
+        return;
+      }
+
+      setFormErrors({});
       const updated = result.data || result;
 
       setProfile((p) => ({ ...(p || {}), ...updated }));
@@ -170,13 +189,27 @@ export default function Profile() {
         headers: authHeaders(),
         body: JSON.stringify(passwordForm),
       });
-      if (!res.ok) throw new Error(`Password change failed (${res.status})`);
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const message =
+          result.errors?.[0]?.message ||
+          result.message ||
+          "Failed to change password";
+        setPasswordError(message);
+        toast.error(message);
+        return;
+      }
+
+      setPasswordError(null);
       setPasswordForm({ currentPassword: "", newPassword: "" });
       setShowPasswordForm(false);
       toast.success("Password changed");
     } catch (err) {
       console.error("Failed to change password:", err);
-      toast.error("Failed to change password");
+      const message = "Failed to change password";
+      setPasswordError(message);
+      toast.error(message);
     }
   };
 
@@ -304,6 +337,9 @@ export default function Profile() {
                 value={form.name}
                 onChange={set("name")}
               />
+              {formErrors.name && (
+                <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-[#5C5F60] mb-1.5">
@@ -315,6 +351,9 @@ export default function Profile() {
                 value={form.email}
                 onChange={set("email")}
               />
+              {formErrors.email && (
+                <p className="text-xs text-red-600 mt-1">{formErrors.email}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-[#5C5F60] mb-1.5">
@@ -333,6 +372,11 @@ export default function Profile() {
                   onChange={set("phone")}
                 />
               </div>
+              {(formErrors.phone || formErrors.countryCode) && (
+                <p className="text-xs text-red-600 mt-1">
+                  {formErrors.countryCode || formErrors.phone}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-[#5C5F60] mb-1.5">
@@ -348,7 +392,10 @@ export default function Profile() {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
             <button
-              onClick={() => setShowPasswordForm((s) => !s)}
+              onClick={() => {
+                setShowPasswordForm((s) => !s);
+                setPasswordError(null);
+              }}
               className="flex items-center justify-between gap-4 border border-[#E8DFE1] rounded-xl px-4 py-3 text-left hover:bg-slate-50 transition w-full sm:w-auto"
             >
               <span>
@@ -381,12 +428,13 @@ export default function Profile() {
                     className={`${inputClass} pr-10`}
                     type={showCurrentPassword ? "text" : "password"}
                     value={passwordForm.currentPassword}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setPasswordForm((p) => ({
                         ...p,
                         currentPassword: e.target.value,
-                      }))
-                    }
+                      }));
+                      setPasswordError(null);
+                    }}
                   />
                   <button
                     type="button"
@@ -413,12 +461,13 @@ export default function Profile() {
                     className={`${inputClass} pr-10`}
                     type={showNewPassword ? "text" : "password"}
                     value={passwordForm.newPassword}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setPasswordForm((p) => ({
                         ...p,
                         newPassword: e.target.value,
-                      }))
-                    }
+                      }));
+                      setPasswordError(null);
+                    }}
                   />
                   <button
                     type="button"
@@ -432,6 +481,11 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
+              {passwordError && (
+                <p className="text-xs text-red-600 sm:col-span-2">
+                  {passwordError}
+                </p>
+              )}
               <button
                 onClick={handleChangePassword}
                 className="flex items-center gap-2 bg-[#FFD1DC] hover:bg-[#f7bfce] text-[#6B4A52] font-bold text-sm px-6 py-3 rounded-xl transition w-fit sm:col-span-2"
