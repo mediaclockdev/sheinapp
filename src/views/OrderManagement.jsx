@@ -193,6 +193,7 @@ const OrderManagement = () => {
     customfee: 0,
   });
   const [estimatedWeight, setEstimatedWeight] = useState("");
+  const [agentdiscount, setAgentDiscount] = useState("");
 
   useEffect(() => {
     const token =
@@ -220,6 +221,7 @@ const OrderManagement = () => {
     setSelectedOrderId(id);
     setSelectedOrder(null);
     setEstimatedWeight("");
+    setAgentDiscount("");
     setCanModerate(moderate);
     setStatusError(null);
     setDetailLoading(true);
@@ -257,6 +259,9 @@ const OrderManagement = () => {
           0,
         );
         setEstimatedWeight(String(totalW));
+      }
+      if (order?.agentDiscount != null && parseFloat(order.agentDiscount) > 0) {
+        setAgentDiscount(String(order.agentDiscount));
       }
     } catch (err) {
       setDetailError(err.message);
@@ -379,7 +384,10 @@ const OrderManagement = () => {
           body: JSON.stringify({
             status: newStatus,
             ...(newStatus === "APPROVED"
-              ? { estimatedWeight: parseFloat(estimatedWeight) }
+              ? {
+                  estimatedWeight: parseFloat(estimatedWeight),
+                  agentDiscount: Number(agentdiscount) || 0,
+                }
               : {}),
           }),
         },
@@ -395,7 +403,10 @@ const OrderManagement = () => {
               ...prev,
               status: newStatus,
               ...(newStatus === "APPROVED"
-                ? { totalWeight: parseFloat(estimatedWeight) }
+                ? {
+                    totalWeight: parseFloat(estimatedWeight),
+                    agentDiscount: Number(agentdiscount) || 0,
+                  }
                 : {}),
             }
           : prev,
@@ -430,6 +441,7 @@ const OrderManagement = () => {
   const orderDeliveryFee = Number(settings.deliveryfee) || 0;
 
   const weightKg = parseFloat(estimatedWeight) || 0;
+  const promotionalDiscount = Number(selectedOrder?.totalPromotionalDiscount) || 0;
 
   const itemSubtotal =
     (selectedOrder?.items || []).reduce(
@@ -441,18 +453,13 @@ const OrderManagement = () => {
 
   const shippingCost = weightKg * settings.pricePerKg;
 
-  const baseAmount =
-    itemSubtotal + shippingCost + orderCustomFee + orderDeliveryFee;
+  const baseAmount = itemSubtotal - promotionalDiscount;
 
-  const matchedRule = settings.discountRules
-    .filter((r) => baseAmount >= Number(r.minOrderAmount))
-    .sort((a, b) => Number(b.minOrderAmount) - Number(a.minOrderAmount))[0];
+  const netAmount = baseAmount + shippingCost + orderCustomFee + orderDeliveryFee;
 
-  const discountRate = Number(matchedRule?.discountRate) || 0;
+  const agentDiscountValue = Number(agentdiscount) || 0;
 
-  const discountAmount = (baseAmount * discountRate) / 100;
-
-  const totalAmount = baseAmount - discountAmount;
+  const totalAmount = netAmount - agentDiscountValue;
 
   const getStatusClass = (s) => {
     switch (s) {
@@ -752,9 +759,7 @@ const OrderManagement = () => {
             <div className="border-t border-[#E5D6D8]">
               <div className="p-6">
                 {/* Estimated Weight */}
-                <span className="text-[10px] font-bold text-[#98A2AB] uppercase tracking-wider block mb-2">
-                  Total Estimated Weight
-                </span>
+
                 <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
                   <span className="text-base font-bold text-[#141D23]">
                     Estimated Weight
@@ -781,6 +786,34 @@ const OrderManagement = () => {
                   </div>
                 </div>
 
+                {/*  Agent Discount */}
+
+                <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
+                  <span className="text-base font-bold text-[#141D23]">
+                    Agent Discount
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base font-bold text-[#78555E]">
+                      $
+                    </span>
+                    {canModerate ? (
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={agentdiscount}
+                        onChange={(e) => setAgentDiscount(e.target.value)}
+                        placeholder="10"
+                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base font-bold text-[#78555E] outline-none"
+                      />
+                    ) : (
+                      <span className="text-base font-bold text-[#78555E]">
+                        {agentdiscount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 <h3 className="text-base font-bold text-[#141D23] mb-4">
                   Order Summary
                 </h3>
@@ -790,6 +823,20 @@ const OrderManagement = () => {
                     <span className="text-[#5C5F60]">Item Subtotal</span>
                     <span className="text-[#141D23] font-semibold">
                       ${itemSubtotal.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5C5F60]">Promotions Discount</span>
+                    <span className="text-red-600 font-semibold">
+                      -${promotionalDiscount.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="border-t border-[#E5E7EB] pt-3 flex justify-between items-center">
+                    <span className="text-[#141D23] font-bold">
+                      Base Amount
+                    </span>
+                    <span className="text-[#141D23] font-bold">
+                      ${baseAmount.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -816,25 +863,16 @@ const OrderManagement = () => {
                       ${orderDeliveryFee.toFixed(2)}
                     </span>
                   </div>
-
                   <div className="border-t border-[#E5E7EB] pt-3 flex justify-between items-center">
+                    <span className="text-[#141D23] font-bold">Net Amount</span>
                     <span className="text-[#141D23] font-bold">
-                      Base Amount
-                    </span>
-                    <span className="text-[#141D23] font-bold">
-                      ${baseAmount.toFixed(2)}
+                      ${netAmount.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[#5C5F60]">Discount Applied</span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-[#FFE8EF] text-[#D24D77]">
-                      {discountRate}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[#5C5F60]">Discount Amount</span>
+                    <span className="text-[#5C5F60]">Agent Discount</span>
                     <span className="text-red-600 font-semibold">
-                      -${discountAmount.toFixed(2)}
+                      -${agentDiscountValue.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -848,6 +886,7 @@ const OrderManagement = () => {
                   </span>
                 </div>
               </div>
+
               {/* Footer Buttons */}
               {canModerate && (
                 <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 space-y-3">
