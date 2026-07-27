@@ -217,7 +217,7 @@ export default function Settings() {
           </div>
 
           {/* Card 2: Coupon Discount Rules */}
-          <div className="order-3 lg:order-2 bg-white rounded-lg border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          {/* <div className="order-3 lg:order-2 bg-white rounded-lg border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
               <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
                 <span className="lg:hidden">3</span>
@@ -306,10 +306,10 @@ export default function Settings() {
                 calculation).
               </p>
             </div>
-          </div>
+          </div> */}
 
           {/* Card 3 : Custom and delivery fee  */}
-          <div className="order-2 lg:order-3 bg-white rounded-lg border border-[#D3C3C5] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="order-2 lg:order-3 bg-white rounded-2xl border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
               <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
                 <span className="lg:hidden">2</span>

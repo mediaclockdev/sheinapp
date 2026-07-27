@@ -213,7 +213,7 @@ export default function Profile() {
 
   return (
     <div className="flex-1 bg-[#fdf5f7] min-h-[calc(100vh-70px)]">
-      <div className="p-4 sm:p-8 max-w-5xl space-y-6">
+      <div className="p-4 sm:p-8 max-w-5xl space-y-6 mx-auto">
         {/* Profile header card */}
         <div className="bg-white border border-[#E8DFE1] rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
           <div className="relative shrink-0">
@@ -284,7 +284,7 @@ export default function Profile() {
 
         {/* Personal Information */}
         <div className="bg-white border border-[#E8DFE1] rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between  mb-6">
             <h3 className="text-lg font-bold text-[#141D23]">
               Personal Information
             </h3>
@@ -428,11 +428,7 @@ export default function Profile() {
                       showNewPassword ? "Hide password" : "Show password"
                     }
                   >
-                    {showNewPassword ? (
-                      <EyeOff size={16} />
-                    ) : (
-                      <Eye size={16} />
-                    )}
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>

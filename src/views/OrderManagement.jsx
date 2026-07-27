@@ -936,6 +936,7 @@ const OrderManagement = () => {
             type="checkbox"
             checked={tbl.getIsAllPageRowsSelected()}
             onChange={tbl.getToggleAllPageRowsSelectedHandler()}
+            className="accent-[#7A5C69] h-4 w-4 align-middle cursor-pointer"
           />
         ),
         cell: ({ row }) => (
@@ -943,7 +944,7 @@ const OrderManagement = () => {
             type="checkbox"
             checked={row.getIsSelected()}
             onChange={row.getToggleSelectedHandler()}
-            className="accent-[#7A5C69]"
+            className="accent-[#7A5C69] h-4 w-4 align-middle cursor-pointer"
           />
         ),
       },
@@ -1178,6 +1179,7 @@ const OrderManagement = () => {
                 setStatus("All");
                 setDateRange([null, null]);
                 setSearchInput("");
+                setRowSelection({});
               }}
               disabled={ordersLoading}
               className="text-[#8B6575] hover:rotate-180 transition-transform duration-300 disabled:opacity-50"
@@ -1214,10 +1216,8 @@ const OrderManagement = () => {
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className={`py-4 text-xs lg:text-sm font-bold text-[#666] ${
-                          header.column.id === "select"
-                            ? "w-12 px-3"
-                            : "text-center px-3"
+                        className={`py-4 text-xs lg:text-sm font-bold text-[#666] text-center ${
+                          header.column.id === "select" ? "w-12 px-3" : "px-3"
                         }`}
                       >
                         {header.isPlaceholder
@@ -1263,8 +1263,8 @@ const OrderManagement = () => {
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className={`py-4 ${
-                          cell.column.id === "select" ? "px-3" : "text-center"
+                        className={`py-4 text-center ${
+                          cell.column.id === "select" ? "px-3" : ""
                         }`}
                       >
                         {flexRender(
