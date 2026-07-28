@@ -460,7 +460,8 @@ const OrderManagement = () => {
   const orderDeliveryFee = Number(settings.deliveryfee) || 0;
 
   const weightKg = parseFloat(estimatedWeight) || 0;
-  const promotionalDiscount = Number(selectedOrder?.totalPromotionalDiscount) || 0;
+  const promotionalDiscount =
+    Number(selectedOrder?.totalPromotionalDiscount) || 0;
 
   const itemSubtotal =
     (selectedOrder?.items || []).reduce(
@@ -474,7 +475,8 @@ const OrderManagement = () => {
 
   const baseAmount = itemSubtotal - promotionalDiscount;
 
-  const netAmount = baseAmount + shippingCost + orderCustomFee + orderDeliveryFee;
+  const netAmount =
+    baseAmount + shippingCost + orderCustomFee + orderDeliveryFee;
 
   const agentDiscountValue = Number(agentdiscount) || 0;
 
@@ -1148,7 +1150,7 @@ const OrderManagement = () => {
                     isClearable
                     placeholderText="Start date"
                     dateFormat="MMM d"
-                    className="focus:outline-none text-base font-normal bg-transparent w-full"
+                    className="focus:outline-none text-base font-normal bg-transparent w-full relative z-10"
                   />
                 </div>
               </div>
@@ -1169,7 +1171,7 @@ const OrderManagement = () => {
                     isClearable
                     placeholderText="End date"
                     dateFormat="MMM d"
-                    className="focus:outline-none text-base font-normal bg-transparent w-full"
+                    className="focus:outline-none text-base font-normal bg-transparent w-full relative z-10"
                   />
                 </div>
               </div>

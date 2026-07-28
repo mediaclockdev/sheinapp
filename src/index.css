@@ -12,6 +12,11 @@
   background: transparent;
 }
 
+/* Keep the calendar popover above sticky table headers */
+.react-datepicker-popper {
+  z-index: 50 !important;
+}
+
 /* Make calendar popover fit on mobile screen width */
 @media (max-width: 640px) {
   .react-datepicker-popper {
