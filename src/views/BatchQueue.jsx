@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Move, Merge, Copy, Info, LockKeyhole, X } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
+import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const BATCHES_API_URL = `${API_BASE_URL}/api/batches`;
@@ -76,8 +77,7 @@ export default function BatchQueue() {
   const [lockedBatchesError, setLockedBatchesError] = useState(null);
 
   const fetchBatches = useCallback(async (status) => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
     const response = await fetch(`${BATCHES_API_URL}?status=${status}`, {
       method: "GET",
@@ -87,6 +87,10 @@ export default function BatchQueue() {
       },
     });
 
+    if (isUnauthorized(response.status)) {
+      handleUnauthorized();
+      throw new Error("Session expired");
+    }
     const result = await response.json();
     if (!response.ok)
       throw new Error(result.message || `Failed to fetch ${status} batches`);
@@ -130,8 +134,7 @@ export default function BatchQueue() {
     setApprovedOrdersLoading(true);
     setApprovedOrdersError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(APPROVED_ORDERS_API_URL, {
         method: "GET",
@@ -141,6 +144,10 @@ export default function BatchQueue() {
         },
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const result = await response.json();
       if (!response.ok)
         throw new Error(result.message || "Failed to fetch approved orders");
@@ -203,8 +210,7 @@ export default function BatchQueue() {
     setCreatingBatch(true);
     setCreateBatchError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(CREATE_BATCH_API_URL, {
         method: "POST",
@@ -215,6 +221,10 @@ export default function BatchQueue() {
         body: JSON.stringify({ orderIds: selectedOrders.map(Number) }),
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const rawText = await response.text();
       let result = {};
       try {
@@ -258,8 +268,7 @@ export default function BatchQueue() {
     setLockingBatchId(batch.id);
     setLockError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(`${BATCHES_API_URL}/${batch.id}/lock`, {
         method: "PATCH",
@@ -269,6 +278,10 @@ export default function BatchQueue() {
         },
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const rawText = await response.text();
       let result = {};
       try {
@@ -298,8 +311,7 @@ export default function BatchQueue() {
   const [batchDetailLoading, setBatchDetailLoading] = useState(false);
 
   const fetchBatchById = useCallback(async (id) => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
     const response = await fetch(`${BATCHES_API_URL}/${id}`, {
       method: "GET",
@@ -309,6 +321,10 @@ export default function BatchQueue() {
       },
     });
 
+    if (isUnauthorized(response.status)) {
+      handleUnauthorized();
+      throw new Error("Session expired");
+    }
     const result = await response.json();
     if (!response.ok)
       throw new Error(result.message || "Failed to fetch batch");
@@ -353,8 +369,7 @@ export default function BatchQueue() {
     setMoveLoading(true);
     setMoveError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(moveOrdersApiUrl(selectedBatchId), {
         method: "POST",
@@ -368,6 +383,10 @@ export default function BatchQueue() {
         }),
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const rawText = await response.text();
       let result = {};
       try {
@@ -437,8 +456,7 @@ export default function BatchQueue() {
     setMergeLoading(true);
     setMergeError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(MERGE_BATCH_API_URL, {
         method: "POST",
@@ -455,6 +473,10 @@ export default function BatchQueue() {
         }),
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const rawText = await response.text();
       let result = {};
       try {

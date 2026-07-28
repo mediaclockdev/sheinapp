@@ -3,13 +3,13 @@ import { useOutletContext } from "react-router-dom";
 import { ChevronRight, BadgeCheck, Pencil, Eye, EyeOff } from "lucide-react";
 import tick from "../assets/tickicon.svg";
 import { toast } from "../components/Toast";
+import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
 
 const authHeaders = () => {
-  const token =
-    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -43,6 +43,21 @@ const NOTIFICATIONS = [
   },
 ];
 
+const COUNTRY_CODES = [
+  ["1", "US / Canada"],
+  ["61", "Australia"],
+  ["971", "UAE"],
+  ["966", "Saudi Arabia"],
+  ["974", "Qatar"],
+  ["965", "Kuwait"],
+  ["973", "Bahrain"],
+  ["968", "Oman"],
+  ["962", "Jordan"],
+  ["961", "Lebanon"],
+  ["91", "India"],
+  ["44", "UK"],
+];
+
 const prefsFromApi = (notificationPreferences) => {
   if (!notificationPreferences) return null;
   return NOTIFICATIONS.reduce(
@@ -55,11 +70,13 @@ const prefsFromApi = (notificationPreferences) => {
 };
 
 const updateStoredUser = (patch) => {
-  const store = localStorage.getItem("user") ? localStorage : sessionStorage;
-  const raw = store.getItem("user");
+  const raw = localStorage.getItem("user");
   if (!raw) return;
   try {
-    store.setItem("user", JSON.stringify({ ...JSON.parse(raw), ...patch }));
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...JSON.parse(raw), ...patch }),
+    );
   } catch {
     // ignore malformed stored user
   }
@@ -82,7 +99,7 @@ const Toggle = ({ on, onClick }) => (
 );
 
 export default function Profile() {
-  const { onAvatarChange } = useOutletContext() ?? {};
+  const { onAvatarChange, onUserChange } = useOutletContext() ?? {};
   const [profile, setProfile] = useState(null); // raw API data
   const [form, setForm] = useState({
     name: "",
@@ -110,7 +127,13 @@ export default function Profile() {
 
   useEffect(() => {
     fetch(PROFILE_API_URL, { headers: authHeaders() })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((res) => {
+        if (isUnauthorized(res.status)) {
+          handleUnauthorized();
+          return Promise.reject(res.status);
+        }
+        return res.ok ? res.json() : Promise.reject(res.status);
+      })
       .then(({ data }) => {
         if (!data) return;
         setProfile(data);
@@ -143,6 +166,10 @@ export default function Profile() {
           countryCode: form.countryCode.trim(),
         }),
       });
+      if (isUnauthorized(res.status)) {
+        handleUnauthorized();
+        return;
+      }
       const result = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -172,6 +199,7 @@ export default function Profile() {
       const apiPrefs = prefsFromApi(updated.notificationPreferences);
       if (apiPrefs) setPrefs((p) => ({ ...p, ...apiPrefs }));
       updateStoredUser({ name: updated.name ?? form.name });
+      onUserChange?.({ name: updated.name ?? form.name });
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -189,6 +217,10 @@ export default function Profile() {
         headers: authHeaders(),
         body: JSON.stringify(passwordForm),
       });
+      if (isUnauthorized(res.status)) {
+        handleUnauthorized();
+        return;
+      }
       const result = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -217,8 +249,7 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
       const body = new FormData();
       body.append("image", file);
       const res = await fetch(`${PROFILE_API_URL}/photo`, {
@@ -226,6 +257,10 @@ export default function Profile() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body,
       });
+      if (isUnauthorized(res.status)) {
+        handleUnauthorized();
+        return;
+      }
       const result = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(`Photo upload failed (${res.status})`);
       const avatarUrl =
@@ -360,12 +395,29 @@ export default function Profile() {
                 Phone Number
               </label>
               <div className="flex gap-2">
-                <input
-                  className={`${inputClass.replace("w-full", "w-20")} shrink-0`}
-                  value={form.countryCode}
-                  onChange={set("countryCode")}
-                  placeholder="+61"
-                />
+                <div className="relative w-24 shrink-0">
+                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm text-[#141D23]">
+                    {form.countryCode ? (
+                      `+${form.countryCode}`
+                    ) : (
+                      <span className="text-[#98a2ab]">Code</span>
+                    )}
+                  </span>
+                  <select
+                    className={`${inputClass} w-24 cursor-pointer text-transparent [&>option]:text-[#141D23]`}
+                    value={form.countryCode}
+                    onChange={set("countryCode")}
+                  >
+                    <option value="" disabled>
+                      Code
+                    </option>
+                    {COUNTRY_CODES.map(([code, country]) => (
+                      <option key={code} value={code}>
+                        +{code} {country}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <input
                   className={inputClass}
                   value={form.phone}

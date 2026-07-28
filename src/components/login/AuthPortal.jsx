@@ -270,15 +270,12 @@ function LoginScreen() {
       }
 
       if (result.token) {
-        if (rememberMe) {
-          localStorage.setItem("token", result.token);
-          if (result.data)
-            localStorage.setItem("user", JSON.stringify(result.data));
-        } else {
-          sessionStorage.setItem("token", result.token);
-          if (result.data)
-            sessionStorage.setItem("user", JSON.stringify(result.data));
-        }
+        localStorage.setItem("token", result.token);
+        if (result.data)
+          localStorage.setItem(
+            "user",
+            JSON.stringify({ id: result.data.id, name: result.data.name }),
+          );
       }
       navigate("/dashboard");
     } catch (err) {
@@ -415,7 +412,9 @@ function ForgotScreen() {
       if (!response.ok) {
         throw new Error(result.message || "Failed to send reset link");
       }
-      setSuccess("Password reset link has been sent to your email. Please check your inbox.");
+      setSuccess(
+        "Password reset link has been sent to your email. Please check your inbox.",
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -553,7 +552,9 @@ function ResetScreen() {
     setSuccess("");
 
     if (!token) {
-      setError("Reset token is missing or invalid. Please request a new reset link.");
+      setError(
+        "Reset token is missing or invalid. Please request a new reset link.",
+      );
       return;
     }
     const formData = new FormData(e.target);
@@ -787,8 +788,8 @@ function RegisterScreen() {
 
       if (result.token) {
         localStorage.setItem("token", result.token);
-        if (result.data)
-          localStorage.setItem("user", JSON.stringify(result.data));
+        //   if (result.data)
+        //     localStorage.setItem("user", JSON.stringify(result.data));
       }
       navigate("/dashboard");
     } catch (err) {

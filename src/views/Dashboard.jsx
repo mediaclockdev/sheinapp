@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 import newbatchicon from "../assets/newbatch.svg";
 import totalordersicon from "../assets/totalordericon.svg";
 import pendingreviewicon from "../assets/pendingreviewicon.svg";
@@ -20,14 +21,17 @@ const imageUrl = (p) =>
   !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
 
 const fetchApi = async (path) => {
-  const token =
-    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const token = localStorage.getItem("token");
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
+  if (isUnauthorized(response.status)) {
+    handleUnauthorized();
+    throw new Error("Session expired");
+  }
   if (!response.ok) throw new Error(`Failed to fetch ${path}`);
   const json = await response.json();
   return json.data;
@@ -120,9 +124,7 @@ const Dashboard = () => {
   useEffect(() => {
     let user = null;
     try {
-      user = JSON.parse(
-        localStorage.getItem("user") || sessionStorage.getItem("user"),
-      );
+      user = JSON.parse(localStorage.getItem("user"));
     } catch {
       /* ignore bad stored user */
     }

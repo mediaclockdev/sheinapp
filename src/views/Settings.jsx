@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Save, Info, Plus, X } from "lucide-react";
 import { toast } from "../components/Toast";
+import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
 const SETTINGS_API_URL = "https://shelynx.mediaclocksoft.com.au/api/settings";
 
 const initialTiers = [{ min: "100", max: "199", discount: "5" }];
 
 const authHeaders = () => {
-  const token =
-    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -26,7 +26,13 @@ export default function Settings() {
 
   useEffect(() => {
     fetch(SETTINGS_API_URL, { headers: authHeaders() })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((res) => {
+        if (isUnauthorized(res.status)) {
+          handleUnauthorized();
+          return Promise.reject(res.status);
+        }
+        return res.ok ? res.json() : Promise.reject(res.status);
+      })
       .then(({ data }) => {
         if (data?.pricePerKg != null) setPricePerKg(String(data.pricePerKg));
         if (data?.customfee != null) setCustomFee(String(data.customfee));
@@ -92,6 +98,14 @@ export default function Settings() {
         }),
       ]);
 
+      if (
+        isUnauthorized(shippingRes.status) ||
+        isUnauthorized(rulesRes.status) ||
+        isUnauthorized(feesRes.status)
+      ) {
+        handleUnauthorized();
+        return;
+      }
       if (!shippingRes.ok || !rulesRes.ok || !feesRes.ok) {
         throw new Error("Save failed");
       }

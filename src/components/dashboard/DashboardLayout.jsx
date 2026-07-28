@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation, Link } from "react-router-dom";
 import Sidebar from "./Sidebar";
+import { handleUnauthorized, isUnauthorized } from "../../lib/sessionExpiry";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
@@ -27,8 +28,7 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     try {
-      const storedUser =
-        localStorage.getItem("user") || sessionStorage.getItem("user");
+      const storedUser = localStorage.getItem("user");
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
@@ -36,12 +36,17 @@ const DashboardLayout = () => {
       console.error("Failed to parse user data", e);
     }
 
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = localStorage.getItem("token");
     fetch(PROFILE_API_URL, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((res) => {
+        if (isUnauthorized(res.status)) {
+          handleUnauthorized();
+          return Promise.reject(res.status);
+        }
+        return res.ok ? res.json() : Promise.reject(res.status);
+      })
       .then(({ data }) => setAvatarUrl(data?.avatarUrl || null))
       .catch((err) => console.error("Failed to load agent avatar:", err));
   }, []);
@@ -129,7 +134,13 @@ const DashboardLayout = () => {
 
         {/* Dynamic Route Content */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet context={{ onAvatarChange: setAvatarUrl }} />
+          <Outlet
+            context={{
+              onAvatarChange: setAvatarUrl,
+              onUserChange: (patch) =>
+                setUser((u) => ({ ...(u || {}), ...patch })),
+            }}
+          />
         </main>
       </div>
     </div>

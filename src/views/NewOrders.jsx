@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SuccessToast from "../components/common/SuccessToast";
+import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 import usericon from "../assets/CustomerInformationicon.svg";
 import addnewordericon from "../assets/addnewproduct.svg";
 import productdetailsicon from "../assets/productdetailicon.svg";
@@ -78,8 +79,7 @@ const NewOrders = () => {
     setLoading(true);
     setError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const items = [
         {
@@ -116,6 +116,10 @@ const NewOrders = () => {
         body: formData,
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const rawText = await response.text();
       let result = {};
       try {

@@ -13,6 +13,7 @@ import {
   flexRender,
   getCoreRowModel,
 } from "@tanstack/react-table";
+import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const ORDERS_API_URL = `${API_BASE_URL}/api/orders`;
@@ -120,8 +121,7 @@ const OrderManagement = () => {
     setOrdersLoading(true);
     setOrdersError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const params = new URLSearchParams({
         page: pagination.pageIndex + 1,
@@ -140,6 +140,10 @@ const OrderManagement = () => {
         },
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const result = await response.json();
       if (!response.ok)
         throw new Error(result.message || "Failed to fetch orders");
@@ -196,15 +200,20 @@ const OrderManagement = () => {
   const [agentdiscount, setAgentDiscount] = useState("");
 
   useEffect(() => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = localStorage.getItem("token");
     fetch(SETTINGS_API_URL, {
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((res) => {
+        if (isUnauthorized(res.status)) {
+          handleUnauthorized();
+          return Promise.reject(res.status);
+        }
+        return res.ok ? res.json() : Promise.reject(res.status);
+      })
       .then(({ data }) =>
         setSettings({
           pricePerKg: Number(data?.pricePerKg) || 0,
@@ -227,8 +236,7 @@ const OrderManagement = () => {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(`${ORDER_DETAIL_API_URL}/${id}`, {
         method: "GET",
@@ -238,6 +246,10 @@ const OrderManagement = () => {
         },
       });
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       const result = await response.json();
       if (!response.ok)
         throw new Error(result.message || "Failed to fetch order details");
@@ -334,6 +346,10 @@ const OrderManagement = () => {
       }),
     });
 
+    if (isUnauthorized(response.status)) {
+      handleUnauthorized();
+      return;
+    }
     const rawText = await response.text();
     let result = {};
     try {
@@ -366,8 +382,7 @@ const OrderManagement = () => {
     setStatusUpdating(true);
     setStatusError(null);
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       if (newStatus === "APPROVED") {
         await handleSaveOrderEdits(token);
@@ -393,6 +408,10 @@ const OrderManagement = () => {
         },
       );
 
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return false;
+      }
       const result = await response.json();
       if (!response.ok)
         throw new Error(result.message || "Failed to update order status");
@@ -480,14 +499,17 @@ const OrderManagement = () => {
       .rows.map((row) => row.original.raw?.id ?? row.original.id);
     if (!selectedIds.length) return;
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${ORDERS_API_URL}/export?ids=${selectedIds.join(",")}`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         },
       );
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
       if (!response.ok) throw new Error(`Export failed (${response.status})`);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
