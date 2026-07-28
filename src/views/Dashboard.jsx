@@ -629,15 +629,15 @@ const Dashboard = () => {
           </div>
 
           <div className="flex gap-3">
-            <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
+            {/* <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
               <img src={filtericon} alt="Filter" className="h-3.5 w-3.5" />
               <span>Filter</span>
-            </button>
-            <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
+            </button> */}
+            {/* <button className="flex items-center gap-1.5 px-3 py-2 border border-[#D3C3C5] hover:bg-slate-50 rounded-sm text-[13px] font-semibold text-[#141D23] transition duration-200 cursor-pointer">
               <img src={exporticon} alt="Export" className="h-3.5 w-3.5" />
 
               <span>Export</span>
-            </button>
+            </button> */}
             <button
               onClick={() => navigate("/orders")}
               className="bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-normal px-4 py-2 rounded-xl text-[13px] transition duration-200 cursor-pointer"
