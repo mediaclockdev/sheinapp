@@ -71,15 +71,6 @@ export function TrackingView() {
   );
 }
 
-export function CustomersView() {
-  return (
-    <PagePlaceholder
-      title="Customers & Proxy Profiles"
-      description="Customer trust index database, proxy buyer settings, and previous transaction history records."
-    />
-  );
-}
-
 export function ReportsView() {
   return (
     <PagePlaceholder

@@ -12,13 +12,13 @@ import OrderManagement from "../views/OrderManagement";
 import {
   PaymentsView,
   TrackingView,
-  CustomersView,
   ReportsView,
 } from "../views/PlaceholderViews";
 import Settings from "../views/Settings";
 import Profile from "../views/Profile";
 import BatchQueue from "../views/BatchQueue";
 import NewOrders from "../views/NewOrders";
+import Customers from "../views/Customers";
 
 const isAuthenticated = () => {
   return !!localStorage.getItem("token");
@@ -67,7 +67,7 @@ function AppRoutes() {
         <Route path="payments" element={<PaymentsView />} />
         <Route path="batch-queue" element={<BatchQueue />} />
         <Route path="tracking" element={<TrackingView />} />
-        <Route path="customers" element={<CustomersView />} />
+        <Route path="customers" element={<Customers />} />
         <Route path="reports" element={<ReportsView />} />
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
