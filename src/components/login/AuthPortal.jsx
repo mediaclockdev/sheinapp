@@ -133,12 +133,6 @@ function BrandLogo({ compact = false }) {
       </div>
     );
   }
-
-  return (
-    <div className="pointer-events-none absolute left-5 top-5 z-10 flex flex-col items-center text-[#ff5f96] sm:left-8 sm:top-6">
-      {/* <img src={logo2} alt="logo2" /> */}
-    </div>
-  );
 }
 
 function Field({
@@ -286,9 +280,9 @@ function LoginScreen() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-5 pt-4 pb-3">
+    <div className="max-w-screen-2xl mx-auto  lg:px-5 pt-4 pb-3">
       <div className="w-full max-w-[500px] rounded-md border border-[#78555e]/20 bg-white/95 shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
-        <div className="px-8 pb-4 pt-4">
+        <div className="px-3 lg:px-8 py-4">
           <h1 className="text-2xl font-semibold tracking-tight text-[#17222b] text-center">
             Welcome Back
           </h1>
@@ -347,18 +341,18 @@ function LoginScreen() {
             </label>
 
             <label className="flex items-center justify-between text-xs text-[#4f4446] block">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 ">
                 <input
                   name="rememberMe"
                   className="h-3 w-3 accent-[#ff5f96]"
                   type="checkbox"
                 />
-                Stay logged in for 30 days
+                <p className="text-xs">Stay logged in for 30 days</p>
               </div>
               <div>
                 <Link
                   to="/forgot-password"
-                  className="text-[13px] font-semibold text-[#78555e] hover:text-[#ff5f96]"
+                  className="text-xs font-semibold text-[#78555e] hover:text-[#ff5f96]"
                 >
                   Forgot Password?
                 </Link>
@@ -800,12 +794,12 @@ function RegisterScreen() {
   };
 
   return (
-    <div className="w-full max-w-[526px] rounded-md border border-[#78555e]/20 bg-white/95 px-9 py-10 shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
+    <div className="w-full max-w-[526px] rounded-md border border-[#78555e]/20 bg-white/95 px-4 lg:px-8 py-5 lg:py-10 shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
       <div className="text-center">
-        <h1 className="text-[28px] font-extrabold tracking-tight text-[#17222b]">
+        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-[#17222b]">
           Create Agent Account
         </h1>
-        <p className="mx-auto mt-2 max-w-[420px] text-[18px] leading-6 text-[#626973]">
+        <p className="mx-auto mt-2 max-w-[420px] text-base lg:text-lg leading-6 text-[#626973]">
           Join our logistics network as a verified Shein shopping agent.
         </p>
       </div>
@@ -902,7 +896,7 @@ function RegisterScreen() {
           placeholder="••••••••"
           error={fieldErrors.confirmPassword}
         />
-        <div className="flex gap-3 rounded bg-[#eef7ff] px-5 py-5 text-[12px] font-semibold leading-5 text-[#4e5963]">
+        <div className="flex gap-3 rounded bg-[#eef7ff] px-3 lg:px-5 py-3 lg:py-5 text-xs font-semibold leading-5 text-[#4e5963]">
           <Icon
             name="info"
             className="mt-0.5 h-5 w-5 shrink-0 text-[#7a4e5b]"
@@ -917,9 +911,9 @@ function RegisterScreen() {
           {loading ? "Registering..." : "Register Account"}
         </PrimaryButton>
       </form>
-      <p className="mt-9 text-center text-[18px] text-[#73787e]">
+      <p className="mt-9 text-center text-base lg:text-lg text-[#73787e]">
         Already have an account?{" "}
-        <Link to="/login" className="font-bold text-[#7a4e5b]">
+        <Link to="/login" className="font-semibold text-[#7a4e5b]">
           Login
         </Link>
       </p>
@@ -962,7 +956,7 @@ function PortalLayout() {
       <header className="flex h-[55px] items-center border-b border-[#dec9ce] bg-white px-7 sm:px-9">
         <Link
           to="/login"
-          className="flex items-center gap-3 text-2xl font-bold tracking-tight text-[#ee5d8d]"
+          className="flex items-center gap-3 text-xl lg:text-2xl font-bold tracking-tight text-[#ee5d8d]"
         >
           <BrandLogo compact />
           Shelynx Agent Portal
@@ -970,14 +964,8 @@ function PortalLayout() {
       </header>
 
       <main
-        className={`relative flex min-h-[calc(100vh-90px)] flex-1 justify-center overflow-hidden border-b border-[#dbcbd0] bg-[#f8dce4] px-4 pb-4 pt-6`}
+        className={`relative flex min-h-[calc(100vh-90px)] justify-center overflow-hidden border-b border-[#dbcbd0] bg-[#f8dce4] pb-4 pt-6`}
       >
-        {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_52%_18%,rgba(255,255,255,0.58),transparent_31%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(153deg,rgba(255,255,255,0.68)_0_27%,transparent_27.2%)]" />
-        <div className="absolute bottom-[-24%] right-[-8%] h-[70%] w-[86%] rotate-[-13deg] rounded-tl-full bg-white/15" />
-        <div className="absolute left-[-12%] top-[16%] h-[38%] w-[60%] rotate-[9deg] rounded-br-full bg-white/30" />
-        */}
-
         <BrandLogo />
 
         <section className="relative z-[1] flex w-full max-w-[526px] flex-col items-center">
