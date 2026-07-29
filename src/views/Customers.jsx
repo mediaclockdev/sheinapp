@@ -47,6 +47,7 @@ export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDisabled, setIsDisabled] = useState(true);
 
   const handleFetchCustomer = async () => {
     setLoading(true);
@@ -162,8 +163,16 @@ export default function Customers() {
                 Manage and track your proxy shopping client.
               </p>
             </div>
-            <button className="shrink-0 flex items-center justify-center gap-2 bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border border-[#D3C3C5] px-4 py-2.5 rounded-sm text-sm font-bold transition-colors">
-              <UserPlus size={16} /> Add Customer
+            <button
+              disabled={isDisabled}
+              className={`shrink-0 flex items-center justify-center gap-2 border px-4 py-2.5 rounded-sm text-sm font-bold transition-colors ${
+                isDisabled
+                  ? "bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed"
+                  : "bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border-[#D3C3C5]"
+              }`}
+            >
+              <UserPlus size={16} />
+              Add Customer
             </button>
           </div>
 
@@ -311,10 +320,18 @@ export default function Customers() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button className="p-2 border border-[#D3C3C5] rounded text-[#5C5F60] hover:bg-slate-50 transition-colors">
+                  <button
+                    disabled={isDisabled}
+                    className={`p-2 border border-[#D3C3C5] rounded text-[#5C5F60] hover:bg-slate-50 transition-colors
+                    ${isDisabled ? "cursor-not-allowed" : ""}`}
+                  >
                     <Pencil size={16} />
                   </button>
-                  <button className="p-2 border border-[#D3C3C5] rounded text-[#5C5F60] hover:bg-slate-50 transition-colors">
+                  <button
+                    disabled={isDisabled}
+                    className={`p-2 border border-[#D3C3C5] rounded text-[#5C5F60] hover:bg-slate-50 transition-colors
+ ${isDisabled ? "cursor-not-allowed" : ""}`}
+                  >
                     <MoreVertical size={16} />
                   </button>
                 </div>
@@ -372,10 +389,26 @@ export default function Customers() {
               </div>
 
               <div className="flex gap-3 mt-6">
-                <button className="flex-1 bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors">
+                <button
+                  disabled={isDisabled}
+                  className={`flex-1 bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors
+                  ${
+                    isDisabled
+                      ? " text-gray-500 border-gray-300 cursor-not-allowed opacity-60"
+                      : "bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border-[#D3C3C5]"
+                  }`}
+                >
                   Contact Customer
                 </button>
-                <button className="flex-1 bg-white hover:bg-slate-50 text-[#141D23] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors">
+                <button
+                  disabled={isDisabled}
+                  className={`flex-1 bg-white hover:bg-slate-50 text-[#141D23] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors
+   ${
+     isDisabled
+       ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed opacity-60"
+       : "bg-white hover:bg-slate-50 text-[#141D23] border-[#D3C3C5]"
+   }`}
+                >
                   Edit Profile
                 </button>
               </div>
