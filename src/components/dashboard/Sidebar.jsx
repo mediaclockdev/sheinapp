@@ -52,7 +52,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="flex flex-col gap-6">
           {/* Logo and Brand Title */}
           <div>
-            <div className="h-32 w-32 overflow-hidden mt-[-20px]">
+            <div className="h-32 w-32 overflow-hidden lg:mt-[-20px]">
               <img
                 src={logo2}
                 alt="Shelynx Logo"
