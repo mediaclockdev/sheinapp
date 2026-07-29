@@ -781,11 +781,11 @@ const OrderManagement = () => {
 
             {/* Order Summary */}
             <div className="border-t border-[#E5D6D8]">
-              <div className="p-6">
+              <div className="p-4 lg:p-6">
                 {/* Estimated Weight */}
 
                 <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
-                  <span className="text-base font-bold text-[#141D23]">
+                  <span className="text-sm lg:text-base font-bold text-[#141D23]">
                     Estimated Weight
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -797,14 +797,14 @@ const OrderManagement = () => {
                         value={estimatedWeight}
                         onChange={(e) => setEstimatedWeight(e.target.value)}
                         placeholder="0"
-                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base font-bold text-[#78555E] outline-none"
+                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-sm lg:text-base font-bold text-[#78555E] outline-none"
                       />
                     ) : (
                       <span className="text-base font-bold text-[#78555E]">
                         {weightKg}
                       </span>
                     )}
-                    <span className="text-base font-bold text-[#78555E]">
+                    <span className="text-sm lg:text-base font-bold text-[#78555E]">
                       KG
                     </span>
                   </div>
@@ -813,11 +813,11 @@ const OrderManagement = () => {
                 {/*  Agent Discount */}
 
                 <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
-                  <span className="text-base font-bold text-[#141D23]">
+                  <span className=" text-sm lg:text-base font-bold text-[#141D23]">
                     Agent Discount
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base font-bold text-[#78555E]">
+                    <span className="text-sm lg:text-base font-bold text-[#78555E]">
                       $
                     </span>
                     {canModerate ? (
@@ -828,7 +828,7 @@ const OrderManagement = () => {
                         value={agentdiscount}
                         onChange={(e) => setAgentDiscount(e.target.value)}
                         placeholder="10"
-                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base font-bold text-[#78555E] outline-none"
+                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
                       />
                     ) : (
                       <span className="text-base font-bold text-[#78555E]">
@@ -901,11 +901,11 @@ const OrderManagement = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-4">
-                  <span className="text-lg font-bold text-[#141D23]">
+                <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-3 lg:px-4 py-3 mt-4">
+                  <span className="text-base lg:text-lg font-bold text-[#141D23]">
                     Total Amount
                   </span>
-                  <span className="text-xl font-bold text-green-600">
+                  <span className="text-base lg:text-xl font-bold text-green-600">
                     ${totalAmount.toFixed(2)}
                   </span>
                 </div>
@@ -928,7 +928,7 @@ const OrderManagement = () => {
                       disabled={statusUpdating}
                     >
                       <img src={approve} alt="" />
-                      <span>Approve</span>
+                      <span className="text-sm lg:text-base">Approve</span>
                     </button>
 
                     <button
@@ -938,7 +938,7 @@ const OrderManagement = () => {
                       disabled={statusUpdating}
                     >
                       <img src={reject} alt="" />
-                      <span>Reject</span>
+                      <span className="text-sm lg:text-base">Reject</span>
                     </button>
                   </div>
                 </div>

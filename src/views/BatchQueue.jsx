@@ -523,16 +523,11 @@ export default function BatchQueue() {
       />
       {/* Header */}
       <div className="space-y-1">
-        {/* <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold text-[#7A4E5B] tracking-tight">
-            Batch Queue
-          </h1>
-        </div> */}
         <div className="flex flex-col lg:flex-row items-center gap-3">
           <p className="text-[#5C5F60] text-base lg:text-xl">
             Smart grouping active based on discount thresholds.
           </p>
-          <span className="flex items-center gap-1 text-base font-semibold text-[#A25F6E] bg-[#FFD1DC]/40 px-2 py-1 rounded-sm border border-[#FFD1DC]">
+          <span className="flex items-center gap-1 text-sm lg:text-base font-semibold text-[#A25F6E] bg-[#FFD1DC]/40 px-2 py-1 rounded-sm border border-[#FFD1DC]">
             <Info size={18} />
             Manual overrides enabled
           </span>
@@ -544,7 +539,7 @@ export default function BatchQueue() {
         <div className="flex gap-8">
           <button
             onClick={() => setActiveTab("approved")}
-            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 ${
               activeTab === "approved"
                 ? "border-[#7A4E5B] text-[#141D23]"
                 : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
@@ -554,7 +549,7 @@ export default function BatchQueue() {
           </button>
           <button
             onClick={() => setActiveTab("active")}
-            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 ${
               activeTab === "active"
                 ? "border-[#7A4E5B] text-[#141D23]"
                 : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
@@ -564,7 +559,7 @@ export default function BatchQueue() {
           </button>
           <button
             onClick={() => setActiveTab("locked")}
-            className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 ${
               activeTab === "locked"
                 ? "border-[#7A4E5B] text-[#141D23]"
                 : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
@@ -578,15 +573,15 @@ export default function BatchQueue() {
       {/* Tab Content */}
       <div className="min-h-[300px]">
         {activeTab === "approved" && (
-          <div className="bg-white border border-[#D3C3C5] rounded-lg overflow-hidden">
-            <div className="p-4 border-b border-[#D3C3C5] flex justify-between items-center bg-[#FFD1DC]/10">
-              <h2 className="font-semibold text-[#141D23]">
+          <div className="bg-white border border-[#D3C3C5] rounded-lg">
+            <div className="p-4 border-b border-[#D3C3C5] flex flex-wrap gap-3 justify-between items-center bg-[#FFD1DC]/10">
+              <h2 className="font-semibold text-[#141D23] text-sm lg:text-base">
                 Ready for Batching
               </h2>
               <button
                 onClick={handleCreateBatch}
                 disabled={selectedOrders.length === 0 || creatingBatch}
-                className="bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#2D141C] border border-[#D3C3C5] px-4 py-2 rounded-sm text-sm font-medium disabled:opacity-50 transition-colors"
+                className="bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#2D141C] border border-[#D3C3C5] px-4 py-2 rounded-sm text-xs lg:text-sm font-medium disabled:opacity-50 transition-colors"
               >
                 {creatingBatch ? "Creating Batch..." : "Make Batch"}
               </button>
@@ -596,70 +591,74 @@ export default function BatchQueue() {
                 {createBatchError}
               </p>
             )}
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-[#5C5F60] border-b border-[#D3C3C5]">
-                <tr>
-                  <th className="px-6 py-3 font-medium w-12"></th>
-                  <th className="px-6 py-3 font-medium">Order ID</th>
-                  <th className="px-6 py-3 font-medium">Customer</th>
-                  <th className="px-6 py-3 font-medium">Items</th>
-                  <th className="px-6 py-3 font-medium">Value</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#D3C3C5]">
-                {approvedOrdersLoading ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-[#5C5F60] border-b border-[#D3C3C5]">
                   <tr>
-                    <td
-                      colSpan="5"
-                      className="px-6 py-8 text-center text-[#5C5F60]"
-                    >
-                      Loading approved orders...
-                    </td>
+                    <th className="px-6 py-3 font-medium w-12"></th>
+                    <th className="px-6 py-3 font-medium">Order ID</th>
+                    <th className="px-6 py-3 font-medium">Customer</th>
+                    <th className="px-6 py-3 font-medium">Items</th>
+                    <th className="px-6 py-3 font-medium">Value</th>
                   </tr>
-                ) : approvedOrdersError ? (
-                  <tr>
-                    <td
-                      colSpan="5"
-                      className="px-6 py-8 text-center text-red-600"
-                    >
-                      {approvedOrdersError}
-                    </td>
-                  </tr>
-                ) : approvedOrders.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan="5"
-                      className="px-6 py-8 text-center text-[#5C5F60]"
-                    >
-                      No approved orders available.
-                    </td>
-                  </tr>
-                ) : (
-                  approvedOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedOrders.includes(order.id)}
-                          onChange={() => toggleOrderSelection(order.id)}
-                          className="rounded border-[#D3C3C5] text-[#7A4E5B] focus:ring-[#7A4E5B]"
-                        />
-                      </td>
-                      <td className="px-6 py-4 font-medium text-[#141D23]">
-                        {order.displayId}
-                      </td>
-                      <td className="px-6 py-4 text-[#5C5F60]">{order.user}</td>
-                      <td className="px-6 py-4 text-[#5C5F60]">
-                        {order.items}
-                      </td>
-                      <td className="px-6 py-4 text-[#5C5F60]">
-                        ${order.value?.toFixed(2) || "0.00"}
+                </thead>
+                <tbody className="divide-y divide-[#D3C3C5]">
+                  {approvedOrdersLoading ? (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="px-6 py-8 text-center text-[#5C5F60]"
+                      >
+                        Loading approved orders...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : approvedOrdersError ? (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="px-6 py-8 text-center text-red-600"
+                      >
+                        {approvedOrdersError}
+                      </td>
+                    </tr>
+                  ) : approvedOrders.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="px-6 py-8 text-center text-[#5C5F60]"
+                      >
+                        No approved orders available.
+                      </td>
+                    </tr>
+                  ) : (
+                    approvedOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedOrders.includes(order.id)}
+                            onChange={() => toggleOrderSelection(order.id)}
+                            className="rounded border-[#D3C3C5] text-[#7A4E5B] focus:ring-[#7A4E5B]"
+                          />
+                        </td>
+                        <td className="px-6 py-4 font-medium text-[#141D23]">
+                          {order.displayId}
+                        </td>
+                        <td className="px-6 py-4 text-[#5C5F60]">
+                          {order.user}
+                        </td>
+                        <td className="px-6 py-4 text-[#5C5F60]">
+                          {order.items}
+                        </td>
+                        <td className="px-6 py-4 text-[#5C5F60]">
+                          ${order.value?.toFixed(2) || "0.00"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -873,10 +872,10 @@ export default function BatchQueue() {
       <div className="bg-[#2B323B] rounded-md p-6 text-white shadow-md">
         <div className="flex justify-between items-start mb-12">
           <div>
-            <h3 className="text-xl font-bold mb-1">
+            <h3 className="text-sm lg:text-xl font-bold mb-1">
               Discount Capture Efficiency
             </h3>
-            <p className="text-[#9BA1A6] text-sm">
+            <p className="text-[#9BA1A6] text-xs lg:text-sm">
               Weekly percentage of batches hitting target tiers.
             </p>
           </div>
@@ -885,14 +884,17 @@ export default function BatchQueue() {
           </span>
         </div>
 
-        <div className="flex items-end justify-center gap-6 h-40 mt-10">
+        <div className="flex items-end justify-center gap-2 sm:gap-4 lg:gap-6 h-40 mt-10">
           {STATIC_CHART_DATA.map((item, idx) => (
-            <div key={idx} className="flex flex-col items-center gap-3">
+            <div
+              key={idx}
+              className="flex flex-1 flex-col items-center gap-2 lg:gap-3 min-w-0"
+            >
               <div
-                className={`w-20 rounded-t-sm transition-all duration-500 ease-in-out ${item.day === "FRI" ? "bg-[#8E5E6C]" : "bg-[#FFD1DC]"}`}
+                className={`w-full max-w-[48px] sm:max-w-[64px] lg:max-w-[80px] rounded-t-sm transition-all duration-500 ease-in-out ${item.day === "FRI" ? "bg-[#8E5E6C]" : "bg-[#FFD1DC]"}`}
                 style={{ height: `${item.value}%` }}
               ></div>
-              <span className="text-xs text-[#9BA1A6] font-semibold tracking-widest">
+              <span className="text-xs text-[#9BA1A6] font-semibold">
                 {item.day}
               </span>
             </div>
@@ -902,14 +904,14 @@ export default function BatchQueue() {
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-xl font-bold text-[#141D23]">
+          <h3 className="text-base lg:text-xl font-bold text-[#141D23]">
             Recent Action Log
           </h3>
           <button className="text-[#5C5F60] text-sm font-semibold hover:text-[#141D23] transition-colors">
             View Full History →
           </button>
         </div>
-        <div className="bg-white border border-[#D3C3C5] rounded-md overflow-hidden">
+        <div className="bg-white border border-[#D3C3C5] rounded-md overflow-x-scroll">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-[#5C5F60] border-b border-[#D3C3C5]">
               <tr>
