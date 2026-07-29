@@ -191,7 +191,7 @@ export default function Customers() {
                       Orders
                     </th>
                     <th className="px-4 lg:px-6 py-3 font-bold tracking-wide">
-                      LTV
+                      Amount
                     </th>
                     <th className="px-4 lg:px-6 py-3 font-bold tracking-wide">
                       Rating
@@ -278,7 +278,7 @@ export default function Customers() {
                           {customer.ordersCount}
                         </td>
                         <td className="px-4 lg:px-6 py-3 text-[#141D23] whitespace-nowrap">
-                          {customer.lifetimeValue}
+                          ${customer.lifetimeValue}
                         </td>
                         <td className="px-4 lg:px-6 py-3">
                           <StarRating rating={customer.rating} />
@@ -383,7 +383,7 @@ export default function Customers() {
                     Total LTV
                   </p>
                   <p className="text-xl font-extrabold text-[#141D23] mt-1">
-                    {selectedCustomer.stats?.totalLtv}
+                    ${selectedCustomer.stats?.totalLtv}
                   </p>
                 </div>
               </div>
