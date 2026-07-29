@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   UserPlus,
   Pencil,
@@ -7,136 +7,10 @@ import {
   Phone,
   Star,
 } from "lucide-react";
+import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
-const MOCK_CUSTOMERS = [
-  {
-    id: 1,
-    name: "Elena Rodriguez",
-    avatar: "https://i.pravatar.cc/150?img=47",
-    email: "elena.r@example.com",
-    phone: "+1 555-0102",
-    orders: 42,
-    ltv: 12450.0,
-    rating: 5,
-    lastActive: "2 hours ago",
-    membership: "VIP Member",
-    since: "Jan 2025",
-    address: "742 Evergreen Terrace, Springfield, OR 97403",
-    orderHistory: [
-      {
-        id: "ORD-90210",
-        date: "Oct 24, 2023",
-        items: 3,
-        value: 450.0,
-        status: "DELIVERED",
-      },
-      {
-        id: "ORD-88541",
-        date: "Oct 18, 2023",
-        items: 1,
-        value: 1200.0,
-        status: "BATCHED",
-      },
-      {
-        id: "ORD-87122",
-        date: "Oct 12, 2023",
-        items: 5,
-        value: 340.5,
-        status: "PURCHASED",
-      },
-      {
-        id: "ORD-86001",
-        date: "Oct 05, 2023",
-        items: 2,
-        value: 89.0,
-        status: "DELIVERED",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Jameson Wu",
-    avatar: "https://i.pravatar.cc/150?img=12",
-    email: "j.wu@techmail.com",
-    phone: "+1 555-0198",
-    orders: 15,
-    ltv: 4120.5,
-    rating: 4,
-    lastActive: "Yesterday",
-    membership: "Member",
-    since: "Mar 2025",
-    address: "18 Harbor View Rd, Seattle, WA 98101",
-    orderHistory: [
-      {
-        id: "ORD-90188",
-        date: "Oct 20, 2023",
-        items: 2,
-        value: 210.0,
-        status: "DELIVERED",
-      },
-      {
-        id: "ORD-89012",
-        date: "Oct 09, 2023",
-        items: 1,
-        value: 640.5,
-        status: "PURCHASED",
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Sarah Jenkins",
-    avatar: "https://i.pravatar.cc/150?img=32",
-    email: "s.jenkins@web.io",
-    phone: "+44 20 7946 0111",
-    orders: 8,
-    ltv: 1890.0,
-    rating: 3,
-    lastActive: "3 days ago",
-    membership: "Member",
-    since: "Jun 2025",
-    address: "12 Baker Street, London, NW1 6XE",
-    orderHistory: [
-      {
-        id: "ORD-88870",
-        date: "Sep 30, 2023",
-        items: 1,
-        value: 1890.0,
-        status: "PURCHASED",
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "Marcus Thorne",
-    avatar: "https://i.pravatar.cc/150?img=15",
-    email: "marcus.t@design.com",
-    phone: "+1 555-0144",
-    orders: 29,
-    ltv: 8700.25,
-    rating: 4,
-    lastActive: "1 week ago",
-    membership: "VIP Member",
-    since: "Nov 2024",
-    address: "88 Riverside Dr, Austin, TX 73301",
-    orderHistory: [
-      {
-        id: "ORD-84450",
-        date: "Sep 22, 2023",
-        items: 4,
-        value: 720.25,
-        status: "DELIVERED",
-      },
-      {
-        id: "ORD-83210",
-        date: "Sep 10, 2023",
-        items: 2,
-        value: 199.0,
-        status: "DELIVERED",
-      },
-    ],
-  },
-];
+const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
+const CUSTOMERS_API_URL = `${API_BASE_URL}/api/customers`;
 
 const STATUS_STYLES = {
   DELIVERED: "bg-[#E6F4EA] text-[#0D8246]",
@@ -150,11 +24,6 @@ const formatCurrency = (value) =>
     currency: "USD",
     minimumFractionDigits: 2,
   });
-
-const formatLtvShort = (value) => {
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-  return `$${value.toFixed(0)}`;
-};
 
 const StarRating = ({ rating }) => (
   <div className="flex items-center gap-0.5">
@@ -173,13 +42,111 @@ const StarRating = ({ rating }) => (
 );
 
 export default function Customers() {
-  const [customers] = useState(MOCK_CUSTOMERS);
-  const [selectedCustomerId, setSelectedCustomerId] = useState(
-    MOCK_CUSTOMERS[0]?.id,
-  );
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const selectedCustomer =
-    customers.find((c) => c.id === selectedCustomerId) || customers[0];
+  const handleFetchCustomer = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(CUSTOMERS_API_URL, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.message || "Failed to fetch customers");
+      const list = result.data || result.customers || result || [];
+      console.log("Customers fetched:", list);
+      const customers = Array.isArray(list) ? list : [];
+
+      setCustomers(customers);
+
+      if (customers.length > 0) {
+        fetchCustomerDetails(customers[0].id);
+      }
+    } catch (err) {
+      setError(err.message);
+      setCustomers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    handleFetchCustomer();
+  }, []);
+
+  const fetchCustomerDetails = async (id) => {
+    if (!id) return;
+
+    setDetailLoading(true);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${CUSTOMERS_API_URL}/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message);
+      }
+
+      setSelectedCustomer(result.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+  const formatLastActive = (date) => {
+    if (!date) return "N/A";
+
+    const now = new Date();
+    const lastActive = new Date(date);
+
+    const diff = now - lastActive;
+
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+
+    return `${days} day${days > 1 ? "s" : ""} ago`;
+  };
+  const getInitials = (name = "") => {
+    return name
+      .trim()
+      .split(" ")
+      .slice(0, 2)
+      .map((word) => word.charAt(0).toUpperCase())
+      .join("");
+  };
 
   return (
     <div className="p-4 lg:p-8 bg-[#FFD1DC]/10 min-h-[calc(100vh-70px)] font-sans">
@@ -226,46 +193,92 @@ export default function Customers() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#D3C3C5]">
-                  {customers.map((customer) => (
-                    <tr
-                      key={customer.id}
-                      onClick={() => setSelectedCustomerId(customer.id)}
-                      className={`cursor-pointer transition-colors ${
-                        selectedCustomer?.id === customer.id
-                          ? "bg-[#FFD1DC]/20"
-                          : "hover:bg-slate-50"
-                      }`}
-                    >
-                      <td className="px-4 lg:px-6 py-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={customer.avatar}
-                            alt={customer.name}
-                            className="w-9 h-9 rounded-full object-cover shrink-0"
-                          />
-                          <span className="font-semibold text-[#141D23] whitespace-nowrap">
-                            {customer.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 lg:px-6 py-3 text-[#5C5F60] whitespace-nowrap">
-                        <div>{customer.email}</div>
-                        <div>{customer.phone}</div>
-                      </td>
-                      <td className="px-4 lg:px-6 py-3 text-[#141D23]">
-                        {customer.orders}
-                      </td>
-                      <td className="px-4 lg:px-6 py-3 text-[#141D23] whitespace-nowrap">
-                        {formatCurrency(customer.ltv)}
-                      </td>
-                      <td className="px-4 lg:px-6 py-3">
-                        <StarRating rating={customer.rating} />
-                      </td>
-                      <td className="px-4 lg:px-6 py-3 text-[#5C5F60] whitespace-nowrap">
-                        {customer.lastActive}
+                  {loading && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-4 lg:px-6 py-6 text-center text-[#5C5F60]"
+                      >
+                        Loading customers...
                       </td>
                     </tr>
-                  ))}
+                  )}
+                  {error && !loading && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-4 lg:px-6 py-6 text-center text-red-600"
+                      >
+                        {error}
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && !error && customers.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-4 lg:px-6 py-6 text-center text-[#5C5F60]"
+                      >
+                        No customers found.
+                      </td>
+                    </tr>
+                  )}
+                  {!loading &&
+                    !error &&
+                    customers.map((customer) => (
+                      <tr
+                        key={customer.id}
+                        onClick={() => {
+                          fetchCustomerDetails(customer.id);
+                        }}
+                        className={`cursor-pointer transition-colors ${
+                          selectedCustomer?.id === customer.id
+                            ? "bg-[#FFD1DC]/20"
+                            : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <td className="px-4 lg:px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            {customer.avatar ? (
+                              <img
+                                src={customer.avatar}
+                                alt={customer.name}
+                                className="w-9 h-9 rounded-full object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-[#FFD1DC] text-[#7A4E5B] flex items-center justify-center font-bold shrink-0">
+                                {getInitials(customer.name)}
+                              </div>
+                            )}
+
+                            <span className="font-semibold text-[#141D23] whitespace-nowrap">
+                              {customer.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 lg:px-6 py-3 text-[#5C5F60] whitespace-nowrap">
+                          <div>{customer.email}</div>
+                          <div>
+                            <p>
+                              {customer.countryCode}{" "}
+                              <span>{customer.phone}</span>
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 lg:px-6 py-3 text-[#141D23]">
+                          {customer.ordersCount}
+                        </td>
+                        <td className="px-4 lg:px-6 py-3 text-[#141D23] whitespace-nowrap">
+                          {customer.lifetimeValue}
+                        </td>
+                        <td className="px-4 lg:px-6 py-3">
+                          <StarRating rating={customer.rating} />
+                        </td>
+                        <td className="px-4 lg:px-6 py-3 text-[#5C5F60] whitespace-nowrap">
+                          {formatLastActive(customer.lastActive)}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -277,11 +290,26 @@ export default function Customers() {
           <div className="w-full lg:w-[420px] shrink-0 space-y-6">
             <div className="bg-white border border-[#D3C3C5] rounded-lg p-6">
               <div className="flex items-start justify-between">
-                <img
-                  src={selectedCustomer.avatar}
-                  alt={selectedCustomer.name}
-                  className="w-16 h-16 rounded-full object-cover ring-2 ring-[#FFD1DC]"
-                />
+                <div>
+                  <div className="flex items-center gap-3">
+                    {selectedCustomer.avatar ? (
+                      <img
+                        src={selectedCustomer.avatarUrl}
+                        alt={selectedCustomer.name}
+                        className="w-9 h-9 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-[#FFD1DC] text-[#7A4E5B] flex items-center justify-center font-bold shrink-0">
+                        {getInitials(selectedCustomer.name)}
+                      </div>
+                    )}
+
+                    <span className="font-semibold text-[#141D23] whitespace-nowrap">
+                      {selectedCustomer.name}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <button className="p-2 border border-[#D3C3C5] rounded text-[#5C5F60] hover:bg-slate-50 transition-colors">
                     <Pencil size={16} />
@@ -296,19 +324,30 @@ export default function Customers() {
                 {selectedCustomer.name}
               </h2>
               <p className="text-sm text-[#5C5F60]">
-                {selectedCustomer.membership} &bull; Since{" "}
-                {selectedCustomer.since}
+                {/* {selectedCustomer.isVip} */}
+                Since {/* {selectedCustomer.joinedAt} */}
+                {formatLastActive(selectedCustomer.joinedAt)}
               </p>
 
               <div className="border-t border-[#D3C3C5] my-4"></div>
 
               <div className="space-y-3">
                 <div className="flex items-start gap-2.5 text-sm text-[#141D23]">
-                  <MapPin size={16} className="text-[#5C5F60] mt-0.5 shrink-0" />
-                  <span>{selectedCustomer.address}</span>
+                  <MapPin
+                    size={16}
+                    className="text-[#5C5F60] mt-0.5 shrink-0"
+                  />
+                  <span>
+                    <span>
+                      {selectedCustomer.defaultAddress
+                        ? `${selectedCustomer.defaultAddress.addressLine}, ${selectedCustomer.defaultAddress.city}, ${selectedCustomer.defaultAddress.state} ${selectedCustomer.defaultAddress.zipCode}`
+                        : "No address on file"}
+                    </span>
+                  </span>
                 </div>
                 <div className="flex items-center gap-2.5 text-sm text-[#141D23]">
                   <Phone size={16} className="text-[#5C5F60] shrink-0" />
+                  <span>{selectedCustomer.countryCode}</span>
                   <span>{selectedCustomer.phone}</span>
                 </div>
               </div>
@@ -319,7 +358,7 @@ export default function Customers() {
                     Total Orders
                   </p>
                   <p className="text-xl font-extrabold text-[#141D23] mt-1">
-                    {selectedCustomer.orders}
+                    {selectedCustomer.stats?.totalOrders}
                   </p>
                 </div>
                 <div className="bg-slate-50 border border-[#D3C3C5] rounded-md p-3">
@@ -327,7 +366,7 @@ export default function Customers() {
                     Total LTV
                   </p>
                   <p className="text-xl font-extrabold text-[#141D23] mt-1">
-                    {formatLtvShort(selectedCustomer.ltv)}
+                    {selectedCustomer.stats?.totalLtv}
                   </p>
                 </div>
               </div>
@@ -352,32 +391,36 @@ export default function Customers() {
                 </button>
               </div>
               <div className="space-y-3">
-                {selectedCustomer.orderHistory.map((order) => (
+                {(selectedCustomer.recentOrders ?? []).map((order) => (
                   <div
                     key={order.id}
                     className="border border-[#D3C3C5] rounded-md p-3 flex items-center justify-between gap-3"
                   >
-                    <div>
-                      <p className="font-bold text-sm text-[#141D23]">
-                        #{order.id}
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-[#141D23] truncate">
+                        #{order.orderId}
                       </p>
-                      <p className="text-xs text-[#5C5F60] mt-0.5">
-                        {order.date} &bull; {order.items} items
+                      <p className="text-xs text-[#5C5F60] mt-0.5 truncate">
+                        {formatLastActive(order.date)}&bull; {order.itemCount}{" "}
+                        items
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-bold text-sm text-[#141D23]">
-                        {formatCurrency(order.value)}
+                        {formatCurrency(order.grandTotal ?? 0)}
                       </p>
                       <span
-                        className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${STATUS_STYLES[order.status]}`}
+                        className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${
+                          STATUS_STYLES[order.status] ??
+                          "bg-slate-100 text-[#5C5F60]"
+                        }`}
                       >
                         {order.status}
                       </span>
                     </div>
                   </div>
                 ))}
-                {selectedCustomer.orderHistory.length === 0 && (
+                {(selectedCustomer.recentOrders ?? []).length === 0 && (
                   <p className="text-sm text-[#5C5F60] text-center py-4">
                     No orders yet.
                   </p>

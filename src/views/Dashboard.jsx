@@ -10,8 +10,6 @@ import activebatchesicon from "../assets/activediscountbatchesicon.svg";
 // import needunlockbatchicon from "../assets/needtounlockbatchicon.svg";
 import smartbatchicon from "../assets/smartbatchrecicon.svg";
 import incomingordersreviewicon from "../assets/incomingorderreviewicon.svg";
-import filtericon from "../assets/filtericon.svg";
-import exporticon from "../assets/exporticon.svg";
 
 const API_ORIGIN = "https://shelynx.mediaclocksoft.com.au";
 const API_BASE_URL = `${API_ORIGIN}/api`;
