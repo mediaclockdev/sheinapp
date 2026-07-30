@@ -272,8 +272,11 @@ const OrderManagement = () => {
         );
         setEstimatedWeight(String(totalW));
       }
-      if (order?.agentDiscount != null && parseFloat(order.agentDiscount) > 0) {
-        setAgentDiscount(String(order.agentDiscount));
+      if (
+        order?.agentDiscountPercentage != null &&
+        parseFloat(order.agentDiscountPercentage) > 0
+      ) {
+        setAgentDiscount(String(order.agentDiscountPercentage));
       }
     } catch (err) {
       setDetailError(err.message);
@@ -478,7 +481,7 @@ const OrderManagement = () => {
   const netAmount =
     baseAmount + shippingCost + orderCustomFee + orderDeliveryFee;
 
-  const agentDiscountValue = Number(agentdiscount) || 0;
+  const agentDiscountValue = (netAmount * (Number(agentdiscount) || 0)) / 100;
 
   const totalAmount = netAmount - agentDiscountValue;
 
