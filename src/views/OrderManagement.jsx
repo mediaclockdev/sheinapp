@@ -817,9 +817,6 @@ const OrderManagement = () => {
                     Agent Discount
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm lg:text-base font-bold text-[#78555E]">
-                      $
-                    </span>
                     {canModerate ? (
                       <input
                         type="number"
@@ -827,7 +824,7 @@ const OrderManagement = () => {
                         min="0"
                         value={agentdiscount}
                         onChange={(e) => setAgentDiscount(e.target.value)}
-                        placeholder="10"
+                        placeholder="13"
                         className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
                       />
                     ) : (
@@ -835,6 +832,9 @@ const OrderManagement = () => {
                         {agentdiscount}
                       </span>
                     )}
+                    <span className="text-sm lg:text-base font-bold text-[#78555E]">
+                      %
+                    </span>
                   </div>
                 </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Info, Plus, X } from "lucide-react";
+import { Save } from "lucide-react";
 import { toast } from "../components/Toast";
 import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
@@ -20,6 +20,7 @@ export default function Settings() {
   const [weight, setWeight] = useState("0.5");
   const [customFee, setCustomFee] = useState("0");
   const [deliveryFee, setDeliveryFee] = useState("0");
+  const [agentDiscount, setAgentDiscount] = useState("0");
   const [tiers, setTiers] = useState(initialTiers);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // "saved" | "error"
@@ -54,18 +55,6 @@ export default function Settings() {
       .catch((err) => console.error("Failed to load settings:", err));
   }, []);
 
-  const updateTier = (i, field, value) => {
-    setTiers((prev) =>
-      prev.map((t, idx) => (idx === i ? { ...t, [field]: value } : t)),
-    );
-  };
-
-  const addTier = () =>
-    setTiers((prev) => [...prev, { min: "", max: "", discount: "" }]);
-
-  const removeTier = (i) =>
-    setTiers((prev) => prev.filter((_, idx) => idx !== i));
-
   const handleSave = async () => {
     setSaving(true);
     setSaveStatus(null);
@@ -94,6 +83,7 @@ export default function Settings() {
           body: JSON.stringify({
             customFee: parseFloat(customFee) || 0,
             deliveryFee: parseFloat(deliveryFee) || 0,
+            agentDiscount: parseFloat(agentDiscount) || 0,
           }),
         }),
       ]);
@@ -323,11 +313,10 @@ export default function Settings() {
           </div> */}
 
           {/* Card 3 : Custom and delivery fee  */}
-          <div className="order-2 lg:order-3 bg-white rounded-2xl border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className=" bg-white rounded-2xl border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3 mb-5">
               <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
-
-                <span className="hidden lg:inline">2</span>
+                <span className="">2</span>
               </span>
               <h2 className="text-xl font-semibold text-[#141D23]">
                 Custom and Delivery Fee Calculation
@@ -383,6 +372,49 @@ export default function Settings() {
                         placeholder="10"
                         className="w-full bg-transparent text-sm text-[#17222b] outline-none"
                       />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* caard 4 agent discount */}
+          <div className=" bg-white rounded-2xl border border-[#dec9ce]/40 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="h-7 w-7 rounded-lg bg-[#eef4fb] text-[#5c7ba6] text-sm font-bold flex items-center justify-center">
+                <span className="">3</span>
+              </span>
+              <h2 className="text-xl font-semibold text-[#141D23]">
+                Agent Discount
+              </h2>
+            </div>
+
+            <div className="border border-[#D3C3C5] rounded-lg overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 py-3 border-t border-[#e5e9ef] text-sm text-[#17222b]">
+                <div className="flex flex-col gap-4 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div>
+                      <label
+                        htmlFor="custom-fee-input"
+                        className="font-semibold sm:font-normal"
+                      >
+                        Agent Discount
+                      </label>
+                    </div>
+                    <span className="text-[#98a2ab] hidden sm:inline">-</span>
+                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-full sm:w-24">
+                      <input
+                        id="custom-fee-input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={agentDiscount}
+                        onChange={(e) => setAgentDiscount(e.target.value)}
+                        placeholder="10"
+                        className="w-full bg-transparent text-sm text-[#17222b] outline-none"
+                      />
+                      <span className="text-xs text-[#5c5f60] mr-1">%</span>
                     </div>
                   </div>
                 </div>
