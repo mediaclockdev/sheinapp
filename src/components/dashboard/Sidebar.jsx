@@ -29,6 +29,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Payments", path: "/payments", iconSrc: paymentsicon },
     { name: "Tracking", path: "/tracking", iconSrc: trackingicon },
     { name: "Customers", path: "/customers", iconSrc: customericon },
+    { name: "Messages", path: "/conversation", iconSrc: settingsicon },
     { name: "Reports", path: "/reports", iconSrc: reportsicon },
     { name: "Settings", path: "/settings", iconSrc: settingsicon },
   ];
