@@ -41,6 +41,10 @@ export default function Settings() {
         if (data?.deliveryfee != null) setDeliveryFee(String(data.deliveryfee));
         else if (data?.deliveryFee != null)
           setDeliveryFee(String(data.deliveryFee));
+        if (data?.agentdiscount != null)
+          setAgentDiscount(String(data.agentdiscount));
+        else if (data?.agentDiscount != null)
+          setAgentDiscount(String(data.agentDiscount));
         if (data?.discountRules?.length) {
           setTiers(
             data.discountRules.map((r) => ({
