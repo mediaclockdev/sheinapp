@@ -9,7 +9,7 @@ import trackingicon from "../../assets/trackingicon.svg";
 import customericon from "../../assets/customersicon.svg";
 import reportsicon from "../../assets/reportsicon.svg";
 import settingsicon from "../../assets/settingsicon.svg";
-import { LogOut } from "lucide-react";
+import { LogOut, MessageSquare } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { pathname } = useLocation();
@@ -29,7 +29,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Payments", path: "/payments", iconSrc: paymentsicon },
     { name: "Tracking", path: "/tracking", iconSrc: trackingicon },
     { name: "Customers", path: "/customers", iconSrc: customericon },
-    { name: "Messages", path: "/conversation", iconSrc: settingsicon },
+    { name: "Conversations", path: "/conversation", icon: MessageSquare },
     { name: "Reports", path: "/reports", iconSrc: reportsicon },
     { name: "Settings", path: "/settings", iconSrc: settingsicon },
   ];
@@ -87,12 +87,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                   }`
                 }
               >
-                {/* Commented out icon as requested by the user */}
-                <img
-                  src={item.iconSrc}
-                  alt={item.name}
-                  className="h-4 w-4 shrink-0"
-                />
+                {item.icon ? (
+                  <item.icon size={16} className="shrink-0" />
+                ) : (
+                  <img
+                    src={item.iconSrc}
+                    alt={item.name}
+                    className="h-4 w-4 shrink-0"
+                  />
+                )}
 
                 <span>{item.name}</span>
               </NavLink>
