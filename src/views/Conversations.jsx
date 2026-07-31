@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { Plus, Send, Smile, ArrowLeft, FileText } from "lucide-react";
+import { Plus, Send, Smile, ArrowLeft, FileText, X } from "lucide-react";
 import { useSocket } from "../hooks/useSocket";
 
 const API_BASE = "https://shelynx.mediaclocksoft.com.au";
@@ -57,6 +57,11 @@ const Conversations = () => {
   const [draft, setDraft] = useState("");
   const [uploading, setUploading] = useState(false);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
+
+  // File Preview Modal state
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [caption, setCaption] = useState("");
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -135,7 +140,7 @@ const Conversations = () => {
     setDraft("");
   };
 
-  const handleFileUpload = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file || !activeId) return;
 
@@ -143,19 +148,39 @@ const Conversations = () => {
     const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
     if (file.size > MAX_FILE_SIZE) {
       alert("This file is too large! Please upload a file smaller than 25MB.");
-      e.target.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
+    setPreviewUrl(objectUrl);
+    setCaption("");
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleClosePreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setCaption("");
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!selectedFile || !activeId) return;
 
     setUploading(true);
     try {
       let typeStr = "DOCUMENT";
-      if (file.type.startsWith("image/")) typeStr = "IMAGE";
-      else if (file.type.startsWith("video/")) typeStr = "VIDEO";
-      else if (file.type.startsWith("audio/")) typeStr = "AUDIO";
+      if (selectedFile.type.startsWith("image/")) typeStr = "IMAGE";
+      else if (selectedFile.type.startsWith("video/")) typeStr = "VIDEO";
+      else if (selectedFile.type.startsWith("audio/")) typeStr = "AUDIO";
 
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", selectedFile);
       formData.append("conversationId", activeId.toString());
       formData.append("messageType", typeStr);
 
@@ -164,19 +189,30 @@ const Conversations = () => {
         formData,
         authHeaders(),
       );
+
       if (response.data.success && socket) {
+        // Send attachment message
         socket.emit("send_message", {
           conversationId: activeId,
           messageType: "FILE",
           content: response.data.data.url,
         });
+
+        // Send caption if provided by user in preview modal
+        if (caption.trim()) {
+          socket.emit("send_message", {
+            conversationId: activeId,
+            messageType: "TEXT",
+            content: caption.trim(),
+          });
+        }
       }
+      handleClosePreview();
     } catch (error) {
       console.error("File upload failed:", error);
       alert("Failed to upload file. Please try again.");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -244,7 +280,7 @@ const Conversations = () => {
 
       {/* Active Thread */}
       <div
-        className={`flex-1 flex-col min-w-0 ${
+        className={`relative flex-1 flex-col min-w-0 ${
           mobileThreadOpen ? "flex" : "hidden md:flex"
         }`}
       >
@@ -370,7 +406,7 @@ const Conversations = () => {
               type="file"
               ref={fileInputRef}
               className="hidden"
-              onChange={handleFileUpload}
+              onChange={handleFileSelect}
               accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,application/pdf,audio/mpeg,audio/wav,audio/ogg"
             />
 
@@ -411,6 +447,81 @@ const Conversations = () => {
           <div className="flex-1 flex items-center justify-center text-[#8C959F]">
             Select a conversation
           </div>
+        )}
+
+        {/* WhatsApp-style File Preview Modal */}
+        {previewUrl && (
+        <div className="absolute inset-0 z-50 bg-[#111B21] flex flex-col justify-between p-4 sm:p-6">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between text-white w-full">
+            <button
+              onClick={handleClosePreview}
+              disabled={uploading}
+              className="p-2 hover:bg-white/10 rounded-full transition text-white/80 hover:text-white"
+              title="Close preview"
+            >
+              <X size={24} />
+            </button>
+            <div className="text-right">
+              <p className="text-sm font-semibold truncate max-w-[200px] sm:max-w-[350px]">
+                {selectedFile?.name}
+              </p>
+              <p className="text-xs text-white/60">
+                {(selectedFile?.size / (1024 * 1024)).toFixed(2)} MB
+              </p>
+            </div>
+          </div>
+
+          {/* Preview Area */}
+          <div className="flex-1 flex items-center justify-center my-4 overflow-hidden w-full">
+            {selectedFile?.type.startsWith("image/") ? (
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="max-h-[65vh] sm:max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl border border-white/10"
+              />
+            ) : selectedFile?.type.startsWith("video/") ? (
+              <video
+                src={previewUrl}
+                controls
+                className="max-h-[65vh] sm:max-h-[70vh] max-w-full rounded-lg shadow-2xl border border-white/10"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center bg-white/10 p-8 rounded-2xl border border-white/20 text-white max-w-md w-full text-center">
+                <FileText size={56} className="text-[#D24D77] mb-3" />
+                <p className="font-bold text-lg truncate w-full">{selectedFile?.name}</p>
+                <p className="text-sm text-white/60 mt-1 uppercase">
+                  {selectedFile?.type || "Document"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Bar / Caption & Send */}
+          <div className="w-full flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Add a caption..."
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !uploading && handleConfirmUpload()}
+              disabled={uploading}
+              className="flex-1 bg-white/10 text-white placeholder-white/50 border border-white/20 rounded-full px-5 py-3 text-sm outline-none focus:border-white/50 transition"
+              autoFocus
+            />
+            <button
+              onClick={handleConfirmUpload}
+              disabled={uploading}
+              className="h-12 w-12 rounded-full bg-[#D24D77] hover:bg-[#b83d64] text-white flex items-center justify-center transition shrink-0 disabled:opacity-50 shadow-lg"
+            >
+              {uploading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send size={18} />
+              )}
+            </button>
+          </div>
+        </div>
         )}
       </div>
     </div>

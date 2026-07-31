@@ -188,6 +188,9 @@ const OrderManagement = () => {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusError, setStatusError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [weightError, setWeightError] = useState("");
+  const [agentDiscountPercentageError, setAgentDiscountPercentageError] =
+    useState("");
 
   // Pricing settings (price per kg + discount tiers) loaded once from the API
   const [settings, setSettings] = useState({
@@ -197,7 +200,7 @@ const OrderManagement = () => {
     customfee: 0,
   });
   const [estimatedWeight, setEstimatedWeight] = useState("");
-  const [agentdiscount, setAgentDiscount] = useState("");
+  const [agentDiscountPercentage, setAgentDiscountPercentage] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -230,7 +233,7 @@ const OrderManagement = () => {
     setSelectedOrderId(id);
     setSelectedOrder(null);
     setEstimatedWeight("");
-    setAgentDiscount("");
+    setAgentDiscountPercentage("");
     setCanModerate(moderate);
     setStatusError(null);
     setDetailLoading(true);
@@ -276,7 +279,7 @@ const OrderManagement = () => {
         order?.agentDiscountPercentage != null &&
         parseFloat(order.agentDiscountPercentage) > 0
       ) {
-        setAgentDiscount(String(order.agentDiscountPercentage));
+        setAgentDiscountPercentage(String(order.agentDiscountPercentage));
       }
     } catch (err) {
       setDetailError(err.message);
@@ -382,6 +385,15 @@ const OrderManagement = () => {
       setStatusError("Please enter the estimated weight before approving.");
       return;
     }
+    if (parseFloat(estimatedWeight) > 100) {
+      setStatusError("Estimated weight cannot exceed 100 kg.");
+      return;
+    }
+
+    if (Number(agentDiscountPercentage) > 100) {
+      setStatusError("Agent discount cannot exceed 100%.");
+      return;
+    }
     setStatusUpdating(true);
     setStatusError(null);
     try {
@@ -404,7 +416,7 @@ const OrderManagement = () => {
             ...(newStatus === "APPROVED"
               ? {
                   estimatedWeight: parseFloat(estimatedWeight),
-                  agentDiscount: Number(agentdiscount) || 0,
+                  agentDiscountPercentage: Number(agentDiscountPercentage) || 0,
                 }
               : {}),
           }),
@@ -427,7 +439,8 @@ const OrderManagement = () => {
               ...(newStatus === "APPROVED"
                 ? {
                     totalWeight: parseFloat(estimatedWeight),
-                    agentDiscount: Number(agentdiscount) || 0,
+                    agentDiscountPercentage:
+                      Number(agentDiscountPercentage) || 0,
                   }
                 : {}),
             }
@@ -481,7 +494,8 @@ const OrderManagement = () => {
   const netAmount =
     baseAmount + shippingCost + orderCustomFee + orderDeliveryFee;
 
-  const agentDiscountValue = (netAmount * (Number(agentdiscount) || 0)) / 100;
+  const agentDiscountValue =
+    (netAmount * (Number(agentDiscountPercentage) || 0)) / 100;
 
   const totalAmount = netAmount - agentDiscountValue;
 
@@ -793,15 +807,32 @@ const OrderManagement = () => {
                   </span>
                   <div className="flex items-center gap-1.5">
                     {canModerate ? (
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={estimatedWeight}
-                        onChange={(e) => setEstimatedWeight(e.target.value)}
-                        placeholder="0"
-                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-sm lg:text-base font-bold text-[#78555E] outline-none"
-                      />
+                      <div className="flex flex-col items-end">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={estimatedWeight}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            if (Number(value) > 100) {
+                              setWeightError("Maximum weight is 100 kg.");
+                              return;
+                            }
+
+                            setWeightError("");
+                            setEstimatedWeight(value);
+                          }}
+                          placeholder="0"
+                          className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-sm lg:text-base font-bold text-[#78555E] outline-none"
+                        />
+                        {weightError && (
+                          <p className="mt-2 text-xs text-red-500">
+                            {weightError}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-base font-bold text-[#78555E]">
                         {weightKg}
@@ -821,18 +852,36 @@ const OrderManagement = () => {
                   </span>
                   <div className="flex items-center gap-1.5">
                     {canModerate ? (
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={agentdiscount}
-                        onChange={(e) => setAgentDiscount(e.target.value)}
-                        placeholder="13"
-                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
-                      />
+                      <div className="flex flex-col items-end">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={agentDiscountPercentage}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            if (value === "" || Number(value) <= 100) {
+                              setAgentDiscountPercentageError("");
+                              setAgentDiscountPercentage(value);
+                            } else {
+                              setAgentDiscountPercentageError(
+                                "Maximum discount is 100%.",
+                              );
+                            }
+                          }}
+                          placeholder="13"
+                          className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
+                        />
+                        {agentDiscountPercentageError && (
+                          <p className="mt-1 text-[10px] text-red-500 whitespace-nowrap">
+                            {agentDiscountPercentageError}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-base font-bold text-[#78555E]">
-                        {agentdiscount}
+                        {agentDiscountPercentage}
                       </span>
                     )}
                     <span className="text-sm lg:text-base font-bold text-[#78555E]">
