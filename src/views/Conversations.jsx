@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { Plus, Send, Smile, ArrowLeft } from "lucide-react";
+import { Plus, Send, Smile, ArrowLeft, FileText } from "lucide-react";
 import { useSocket } from "../hooks/useSocket";
 
 const API_BASE = "https://shelynx.mediaclocksoft.com.au";
@@ -25,10 +25,22 @@ const clockTime = (dateString) =>
       })
     : "";
 
+const renderInboxMessage = (msg) => {
+  if (!msg) return "No messages yet";
+  if (msg.messageType === "IMAGE") return "📷 Photo";
+  if (msg.messageType === "VIDEO") return "🎥 Video";
+  if (msg.messageType === "AUDIO") return "🎵 Voice Message";
+  if (msg.messageType === "DOCUMENT" || msg.messageType === "FILE") return "📄 Document";
+  return msg.content;
+};
+
 const Avatar = ({ name, avatarUrl }) => (
   <div className="relative shrink-0">
     <img
-      src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "")}`}
+      src={
+        avatarUrl ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "")}`
+      }
       alt={name}
       className="h-11 w-11 rounded-full border border-[#D3C3C5] object-cover bg-[#EEF4FB]"
     />
@@ -126,10 +138,27 @@ const Conversations = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !activeId) return;
+
+    // Client-side file size validation matching backend rules
+    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+    if (file.size > MAX_FILE_SIZE) {
+      alert("This file is too large! Please upload a file smaller than 25MB.");
+      e.target.value = "";
+      return;
+    }
+
     setUploading(true);
     try {
+      let typeStr = "DOCUMENT";
+      if (file.type.startsWith("image/")) typeStr = "IMAGE";
+      else if (file.type.startsWith("video/")) typeStr = "VIDEO";
+      else if (file.type.startsWith("audio/")) typeStr = "AUDIO";
+
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("conversationId", activeId.toString());
+      formData.append("messageType", typeStr);
+
       const response = await axios.post(
         `${API_BASE}/api/chat/upload`,
         formData,
@@ -193,11 +222,13 @@ const Conversations = () => {
                       {chat.chatPartner?.name || "N/A"}
                     </span>
                     <span className="text-xs text-[#8C959F] shrink-0">
-                      {relativeTime(chat.lastMessage?.createdAt || chat.updatedAt)}
+                      {relativeTime(
+                        chat.lastMessage?.createdAt || chat.updatedAt,
+                      )}
                     </span>
                   </div>
                   <p className="text-sm text-[#5C5F60] line-clamp-2 mt-0.5">
-                    {chat.lastMessage?.content || "No messages yet"}
+                    {renderInboxMessage(chat.lastMessage)}
                   </p>
                   {chat.unreadCount > 0 && (
                     <span className="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFE8EF] text-[#D24D77]">
@@ -245,42 +276,80 @@ const Conversations = () => {
                 messages.map((m, i) => {
                   const isAgent = m.senderType === "AGENT";
                   const isAttachment =
-                    m.messageType === "FILE" || m.messageType === "IMAGE";
+                    ["FILE", "IMAGE", "DOCUMENT", "VIDEO", "AUDIO"].includes(m.messageType);
                   return (
                     <div
                       key={m.id || i}
                       className={`flex ${isAgent ? "justify-end" : "justify-start"}`}
                     >
                       <div className="max-w-[85%] sm:max-w-[420px]">
-                        {isAttachment ? (
-                          typeof m.content === "string" &&
-                          m.content.match(/\.(jpeg|jpg|gif|png)$/i) ? (
-                            <img
-                              src={fileUrl(m.content)}
-                              alt="Attachment"
-                              className="max-w-[200px] rounded-lg"
-                            />
-                          ) : (
-                            <a
-                              href={fileUrl(m.content)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline text-blue-600 font-medium text-sm"
-                            >
-                              View Attachment
-                            </a>
-                          )
-                        ) : (
-                          <div
-                            className={`rounded-2xl px-4 py-3 text-sm ${
-                              isAgent
-                                ? "bg-[#FDE2E9] text-[#141D23]"
-                                : "bg-[#F1F3F5] text-[#141D23]"
-                            }`}
-                          >
-                            {m.content}
-                          </div>
-                        )}
+                        {(() => {
+                          const url = fileUrl(m.content);
+                          const isImage = m.messageType === "IMAGE" || (typeof m.content === "string" && m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i));
+                          const isVideo = m.messageType === "VIDEO" || (typeof m.content === "string" && m.content.match(/\.(mp4|mov)$/i));
+                          const isAudio = m.messageType === "AUDIO" || (typeof m.content === "string" && m.content.match(/\.(mp3|wav|ogg)$/i));
+                          const isDoc = m.messageType === "DOCUMENT" || m.messageType === "FILE";
+
+                          const bubbleClass = `rounded-2xl px-4 py-3 text-sm ${
+                            isAgent
+                              ? "bg-[#FDE2E9] text-[#141D23]"
+                              : "bg-[#F1F3F5] text-[#141D23]"
+                          }`;
+
+                          if (isImage) {
+                            return (
+                              <img
+                                src={url}
+                                alt="Attachment"
+                                className="max-w-[240px] sm:max-w-[300px] rounded-lg object-cover shadow-sm border border-black/5"
+                              />
+                            );
+                          }
+                          
+                          if (isVideo) {
+                            return (
+                              <video
+                                src={url}
+                                controls
+                                className="max-w-[240px] sm:max-w-[300px] rounded-lg shadow-sm border border-black/5"
+                              />
+                            );
+                          }
+
+                          if (isAudio) {
+                            return (
+                              <div className={bubbleClass + " !p-2"}>
+                                <audio controls src={url} className="max-w-[200px] sm:max-w-[250px] h-10" />
+                              </div>
+                            );
+                          }
+
+                          if (isDoc) {
+                            const fileName = typeof m.content === "string" ? m.content.split('/').pop() : "Document";
+                            return (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={bubbleClass + " flex items-center gap-3 hover:opacity-90 transition-opacity no-underline"}
+                              >
+                                <div className={`p-2 rounded-lg shrink-0 ${isAgent ? "bg-white/50" : "bg-black/5"}`}>
+                                  <FileText size={20} className={isAgent ? "text-[#D24D77]" : "text-gray-500"} />
+                                </div>
+                                <div className="min-w-0 flex-1 max-w-[200px]">
+                                  <p className="font-medium truncate text-sm">{fileName}</p>
+                                  <p className="text-[10px] opacity-70 uppercase mt-0.5">Document</p>
+                                </div>
+                              </a>
+                            );
+                          }
+
+                          return (
+                            <div className={bubbleClass}>
+                              {m.content}
+                            </div>
+                          );
+                        })()}
                         <p
                           className={`text-[11px] text-[#8C959F] mt-1 ${
                             isAgent ? "text-right" : "text-left"
@@ -302,7 +371,7 @@ const Conversations = () => {
               ref={fileInputRef}
               className="hidden"
               onChange={handleFileUpload}
-              accept="image/*,application/pdf,video/mp4"
+              accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,application/pdf,audio/mpeg,audio/wav,audio/ogg"
             />
 
             <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-t border-[#E8DFE1]">
