@@ -20,6 +20,8 @@ import BatchQueue from "../views/BatchQueue";
 import NewOrders from "../views/NewOrders";
 import Customers from "../views/Customers";
 
+import Conversations from "../views/Conversations";
+
 const isAuthenticated = () => {
   return !!localStorage.getItem("token");
 };
@@ -71,6 +73,7 @@ function AppRoutes() {
         <Route path="reports" element={<ReportsView />} />
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="conversation" element={<Conversations />} />
       </Route>
 
       {/* Fallback Catch-all -> redirects to dashboard */}

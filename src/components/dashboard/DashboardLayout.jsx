@@ -14,6 +14,7 @@ const PAGE_TITLES = {
   "/batch-queue": "Batch Queue",
   "/tracking": "Tracking",
   "/customers": "Customers",
+  "/conversation": "Conversations",
   "/reports": "Reports",
   "/settings": "Settings",
   "/profile": "Profile",
