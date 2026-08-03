@@ -409,7 +409,7 @@ export default function Settings() {
               <div>
                 <p
                   className={`text-sm font-semibold ${
-                    isAcceptingOrders ? "text-green-600" : "text-yellow-600"
+                    isAcceptingOrders ? "text-green-600" : "text-gray-500"
                   }`}
                 >
                   {isAcceptingOrders ? "Active" : "Inactive"}
@@ -427,7 +427,7 @@ export default function Settings() {
                 onClick={() => setIsAcceptingOrders((prev) => !prev)}
                 disabled={saving}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
-                  isAcceptingOrders ? "bg-green-500" : "bg-yellow-400"
+                  isAcceptingOrders ? "bg-green-500" : "bg-gray-300"
                 }`}
               >
                 <span
