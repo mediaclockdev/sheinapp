@@ -114,20 +114,23 @@ const DashboardLayout = () => {
               </div>
 
               {/* Profile Avatar Image */}
-              <div className="h-10 w-10 rounded-full border border-[#dec9ce] overflow-hidden bg-[#FFE8EF] flex items-center justify-center font-bold text-[#D24D77] text-sm shadow-sm">
-                {avatarUrl ? (
-                  <img
-                    src={
-                      avatarUrl.startsWith("http")
-                        ? avatarUrl
-                        : `${API_BASE_URL}${avatarUrl}`
-                    }
-                    alt={displayName}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span>{initials}</span>
-                )}
+              <div className="relative h-10 w-10 shrink-0">
+                <div className="h-10 w-10 rounded-full border border-[#dec9ce] overflow-hidden bg-[#FFE8EF] flex items-center justify-center font-bold text-[#D24D77] text-sm shadow-sm">
+                  {avatarUrl ? (
+                    <img
+                      src={
+                        avatarUrl.startsWith("http")
+                          ? avatarUrl
+                          : `${API_BASE_URL}${avatarUrl}`
+                      }
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span>{initials}</span>
+                  )}
+                </div>
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-white"></span>
               </div>
             </Link>
           </div>

@@ -387,6 +387,19 @@ const OrderManagement = () => {
       setStatusError("Agent surcharge cannot exceed the net amount.");
       return;
     }
+
+    if (newStatus === "APPROVED" && canModerate) {
+      if (!(Number(finalAmount) > 0)) {
+        setStatusError("Final amount must be greater than $0.");
+        return;
+      }
+      if (Number(finalAmount) > maxFinalAmount) {
+        setStatusError(
+          `Final amount cannot exceed $${maxFinalAmount.toFixed(2)} (120% of calculated total).`,
+        );
+        return;
+      }
+    }
     setStatusUpdating(true);
     setStatusError(null);
     try {
@@ -490,6 +503,8 @@ const OrderManagement = () => {
   const agentSurchargeAmount = Number(agentSurcharge) || 0;
 
   const calculatedTotal = netAmount + agentSurchargeAmount;
+
+  const maxFinalAmount = calculatedTotal * 1.2;
 
   const finalPrice = Number(finalAmount) || calculatedTotal;
 
@@ -1001,7 +1016,8 @@ const OrderManagement = () => {
                         <input
                           type="number"
                           step="1.00"
-                          min="0"
+                          min="0.01"
+                          max={maxFinalAmount.toFixed(2)}
                           value={finalAmount}
                           onChange={(e) => setFinalAmount(e.target.value)}
                           className="w-24 bg-white border border-green-300 rounded px-2 py-1 text-right text-base lg:text-xl font-bold text-green-600 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
