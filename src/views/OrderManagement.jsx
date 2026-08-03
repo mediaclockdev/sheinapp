@@ -233,6 +233,7 @@ const OrderManagement = () => {
     setSelectedOrder(null);
     setEstimatedWeight("");
     setAgentSurcharge("");
+    setFinalAmount("");
     setCanModerate(moderate);
     setStatusError(null);
     setDetailLoading(true);
@@ -493,6 +494,19 @@ const OrderManagement = () => {
   const finalPrice = Number(finalAmount) || calculatedTotal;
 
   const roundOff = finalPrice - calculatedTotal;
+
+  // Re-seed finalAmount whenever a new order finishes loading (fresh object
+  // reference each fetch), so it never carries over from the previous order
+  // and never relies on the input's placeholder for its real value.
+  useEffect(() => {
+    if (!selectedOrder) return;
+    setFinalAmount(
+      selectedOrder.finalAmount != null
+        ? String(selectedOrder.finalAmount)
+        : calculatedTotal.toFixed(2),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrder]);
 
   const getStatusClass = (s) => {
     switch (s) {
@@ -986,11 +1000,10 @@ const OrderManagement = () => {
                         </span>
                         <input
                           type="number"
-                          step="0.01"
+                          step="1.00"
                           min="0"
                           value={finalAmount}
                           onChange={(e) => setFinalAmount(e.target.value)}
-                          placeholder={calculatedTotal.toFixed(2)}
                           className="w-24 bg-white border border-green-300 rounded px-2 py-1 text-right text-base lg:text-xl font-bold text-green-600 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
                         />
                       </div>
