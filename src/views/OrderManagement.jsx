@@ -857,6 +857,16 @@ const OrderManagement = () => {
 
                             setWeightError("");
                             setEstimatedWeight(value);
+
+                            const newShippingCost =
+                              (parseFloat(value) || 0) * settings.pricePerKg;
+                            const newCalculatedTotal =
+                              baseAmount +
+                              newShippingCost +
+                              orderCustomFee +
+                              orderDeliveryFee +
+                              agentSurchargeAmount;
+                            setFinalAmount(newCalculatedTotal.toFixed(2));
                           }}
                           placeholder="0"
                           className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-sm lg:text-base font-bold text-[#78555E] outline-none"
@@ -898,6 +908,9 @@ const OrderManagement = () => {
                             if (value === "" || Number(value) <= netAmount) {
                               setAgentSurchargeError("");
                               setAgentSurcharge(value);
+                              setFinalAmount(
+                                (netAmount + (Number(value) || 0)).toFixed(2),
+                              );
                             } else {
                               setAgentSurchargeError(
                                 "Surcharge cannot exceed net amount.",
