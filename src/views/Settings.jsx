@@ -4,6 +4,8 @@ import { toast } from "../components/Toast";
 import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
 const SETTINGS_API_URL = "https://shelynx.mediaclocksoft.com.au/api/settings";
+const AGENT_STATUS_API_URL =
+  "https://shelynx.mediaclocksoft.com.au/api/settings/status";
 
 const initialTiers = [{ min: "100", max: "199", discount: "5" }];
 
@@ -24,6 +26,7 @@ export default function Settings() {
   const [tiers, setTiers] = useState(initialTiers);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // "saved" | "error"
+  const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
 
   useEffect(() => {
     fetch(SETTINGS_API_URL, { headers: authHeaders() })
@@ -45,6 +48,8 @@ export default function Settings() {
           setAgentDiscount(String(data.agentdiscount));
         else if (data?.agentDiscount != null)
           setAgentDiscount(String(data.agentDiscount));
+        if (data?.isAcceptingOrders != null)
+          setIsAcceptingOrders(data.isAcceptingOrders);
         if (data?.discountRules?.length) {
           setTiers(
             data.discountRules.map((r) => ({
@@ -63,7 +68,7 @@ export default function Settings() {
     setSaving(true);
     setSaveStatus(null);
     try {
-      const [shippingRes, rulesRes, feesRes] = await Promise.all([
+      const [shippingRes, rulesRes, feesRes, statusRes] = await Promise.all([
         fetch(`${SETTINGS_API_URL}/shipping`, {
           method: "PATCH",
           headers: authHeaders(),
@@ -90,17 +95,23 @@ export default function Settings() {
             agentDiscount: parseFloat(agentDiscount) || 0,
           }),
         }),
+        fetch(AGENT_STATUS_API_URL, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: JSON.stringify({ isAcceptingOrders }),
+        }),
       ]);
 
       if (
         isUnauthorized(shippingRes.status) ||
         isUnauthorized(rulesRes.status) ||
-        isUnauthorized(feesRes.status)
+        isUnauthorized(feesRes.status) ||
+        isUnauthorized(statusRes.status)
       ) {
         handleUnauthorized();
         return;
       }
-      if (!shippingRes.ok || !rulesRes.ok || !feesRes.ok) {
+      if (!shippingRes.ok || !rulesRes.ok || !feesRes.ok || !statusRes.ok) {
         throw new Error("Save failed");
       }
       setSaveStatus("saved");
@@ -390,39 +401,41 @@ export default function Settings() {
                 <span className="">3</span>
               </span>
               <h2 className="text-xl font-semibold text-[#141D23]">
-                Agent Discount
+                Agent Status
               </h2>
             </div>
 
-            <div className="border border-[#D3C3C5] rounded-lg overflow-hidden">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 py-3 border-t border-[#e5e9ef] text-sm text-[#17222b]">
-                <div className="flex flex-col gap-4 w-full sm:w-auto">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <div>
-                      <label
-                        htmlFor="custom-fee-input"
-                        className="font-semibold sm:font-normal"
-                      >
-                        Agent Discount
-                      </label>
-                    </div>
-                    <span className="text-[#98a2ab] hidden sm:inline">-</span>
-                    <div className="flex items-center bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-2 py-1.5 w-full sm:w-24">
-                      <input
-                        id="custom-fee-input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={agentDiscount}
-                        onChange={(e) => setAgentDiscount(e.target.value)}
-                        placeholder="10"
-                        className="w-full bg-transparent text-sm text-[#17222b] outline-none"
-                      />
-                      <span className="text-xs text-[#5c5f60] mr-1">%</span>
-                    </div>
-                  </div>
-                </div>
+            <div className="flex items-center justify-between bg-[#eef4fb] border border-[#d9e4f2] rounded-lg px-4 py-3">
+              <div>
+                <p
+                  className={`text-sm font-semibold ${
+                    isAcceptingOrders ? "text-green-600" : "text-yellow-600"
+                  }`}
+                >
+                  {isAcceptingOrders ? "Active" : "Inactive"}
+                </p>
+                <p className="text-xs text-[#5c5f60] mt-0.5">
+                  {isAcceptingOrders
+                    ? "Currently accepting new orders."
+                    : "New orders are paused."}
+                </p>
               </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAcceptingOrders}
+                onClick={() => setIsAcceptingOrders((prev) => !prev)}
+                disabled={saving}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                  isAcceptingOrders ? "bg-green-500" : "bg-yellow-400"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    isAcceptingOrders ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
             </div>
           </div>
         </div>

@@ -189,9 +189,8 @@ const OrderManagement = () => {
   const [statusError, setStatusError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [weightError, setWeightError] = useState("");
-  const [agentDiscountPercentageError, setAgentDiscountPercentageError] =
-    useState("");
-
+  const [agentSurchargeError, setAgentSurchargeError] = useState("");
+  const [finalAmount, setFinalAmount] = useState("");
   // Pricing settings (price per kg + discount tiers) loaded once from the API
   const [settings, setSettings] = useState({
     pricePerKg: 0,
@@ -200,7 +199,7 @@ const OrderManagement = () => {
     customfee: 0,
   });
   const [estimatedWeight, setEstimatedWeight] = useState("");
-  const [agentDiscountPercentage, setAgentDiscountPercentage] = useState("");
+  const [agentSurcharge, setAgentSurcharge] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -233,7 +232,7 @@ const OrderManagement = () => {
     setSelectedOrderId(id);
     setSelectedOrder(null);
     setEstimatedWeight("");
-    setAgentDiscountPercentage("");
+    setAgentSurcharge("");
     setCanModerate(moderate);
     setStatusError(null);
     setDetailLoading(true);
@@ -275,11 +274,8 @@ const OrderManagement = () => {
         );
         setEstimatedWeight(String(totalW));
       }
-      if (
-        order?.agentDiscountPercentage != null &&
-        parseFloat(order.agentDiscountPercentage) > 0
-      ) {
-        setAgentDiscountPercentage(String(order.agentDiscountPercentage));
+      if (order?.agentSurcharge != null) {
+        setAgentSurcharge(String(order.agentSurcharge));
       }
     } catch (err) {
       setDetailError(err.message);
@@ -381,17 +377,13 @@ const OrderManagement = () => {
 
   const handleUpdateOrderStatus = async (newStatus) => {
     if (!selectedOrderId) return;
-    if (newStatus === "APPROVED" && !(parseFloat(estimatedWeight) > 0)) {
-      setStatusError("Please enter the estimated weight before approving.");
-      return;
-    }
     if (parseFloat(estimatedWeight) > 100) {
       setStatusError("Estimated weight cannot exceed 100 kg.");
       return;
     }
 
-    if (Number(agentDiscountPercentage) > 100) {
-      setStatusError("Agent discount cannot exceed 100%.");
+    if (Number(agentSurcharge) > netAmount) {
+      setStatusError("Agent surcharge cannot exceed the net amount.");
       return;
     }
     setStatusUpdating(true);
@@ -415,8 +407,9 @@ const OrderManagement = () => {
             status: newStatus,
             ...(newStatus === "APPROVED"
               ? {
-                  estimatedWeight: parseFloat(estimatedWeight),
-                  agentDiscountPercentage: Number(agentDiscountPercentage) || 0,
+                  estimatedWeight: parseFloat(estimatedWeight) || 0,
+                  agentSurcharge: Number(agentSurcharge) || 0,
+                  roundedOff: Number(roundOff.toFixed(2)),
                 }
               : {}),
           }),
@@ -439,8 +432,7 @@ const OrderManagement = () => {
               ...(newStatus === "APPROVED"
                 ? {
                     totalWeight: parseFloat(estimatedWeight),
-                    agentDiscountPercentage:
-                      Number(agentDiscountPercentage) || 0,
+                    agentSurcharge: Number(agentSurcharge) || 0,
                   }
                 : {}),
             }
@@ -494,10 +486,13 @@ const OrderManagement = () => {
   const netAmount =
     baseAmount + shippingCost + orderCustomFee + orderDeliveryFee;
 
-  const agentDiscountValue =
-    (netAmount * (Number(agentDiscountPercentage) || 0)) / 100;
+  const agentSurchargeAmount = Number(agentSurcharge) || 0;
 
-  const totalAmount = netAmount - agentDiscountValue;
+  const calculatedTotal = netAmount + agentSurchargeAmount;
+
+  const finalPrice = Number(finalAmount) || calculatedTotal;
+
+  const roundOff = finalPrice - calculatedTotal;
 
   const getStatusClass = (s) => {
     switch (s) {
@@ -650,9 +645,14 @@ const OrderManagement = () => {
                               {item.productName}
                             </p>
                             <div className="flex items-center gap-2 shrink-0">
-                              <p className="font-bold text-xs text-[#78555E]">
-                                ${Number(item.promotionalPrice).toFixed(2)}
-                              </p>
+                              <div>
+                                <p className="font-bold text-xs  text-red-600">
+                                  ${Number(item.promotionalPrice).toFixed(2)}
+                                </p>
+                                <p className="font-bold text-[10px] text-[#78555E] line-through">
+                                  ${Number(item.price).toFixed(2)}
+                                </p>
+                              </div>
                               {canModerate && (
                                 <button
                                   onClick={() => handleDeleteItem(item.id)}
@@ -853,7 +853,7 @@ const OrderManagement = () => {
 
                 <div className="flex items-center justify-between bg-[#ECF5FE] border border-[#D9E4F2] rounded-xl px-4 py-3 mb-5">
                   <span className=" text-sm lg:text-base font-bold text-[#141D23]">
-                    Agent Discount
+                    Agent Surcharge
                   </span>
                   <div className="flex items-center gap-1.5">
                     {canModerate ? (
@@ -862,35 +862,35 @@ const OrderManagement = () => {
                           type="number"
                           step="0.1"
                           min="0"
-                          value={agentDiscountPercentage}
+                          value={agentSurcharge}
                           onChange={(e) => {
                             const value = e.target.value;
 
-                            if (value === "" || Number(value) <= 100) {
-                              setAgentDiscountPercentageError("");
-                              setAgentDiscountPercentage(value);
+                            if (value === "" || Number(value) <= netAmount) {
+                              setAgentSurchargeError("");
+                              setAgentSurcharge(value);
                             } else {
-                              setAgentDiscountPercentageError(
-                                "Maximum discount is 100%.",
+                              setAgentSurchargeError(
+                                "Surcharge cannot exceed net amount.",
                               );
                             }
                           }}
                           placeholder="13"
                           className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
                         />
-                        {agentDiscountPercentageError && (
+                        {agentSurchargeError && (
                           <p className="mt-1 text-[10px] text-red-500 whitespace-nowrap">
-                            {agentDiscountPercentageError}
+                            {agentSurchargeError}
                           </p>
                         )}
                       </div>
                     ) : (
                       <span className="text-base font-bold text-[#78555E]">
-                        {agentDiscountPercentage}
+                        {agentSurchargeAmount}
                       </span>
                     )}
                     <span className="text-sm lg:text-base font-bold text-[#78555E]">
-                      %
+                      $
                     </span>
                   </div>
                 </div>
@@ -951,21 +951,67 @@ const OrderManagement = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[#5C5F60]">Agent Discount</span>
-                    <span className="text-red-600 font-semibold">
-                      -${agentDiscountValue.toFixed(2)}
+                    <span className="text-[#5C5F60]">Agent Surcharge</span>
+                    <span className="text-green-600 font-semibold">
+                      +${agentSurchargeAmount.toFixed(2)}
                     </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Calculated Total</span>
+                    <span>${calculatedTotal.toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>Round Off</span>
+
+                    <span
+                      className={
+                        roundOff >= 0 ? "text-green-600" : "text-red-600"
+                      }
+                    >
+                      {roundOff >= 0 ? "+" : "-"}$
+                      {Math.abs(roundOff).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-3 lg:px-4 py-3">
+                    <span className="text-base lg:text-lg font-bold text-[#141D23]">
+                      Final Amount
+                    </span>
+
+                    {canModerate ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-base lg:text-xl font-bold text-green-600">
+                          $
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={finalAmount}
+                          onChange={(e) => setFinalAmount(e.target.value)}
+                          placeholder={calculatedTotal.toFixed(2)}
+                          className="w-24 bg-white border border-green-300 rounded px-2 py-1 text-right text-base lg:text-xl font-bold text-green-600 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-base lg:text-xl font-bold text-green-600">
+                        ${finalPrice.toFixed(2)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
+                {/*
                 <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-3 lg:px-4 py-3 mt-4">
                   <span className="text-base lg:text-lg font-bold text-[#141D23]">
                     Total Amount
                   </span>
                   <span className="text-base lg:text-xl font-bold text-green-600">
-                    ${totalAmount.toFixed(2)}
+                    ${calculatedTotal.toFixed(2)}
                   </span>
                 </div>
+                */}
               </div>
 
               {/* Footer Buttons */}
