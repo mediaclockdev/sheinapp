@@ -651,7 +651,7 @@ const OrderManagement = () => {
                             </p>
                             <div className="flex items-center gap-2 shrink-0">
                               <p className="font-bold text-xs text-[#78555E]">
-                                ${Number(item.price).toFixed(2)}
+                                ${Number(item.promotionalPrice).toFixed(2)}
                               </p>
                               {canModerate && (
                                 <button
@@ -745,9 +745,14 @@ const OrderManagement = () => {
                         {/* Right Side */}
                         <div className="flex flex-col items-end justify-between h-20 shrink-0">
                           <div className="flex items-center gap-3">
-                            <p className="font-bold text-xs text-[#78555E]">
-                              ${Number(item.price).toFixed(2)}
-                            </p>
+                            <div>
+                              <p className="font-bold text-xs  text-red-600">
+                                ${Number(item.promotionalPrice).toFixed(2)}
+                              </p>
+                              <p className="font-bold text-[10px] text-[#78555E] line-through">
+                                ${Number(item.price).toFixed(2)}
+                              </p>
+                            </div>
                             {canModerate && (
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
