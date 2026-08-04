@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { Save } from "lucide-react";
 import { toast } from "../components/Toast";
 import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
@@ -18,6 +19,7 @@ const authHeaders = () => {
 };
 
 export default function Settings() {
+  const { onStatusChange } = useOutletContext() ?? {};
   const [pricePerKg, setPricePerKg] = useState("10");
   const [weight, setWeight] = useState("0.5");
   const [customFee, setCustomFee] = useState("0");
@@ -25,7 +27,7 @@ export default function Settings() {
   const [agentDiscount, setAgentDiscount] = useState("0");
   const [tiers, setTiers] = useState(initialTiers);
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null); // "saved" | "error"
+  const [saveStatus, setSaveStatus] = useState(null);
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
 
   useEffect(() => {
@@ -48,8 +50,11 @@ export default function Settings() {
           setAgentDiscount(String(data.agentdiscount));
         else if (data?.agentDiscount != null)
           setAgentDiscount(String(data.agentDiscount));
-        if (data?.isAcceptingOrders != null)
-          setIsAcceptingOrders(data.isAcceptingOrders);
+        setIsAcceptingOrders(
+          data?.isAcceptingOrders != null
+            ? Boolean(data.isAcceptingOrders)
+            : true,
+        );
         if (data?.discountRules?.length) {
           setTiers(
             data.discountRules.map((r) => ({
@@ -95,18 +100,12 @@ export default function Settings() {
             agentDiscount: parseFloat(agentDiscount) || 0,
           }),
         }),
-        fetch(AGENT_STATUS_API_URL, {
-          method: "PATCH",
-          headers: authHeaders(),
-          body: JSON.stringify({ isAcceptingOrders }),
-        }),
       ]);
 
       if (
         isUnauthorized(shippingRes.status) ||
         isUnauthorized(rulesRes.status) ||
-        isUnauthorized(feesRes.status) ||
-        isUnauthorized(statusRes.status)
+        isUnauthorized(feesRes.status)
       ) {
         handleUnauthorized();
         return;
@@ -127,6 +126,38 @@ export default function Settings() {
     }
   };
 
+  const handleToggleStatus = async () => {
+    const newStatus = !isAcceptingOrders;
+
+    try {
+      const response = await fetch(AGENT_STATUS_API_URL, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          isAcceptingOrders: newStatus,
+        }),
+      });
+
+      if (isUnauthorized(response.status)) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to update status");
+      }
+
+      setIsAcceptingOrders(newStatus);
+      onStatusChange?.(newStatus);
+      if (newStatus) {
+        toast.active("Agent status is now Active.");
+      } else {
+        toast.inactive("Agent status is now Inactive.");
+      }
+    } catch (err) {
+      toast.error("Failed to update status");
+    }
+  };
   const kg = parseFloat(weight) || 0;
   const basePrice = kg * (parseFloat(pricePerKg) || 0);
 
@@ -424,7 +455,7 @@ export default function Settings() {
                 type="button"
                 role="switch"
                 aria-checked={isAcceptingOrders}
-                onClick={() => setIsAcceptingOrders((prev) => !prev)}
+                onClick={handleToggleStatus}
                 disabled={saving}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                   isAcceptingOrders ? "bg-green-500" : "bg-gray-300"
