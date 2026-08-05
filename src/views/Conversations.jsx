@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { Plus, Send, Smile, ArrowLeft, FileText, X } from "lucide-react";
+import {
+  Plus,
+  Send,
+  Smile,
+  ArrowLeft,
+  FileText,
+  X,
+  Check,
+  CheckCheck,
+} from "lucide-react";
 import { useSocket } from "../hooks/useSocket";
 
 const API_BASE = "https://shelynx.mediaclocksoft.com.au";
@@ -30,7 +39,8 @@ const renderInboxMessage = (msg) => {
   if (msg.messageType === "IMAGE") return "📷 Photo";
   if (msg.messageType === "VIDEO") return "🎥 Video";
   if (msg.messageType === "AUDIO") return "🎵 Voice Message";
-  if (msg.messageType === "DOCUMENT" || msg.messageType === "FILE") return "📄 Document";
+  if (msg.messageType === "DOCUMENT" || msg.messageType === "FILE")
+    return "📄 Document";
   return msg.content;
 };
 
@@ -112,12 +122,67 @@ const Conversations = () => {
     if (!socket || !activeId) return;
     const handleReceive = (newMessage) => {
       if (newMessage.conversationId === activeId) {
+        // Add the message to the screen
         setMessages((prev) => [...prev, newMessage]);
-        socket.emit("mark_as_read", { conversationId: activeId });
+        
+        // IMPORTANT: We MUST only emit mark_as_read if the message came from the customer.
+        // If we emit it for our own message, the backend might broadcast a read receipt
+        // and instantly turn our own checkmarks blue!
+        if (newMessage.senderType !== "AGENT") {
+          socket.emit("mark_as_read", { conversationId: activeId });
+        }
       }
     };
     socket.on("receive_message", handleReceive);
     return () => socket.off("receive_message", handleReceive);
+  }, [socket, activeId]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleInboxNotification = (message) => {
+      setThreads((prev) => {
+        const updatedThreads = prev.map((thread) => {
+          if (thread.id === message.conversationId) {
+            return {
+              ...thread,
+              lastMessage: message,
+              unreadCount:
+                thread.id === activeId ? 0 : (thread.unreadCount || 0) + 1,
+            };
+          }
+          return thread;
+        });
+
+        return updatedThreads.sort((a, b) => {
+          const aTime = a.lastMessage?.createdAt || a.updatedAt;
+          const bTime = b.lastMessage?.createdAt || b.updatedAt;
+
+          return new Date(bTime) - new Date(aTime);
+        });
+      });
+    };
+
+    const handleMessageRead = (data) => {
+      if (data.conversationId === activeId) {
+        // Only turn OUR ticks blue if the CUSTOMER was the one who triggered the read event!
+        if (data.readBy === "CUSTOMER") {
+          setMessages((prev) => 
+            prev.map((m) => 
+              m.senderType === "AGENT" ? { ...m, isRead: true } : m
+            )
+          );
+        }
+      }
+    };
+
+    socket.on("inbox_notification", handleInboxNotification);
+    socket.on("message_read", handleMessageRead);
+
+    return () => {
+      socket.off("inbox_notification", handleInboxNotification);
+      socket.off("message_read", handleMessageRead);
+    };
   }, [socket, activeId]);
 
   useEffect(() => {
@@ -311,8 +376,6 @@ const Conversations = () => {
               ) : (
                 messages.map((m, i) => {
                   const isAgent = m.senderType === "AGENT";
-                  const isAttachment =
-                    ["FILE", "IMAGE", "DOCUMENT", "VIDEO", "AUDIO"].includes(m.messageType);
                   return (
                     <div
                       key={m.id || i}
@@ -321,10 +384,21 @@ const Conversations = () => {
                       <div className="max-w-[85%] sm:max-w-[420px]">
                         {(() => {
                           const url = fileUrl(m.content);
-                          const isImage = m.messageType === "IMAGE" || (typeof m.content === "string" && m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i));
-                          const isVideo = m.messageType === "VIDEO" || (typeof m.content === "string" && m.content.match(/\.(mp4|mov)$/i));
-                          const isAudio = m.messageType === "AUDIO" || (typeof m.content === "string" && m.content.match(/\.(mp3|wav|ogg)$/i));
-                          const isDoc = m.messageType === "DOCUMENT" || m.messageType === "FILE";
+                          const isImage =
+                            m.messageType === "IMAGE" ||
+                            (typeof m.content === "string" &&
+                              m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i));
+                          const isVideo =
+                            m.messageType === "VIDEO" ||
+                            (typeof m.content === "string" &&
+                              m.content.match(/\.(mp4|mov)$/i));
+                          const isAudio =
+                            m.messageType === "AUDIO" ||
+                            (typeof m.content === "string" &&
+                              m.content.match(/\.(mp3|wav|ogg)$/i));
+                          const isDoc =
+                            m.messageType === "DOCUMENT" ||
+                            m.messageType === "FILE";
 
                           const bubbleClass = `rounded-2xl px-4 py-3 text-sm ${
                             isAgent
@@ -341,7 +415,7 @@ const Conversations = () => {
                               />
                             );
                           }
-                          
+
                           if (isVideo) {
                             return (
                               <video
@@ -355,45 +429,82 @@ const Conversations = () => {
                           if (isAudio) {
                             return (
                               <div className={bubbleClass + " !p-2"}>
-                                <audio controls src={url} className="max-w-[200px] sm:max-w-[250px] h-10" />
+                                <audio
+                                  controls
+                                  src={url}
+                                  className="max-w-[200px] sm:max-w-[250px] h-10"
+                                />
                               </div>
                             );
                           }
 
                           if (isDoc) {
-                            const fileName = typeof m.content === "string" ? m.content.split('/').pop() : "Document";
+                            const fileName =
+                              typeof m.content === "string"
+                                ? m.content.split("/").pop()
+                                : "Document";
                             return (
                               <a
                                 href={url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className={bubbleClass + " flex items-center gap-3 hover:opacity-90 transition-opacity no-underline"}
+                                className={
+                                  bubbleClass +
+                                  " flex items-center gap-3 hover:opacity-90 transition-opacity no-underline"
+                                }
                               >
-                                <div className={`p-2 rounded-lg shrink-0 ${isAgent ? "bg-white/50" : "bg-black/5"}`}>
-                                  <FileText size={20} className={isAgent ? "text-[#D24D77]" : "text-gray-500"} />
+                                <div
+                                  className={`p-2 rounded-lg shrink-0 ${isAgent ? "bg-white/50" : "bg-black/5"}`}
+                                >
+                                  <FileText
+                                    size={20}
+                                    className={
+                                      isAgent
+                                        ? "text-[#D24D77]"
+                                        : "text-gray-500"
+                                    }
+                                  />
                                 </div>
                                 <div className="min-w-0 flex-1 max-w-[200px]">
-                                  <p className="font-medium truncate text-sm">{fileName}</p>
-                                  <p className="text-[10px] opacity-70 uppercase mt-0.5">Document</p>
+                                  <p className="font-medium truncate text-sm">
+                                    {fileName}
+                                  </p>
+                                  <p className="text-[10px] opacity-70 uppercase mt-0.5">
+                                    Document
+                                  </p>
                                 </div>
                               </a>
                             );
                           }
 
-                          return (
-                            <div className={bubbleClass}>
-                              {m.content}
-                            </div>
-                          );
+                          return <div className={bubbleClass}>{m.content}</div>;
                         })()}
-                        <p
+                        {/* <p
                           className={`text-[11px] text-[#8C959F] mt-1 ${
                             isAgent ? "text-right" : "text-left"
                           }`}
                         >
                           {isAgent ? "Sarah L." : active.chatPartner?.name} •{" "}
                           {clockTime(m.createdAt)}
-                        </p>
+                        </p> */}
+                        <div
+                          className={`text-[11px] text-[#8C959F] mt-1 flex items-center gap-1 ${isAgent ? "justify-end" : "justify-start"} `}
+                        >
+                          {clockTime(m.createdAt)}
+                          {isAgent && (
+                            <span
+                              className={
+                                m.isRead ? "text-blue-500" : "text-[#8c959f]"
+                              }
+                            >
+                              {m.isRead ? (
+                                <CheckCheck size={14} />
+                              ) : (
+                                <Check size={14} />
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -451,77 +562,81 @@ const Conversations = () => {
 
         {/* WhatsApp-style File Preview Modal */}
         {previewUrl && (
-        <div className="absolute inset-0 z-50 bg-[#111B21] flex flex-col justify-between p-4 sm:p-6">
-          {/* Top Bar */}
-          <div className="flex items-center justify-between text-white w-full">
-            <button
-              onClick={handleClosePreview}
-              disabled={uploading}
-              className="p-2 hover:bg-white/10 rounded-full transition text-white/80 hover:text-white"
-              title="Close preview"
-            >
-              <X size={24} />
-            </button>
-            <div className="text-right">
-              <p className="text-sm font-semibold truncate max-w-[200px] sm:max-w-[350px]">
-                {selectedFile?.name}
-              </p>
-              <p className="text-xs text-white/60">
-                {(selectedFile?.size / (1024 * 1024)).toFixed(2)} MB
-              </p>
-            </div>
-          </div>
-
-          {/* Preview Area */}
-          <div className="flex-1 flex items-center justify-center my-4 overflow-hidden w-full">
-            {selectedFile?.type.startsWith("image/") ? (
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="max-h-[65vh] sm:max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl border border-white/10"
-              />
-            ) : selectedFile?.type.startsWith("video/") ? (
-              <video
-                src={previewUrl}
-                controls
-                className="max-h-[65vh] sm:max-h-[70vh] max-w-full rounded-lg shadow-2xl border border-white/10"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center bg-white/10 p-8 rounded-2xl border border-white/20 text-white max-w-md w-full text-center">
-                <FileText size={56} className="text-[#D24D77] mb-3" />
-                <p className="font-bold text-lg truncate w-full">{selectedFile?.name}</p>
-                <p className="text-sm text-white/60 mt-1 uppercase">
-                  {selectedFile?.type || "Document"}
+          <div className="absolute inset-0 z-50 bg-[#111B21] flex flex-col justify-between p-4 sm:p-6">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between text-white w-full">
+              <button
+                onClick={handleClosePreview}
+                disabled={uploading}
+                className="p-2 hover:bg-white/10 rounded-full transition text-white/80 hover:text-white"
+                title="Close preview"
+              >
+                <X size={24} />
+              </button>
+              <div className="text-right">
+                <p className="text-sm font-semibold truncate max-w-[200px] sm:max-w-[350px]">
+                  {selectedFile?.name}
+                </p>
+                <p className="text-xs text-white/60">
+                  {(selectedFile?.size / (1024 * 1024)).toFixed(2)} MB
                 </p>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Bottom Bar / Caption & Send */}
-          <div className="w-full flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Add a caption..."
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !uploading && handleConfirmUpload()}
-              disabled={uploading}
-              className="flex-1 bg-white/10 text-white placeholder-white/50 border border-white/20 rounded-full px-5 py-3 text-sm outline-none focus:border-white/50 transition"
-              autoFocus
-            />
-            <button
-              onClick={handleConfirmUpload}
-              disabled={uploading}
-              className="h-12 w-12 rounded-full bg-[#D24D77] hover:bg-[#b83d64] text-white flex items-center justify-center transition shrink-0 disabled:opacity-50 shadow-lg"
-            >
-              {uploading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            {/* Preview Area */}
+            <div className="flex-1 flex items-center justify-center my-4 overflow-hidden w-full">
+              {selectedFile?.type.startsWith("image/") ? (
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="max-h-[65vh] sm:max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl border border-white/10"
+                />
+              ) : selectedFile?.type.startsWith("video/") ? (
+                <video
+                  src={previewUrl}
+                  controls
+                  className="max-h-[65vh] sm:max-h-[70vh] max-w-full rounded-lg shadow-2xl border border-white/10"
+                />
               ) : (
-                <Send size={18} />
+                <div className="flex flex-col items-center justify-center bg-white/10 p-8 rounded-2xl border border-white/20 text-white max-w-md w-full text-center">
+                  <FileText size={56} className="text-[#D24D77] mb-3" />
+                  <p className="font-bold text-lg truncate w-full">
+                    {selectedFile?.name}
+                  </p>
+                  <p className="text-sm text-white/60 mt-1 uppercase">
+                    {selectedFile?.type || "Document"}
+                  </p>
+                </div>
               )}
-            </button>
+            </div>
+
+            {/* Bottom Bar / Caption & Send */}
+            <div className="w-full flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="Add a caption..."
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && !uploading && handleConfirmUpload()
+                }
+                disabled={uploading}
+                className="flex-1 bg-white/10 text-white placeholder-white/50 border border-white/20 rounded-full px-5 py-3 text-sm outline-none focus:border-white/50 transition"
+                autoFocus
+              />
+              <button
+                onClick={handleConfirmUpload}
+                disabled={uploading}
+                className="h-12 w-12 rounded-full bg-[#D24D77] hover:bg-[#b83d64] text-white flex items-center justify-center transition shrink-0 disabled:opacity-50 shadow-lg"
+              >
+                {uploading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send size={18} />
+                )}
+              </button>
+            </div>
           </div>
-        </div>
         )}
       </div>
     </div>
