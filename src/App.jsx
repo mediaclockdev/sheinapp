@@ -27,12 +27,15 @@ function App() {
       }
     };
     setupNotifications();
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("Foreground message received: ", payload);
-      alert(
-        `New Message: ${payload.notification.title}\n${payload.notification.body}`
-      );
-    });
+    let unsubscribe = null;
+    if (messaging) {
+      unsubscribe = onMessage(messaging, (payload) => {
+        console.log("Foreground message received: ", payload);
+        alert(
+          `New Message: ${payload.notification.title}\n${payload.notification.body}`
+        );
+      });
+    }
 
     // Clean up the listener when the component unmounts
     return () => {

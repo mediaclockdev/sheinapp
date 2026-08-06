@@ -13,9 +13,20 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-export const messaging = getMessaging(app);
+export let messaging = null;
+
+try {
+  messaging = getMessaging(app);
+} catch (e) {
+  console.warn("Firebase Messaging is not supported in this browser.");
+}
 
 export const requestFirebaseToken = async () => {
+  if (!messaging) {
+    console.warn("Push notifications are not supported by your browser.");
+    return null;
+  }
+
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
