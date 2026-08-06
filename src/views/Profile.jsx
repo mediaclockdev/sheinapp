@@ -137,13 +137,15 @@ export default function Profile() {
       .then(({ data }) => {
         if (!data) return;
         setProfile(data);
+        const agentCode = `AGT${String(data.id).padStart(5, "0")}`;
         setForm({
           name: data.name || "",
           email: data.email || "",
           countryCode: data.countryCode || "",
           phone: data.phone || "",
-          agentCode: `AGT${String(data.id).padStart(5, "0")}`,
+          agentCode,
         });
+        localStorage.setItem("agentCode", agentCode);
         const apiPrefs = prefsFromApi(data.notificationPreferences);
         if (apiPrefs) setPrefs((p) => ({ ...p, ...apiPrefs }));
       })
