@@ -19,8 +19,9 @@ import Profile from "../views/Profile";
 import BatchQueue from "../views/BatchQueue";
 import NewOrders from "../views/NewOrders";
 import Customers from "../views/Customers";
-
 import Conversations from "../views/Conversations";
+import ScanSku from "../views/ScanSku";
+import MobileOnlyRoute from "./MobileOnlyRoute";
 
 const isAuthenticated = () => {
   return !!localStorage.getItem("token");
@@ -74,6 +75,14 @@ function AppRoutes() {
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
         <Route path="conversation" element={<Conversations />} />
+        <Route
+          path="scanSku"
+          element={
+            <MobileOnlyRoute>
+              <ScanSku />
+            </MobileOnlyRoute>
+          }
+        />
       </Route>
 
       {/* Fallback Catch-all -> redirects to dashboard */}
