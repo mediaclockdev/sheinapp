@@ -1,5 +1,5 @@
 import { AppRouter } from "./router/AppRouter";
-import { Toaster } from "./components/Toast";
+import { Toaster, toast } from "./components/Toast";
 import { useEffect } from "react";
 import { requestFirebaseToken, messaging } from "./config/firebase";
 import { onMessage } from "firebase/messaging";
@@ -31,9 +31,10 @@ function App() {
     if (messaging) {
       unsubscribe = onMessage(messaging, (payload) => {
         console.log("Foreground message received: ", payload);
-        alert(
-          `New Message: ${payload.notification.title}\n${payload.notification.body}`
-        );
+        toast.message({
+          title: payload.notification?.title || "New Notification",
+          body: payload.notification?.body || "",
+        });
       });
     }
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Outlet, useLocation, Link } from "react-router-dom";
+import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { handleUnauthorized, isUnauthorized } from "../../lib/sessionExpiry";
+import { useSocket } from "../../hooks/useSocket";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
@@ -22,10 +23,69 @@ const PAGE_TITLES = {
 
 const DashboardLayout = () => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { socket } = useSocket();
   const title = PAGE_TITLES[pathname] || "Dashboard";
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [now, setNow] = useState(new Date());
+
+  // Update time for relative timestamps
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleNotification = (message) => {
+      if (message.senderType === "CUSTOMER") {
+        setNotifications((prev) => {
+          const newNotif = {
+            id: Date.now(),
+            type: "message",
+            title: "New Message",
+            body: message.content ? message.content.substring(0, 80) : "",
+            conversationId: message.conversationId,
+            time: new Date(),
+            read: false,
+          };
+          const updated = [newNotif, ...prev];
+          return updated.slice(0, 20); // max 20
+        });
+      }
+    };
+    socket.on("inbox_notification", handleNotification);
+    return () => {
+      socket.off("inbox_notification", handleNotification);
+    };
+  }, [socket]);
+
+  const getRelativeTime = (date) => {
+    const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
+    if (diffInSeconds < 60) return "just now";
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d ago`;
+  };
+
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = (notif) => {
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    setIsNotificationOpen(false);
+    navigate("/conversation");
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     try {
@@ -88,16 +148,73 @@ const DashboardLayout = () => {
             </h1>
           </div>
           {/* User profile & Notifications */}
-          <div className="flex items-center gap-3 lg:gap-6">
+          <div className="flex items-center gap-3 lg:gap-6 relative">
             {/* Notification Bell */}
-            <button className="relative p-2 rounded-lg hover:bg-slate-100 transition duration-200">
-              {/* Commented out img for notification bell icon */}
-              {/* <img src="bell.svg" alt="Notifications" className="h-5 w-5" /> */}
-              <span className="text-lg">🔔</span>
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className="relative p-2 rounded-lg hover:bg-slate-100 transition duration-200"
+              >
+                <span className="text-lg">🔔</span>
+                {/* Notification Badge */}
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 h-4 w-4 bg-[#D24D77] rounded-full border border-white text-[10px] text-white flex items-center justify-center font-bold">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
 
-              {/* Notification Badge */}
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-[#E14878] rounded-full border border-white"></span>
-            </button>
+              {/* Notification Dropdown */}
+              {isNotificationOpen && (
+                <>
+                  {/* Invisible backdrop to close when clicking outside */}
+                  <div 
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsNotificationOpen(false)}
+                  ></div>
+                  
+                  <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-[#E8DFE1] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-4 border-b border-[#E8DFE1] flex items-center justify-between bg-[#FAFAFA]/90">
+                      <h3 className="font-bold text-[#17222B]">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button onClick={markAllRead} className="text-xs font-bold text-[#D24D77] hover:underline">Mark all read</button>
+                      )}
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center text-[#8C959F] flex flex-col items-center">
+                          <span className="text-4xl mb-2">📭</span>
+                          <p className="text-sm font-medium">No new notifications</p>
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div 
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`p-4 border-b border-[#E8DFE1] hover:bg-[#F8FAFF] cursor-pointer transition flex gap-3 ${notif.read ? 'opacity-60' : ''}`}
+                          >
+                            <div className="h-10 w-10 shrink-0 rounded-full bg-[#FFE8EF] flex items-center justify-center text-lg">
+                              💬
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-[#141D23] truncate">{notif.title}</p>
+                              <p className="text-xs text-[#5C5F60] mt-0.5 line-clamp-2">{notif.body}</p>
+                              <p className="text-[10px] text-[#8C959F] mt-1 font-medium">{getRelativeTime(notif.time)}</p>
+                            </div>
+                            {!notif.read && <div className="h-2 w-2 rounded-full bg-[#D24D77] shrink-0 mt-1"></div>}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {notifications.length > 0 && (
+                      <div className="p-3 border-t border-[#E8DFE1] bg-[#FAFAFA]/90 text-center">
+                        <button onClick={() => { setIsNotificationOpen(false); navigate("/conversation"); }} className="text-sm font-semibold text-[#141D23] hover:text-[#D24D77] transition">View all conversations</button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Vertical Divider */}
             <div className="h-8 w-px bg-slate-200"></div>

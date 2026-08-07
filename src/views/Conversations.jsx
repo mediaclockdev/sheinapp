@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Send,
@@ -11,6 +12,7 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { useSocket } from "../hooks/useSocket";
+import { toast } from "../components/Toast";
 
 const API_BASE = "https://shelynx.mediaclocksoft.com.au";
 const authHeaders = () => ({
@@ -59,6 +61,7 @@ const Avatar = ({ name, avatarUrl }) => (
 
 const Conversations = () => {
   const { socket } = useSocket();
+  const navigate = useNavigate();
   const [threads, setThreads] = useState([]);
   const [inboxLoading, setInboxLoading] = useState(true);
   const [activeId, setActiveId] = useState(null);
@@ -141,6 +144,26 @@ const Conversations = () => {
     if (!socket) return;
 
     const handleInboxNotification = (message) => {
+      // Fire a rich toast if the message is from a customer and it's not the active chat!
+      if (message.conversationId !== activeId && message.senderType === "CUSTOMER") {
+        const thread = threads.find((t) => t.id === message.conversationId);
+        const senderName = thread?.chatPartner?.name || "Customer";
+        const preview = message.messageType === "TEXT"
+          ? (message.content?.length > 60 ? message.content.substring(0, 60) + "..." : message.content)
+          : message.messageType === "IMAGE" ? "📷 Sent a photo"
+          : message.messageType === "VIDEO" ? "🎥 Sent a video"
+          : message.messageType === "AUDIO" ? "🎵 Sent a voice message"
+          : "📄 Sent an attachment";
+
+        toast.message({
+          title: senderName,
+          body: preview,
+          onClick: () => {
+            openChat(message.conversationId);
+          },
+        });
+      }
+
       setThreads((prev) => {
         const updatedThreads = prev.map((thread) => {
           if (thread.id === message.conversationId) {
@@ -192,6 +215,12 @@ const Conversations = () => {
   const openChat = (id) => {
     setActiveId(id);
     setMobileThreadOpen(true);
+    // Instantly clear the unread count when clicking the chat
+    setThreads((prev) =>
+      prev.map((thread) =>
+        thread.id === id ? { ...thread, unreadCount: 0 } : thread
+      )
+    );
   };
 
   const sendMessage = () => {
