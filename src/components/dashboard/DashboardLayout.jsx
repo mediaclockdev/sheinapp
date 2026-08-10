@@ -40,6 +40,8 @@ const DashboardLayout = () => {
     return () => clearInterval(timer);
   }, []);
 
+  console.log("Now ", now);
+
   useEffect(() => {
     if (!socket) return;
     const handleNotification = (message) => {
