@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 let listeners = [];
-let id = 0;
+let idCounter = 0;
 
 export const toast = {
   success: (message) => emit({ type: "success", message }),
@@ -22,8 +22,8 @@ export const toast = {
   show: ({ type, message }) => emit({ type, message }),
 };
 
-function emit(t) {
-  const item = { ...t, id: ++id };
+function emit(payload) {
+  const item = { ...payload, id: ++idCounter, createdAt: Date.now() };
   listeners.forEach((fn) => fn(item));
 }
 
@@ -123,4 +123,3 @@ export function Toaster() {
     </div>
   );
 }
-
