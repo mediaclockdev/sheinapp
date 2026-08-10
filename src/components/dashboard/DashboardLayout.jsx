@@ -49,6 +49,7 @@ const DashboardLayout = () => {
             id: Date.now(),
             type: "message",
             title: "New Message",
+            senderName: message.chatPartner?.name || "Customer",
             body: message.content ? message.content.substring(0, 80) : "",
             conversationId: message.conversationId,
             time: new Date(),
@@ -215,9 +216,10 @@ const DashboardLayout = () => {
                               💬
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-[#141D23] truncate">{notif.title}</p>
-                              <p className="text-xs text-[#5C5F60] mt-0.5 line-clamp-2">{notif.body}</p>
-                              <p className="text-[10px] text-[#8C959F] mt-1 font-medium">{getRelativeTime(notif.time)}</p>
+                              <p className="text-[10px] font-bold text-[#D24D77] uppercase tracking-wider mb-0.5">{notif.title}</p>
+                              <p className="text-sm font-semibold text-[#141D23] truncate leading-tight">{notif.senderName || "Customer"}</p>
+                              <p className="text-xs text-[#5C5F60] mt-1 line-clamp-2 leading-snug">{notif.body}</p>
+                              <p className="text-[10px] text-[#8C959F] mt-1.5 font-medium">{getRelativeTime(notif.time)}</p>
                             </div>
                             {!notif.read && <div className="h-2 w-2 rounded-full bg-[#D24D77] shrink-0 mt-1"></div>}
                           </div>
