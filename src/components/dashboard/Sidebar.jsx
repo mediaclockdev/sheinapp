@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import logo2 from "../../assets/logo2.svg";
 
@@ -10,11 +11,25 @@ import customericon from "../../assets/customersicon.svg";
 import reportsicon from "../../assets/reportsicon.svg";
 import settingsicon from "../../assets/settingsicon.svg";
 import cameraicon from "../../assets/cameraicon.svg";
-import { LogOut, MessageSquare } from "lucide-react";
+import { LogOut, MessageSquare, UserPlus, Copy, Check, X } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const agentCode = localStorage.getItem("agentCode");
+
+  const referralLink = agentCode
+    ? `https://app.shelynx.com/invite?code=${encodeURIComponent(agentCode)}`
+    : "";
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -105,6 +120,16 @@ const Sidebar = ({ isOpen, onClose }) => {
               </NavLink>
             ))}
           </nav>
+          <button
+            onClick={() => {
+              setInviteOpen(true);
+              onClose();
+            }}
+            className="flex w-full items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B] transition duration-200 cursor-pointer"
+          >
+            <UserPlus size={18} className="shrink-0" />
+            <span>Invite</span>
+          </button>
           <button
             onClick={() => {
               handleLogout();
@@ -207,6 +232,39 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button> */}
         </div>
       </div>
+
+      {/* Invite Dialog */}
+      {inviteOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-5 relative">
+            <button
+              onClick={() => setInviteOpen(false)}
+              className="absolute top-3 right-3 p-1 rounded-lg hover:bg-slate-100 text-[#5C5F60]"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+            <h2 className="text-base font-bold text-[#17222B] mb-4">
+              Referral Link
+            </h2>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={referralLink}
+                className="flex-1 text-sm px-3 py-2 rounded-lg border border-[#D3C3C5] bg-[#F6FAFF] text-[#5C5F60] truncate"
+              />
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-[#FFE8EF] text-[#D24D77] hover:bg-[#FFD1DC] transition duration-200 shrink-0 cursor-pointer"
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
