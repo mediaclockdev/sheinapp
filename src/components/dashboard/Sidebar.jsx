@@ -9,6 +9,7 @@ import trackingicon from "../../assets/trackingicon.svg";
 import customericon from "../../assets/customersicon.svg";
 import reportsicon from "../../assets/reportsicon.svg";
 import settingsicon from "../../assets/settingsicon.svg";
+import cameraicon from "../../assets/cameraicon.svg";
 import { LogOut, MessageSquare } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -32,6 +33,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Conversations", path: "/conversation", icon: MessageSquare },
     { name: "Reports", path: "/reports", iconSrc: reportsicon },
     { name: "Settings", path: "/settings", iconSrc: settingsicon },
+    { name: "Scan SKU", path: "/scanSku", iconSrc: cameraicon },
   ];
 
   return (
@@ -81,6 +83,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    item.path === "/scanSku" ? "lg:hidden" : ""
+                  } ${
                     isActive
                       ? "bg-[#FFE8EF] text-[#D24D77]"
                       : "text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B]"

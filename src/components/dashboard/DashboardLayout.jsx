@@ -6,6 +6,7 @@ import { useSocket } from "../../hooks/useSocket";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
+const SETTINGS_API_URL = `${API_BASE_URL}/api/settings`;
 
 const PAGE_TITLES = {
   "/dashboard": "Dashboard",
@@ -86,6 +87,7 @@ const DashboardLayout = () => {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const [isAgentActive, setIsAgentActive] = useState(true);
 
   useEffect(() => {
     try {
@@ -110,6 +112,22 @@ const DashboardLayout = () => {
       })
       .then(({ data }) => setAvatarUrl(data?.avatarUrl || null))
       .catch((err) => console.error("Failed to load agent avatar:", err));
+
+    fetch(SETTINGS_API_URL, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => {
+        if (isUnauthorized(res.status)) return Promise.reject(res.status);
+        return res.ok ? res.json() : Promise.reject(res.status);
+      })
+      .then(({ data }) => {
+        setIsAgentActive(
+          data?.isAcceptingOrders != null
+            ? Boolean(data.isAcceptingOrders)
+            : true,
+        );
+      })
+      .catch((err) => console.error("Failed to load agent status:", err));
   }, []);
 
   const displayName = user?.name || "Sarah Chen";
@@ -247,7 +265,9 @@ const DashboardLayout = () => {
                     <span>{initials}</span>
                   )}
                 </div>
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-white"></span>
+                <span
+                  className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white transition-colors duration-300 ${isAgentActive ? "bg-green-500" : "bg-gray-400"}`}
+                ></span>
               </div>
             </Link>
           </div>
@@ -260,6 +280,8 @@ const DashboardLayout = () => {
               onAvatarChange: setAvatarUrl,
               onUserChange: (patch) =>
                 setUser((u) => ({ ...(u || {}), ...patch })),
+              isAgentActive,
+              onStatusChange: setIsAgentActive,
             }}
           />
         </main>
