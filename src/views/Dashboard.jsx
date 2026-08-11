@@ -141,7 +141,7 @@ const Dashboard = () => {
           totalOrders: (cards?.totalOrders ?? 0).toLocaleString(),
           pendingReview: cards?.pendingReviews ?? 0,
           moneySavedThisMonth: `$${(cards?.moneySaved ?? 0).toLocaleString()}`,
-          totalWeight: `${cards?.totalWeight ?? 0} kg`,
+          totalWeight: `${Number(cards?.totalWeight ?? 0).toFixed(2)} kg`,
           ordersInBatch: cards?.ordersInBatch ?? 0,
         },
         activeDiscountBatches: batches ?? [],

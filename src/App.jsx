@@ -1,6 +1,9 @@
 import { AppRouter } from "./router/AppRouter";
 import { Toaster } from "./components/Toast";
-import { NotificationToaster, notificationToast } from "./components/NotificationToast";
+import {
+  NotificationToaster,
+  notificationToast,
+} from "./components/NotificationToast";
 import { useEffect } from "react";
 import { requestFirebaseToken, messaging } from "./config/firebase";
 import { onMessage } from "firebase/messaging";
@@ -16,8 +19,6 @@ function App() {
     const setupNotifications = async () => {
       const token = await requestFirebaseToken();
       if (token) {
-        console.log("My firebase token is: ", token);
-
         await axios.patch(
           `${API_BASE}/api/agent-profile/fcm-token`,
           {
