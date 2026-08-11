@@ -98,7 +98,9 @@ const DashboardLayout = () => {
     try {
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        // Avoid setting state if already set to same ID to prevent loops
+        setUser(prev => prev?.id === parsed.id ? prev : parsed);
       }
     } catch (e) {
       console.error("Failed to parse user data", e);
