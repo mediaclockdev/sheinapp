@@ -50,11 +50,17 @@ const renderInboxMessage = (msg) => {
   return msg.content;
 };
 
+const resolveAvatarUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
+  return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+};
+
 const Avatar = ({ name, avatarUrl }) => (
   <div className="relative shrink-0">
     <img
       src={
-        avatarUrl ||
+        resolveAvatarUrl(avatarUrl) ||
         `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "")}`
       }
       alt={name}
