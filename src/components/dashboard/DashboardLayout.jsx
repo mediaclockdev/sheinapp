@@ -90,15 +90,6 @@ const DashboardLayout = () => {
   const [isAgentActive, setIsAgentActive] = useState(true);
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (e) {
-      console.error("Failed to parse user data", e);
-    }
-
     const token = localStorage.getItem("token");
     fetch(PROFILE_API_URL, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -110,8 +101,11 @@ const DashboardLayout = () => {
         }
         return res.ok ? res.json() : Promise.reject(res.status);
       })
-      .then(({ data }) => setAvatarUrl(data?.avatarUrl || null))
-      .catch((err) => console.error("Failed to load agent avatar:", err));
+      .then(({ data }) => {
+        setAvatarUrl(data?.avatarUrl || null);
+        if (data) setUser(data);
+      })
+      .catch((err) => console.error("Failed to load agent profile:", err));
 
     fetch(SETTINGS_API_URL, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -130,10 +124,10 @@ const DashboardLayout = () => {
       .catch((err) => console.error("Failed to load agent status:", err));
   }, []);
 
-  const displayName = user?.name || "Sarah Chen";
+  const displayName = user?.name || "Agent";
   const agentText = user?.id
     ? `Verified Agent #${user.id}`
-    : "Verified Agent #48219";
+    : "Verified Agent";
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
