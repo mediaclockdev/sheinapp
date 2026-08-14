@@ -43,85 +43,73 @@ const StarRating = ({ rating }) => (
 
 export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true);
-
-  const handleFetchCustomer = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(CUSTOMERS_API_URL, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.message || "Failed to fetch customers");
-      const list = result.data || result.customers || result || [];
-      console.log("Customers fetched:", list);
-      const customers = Array.isArray(list) ? list : [];
-
-      setCustomers(customers);
-
-      if (customers.length > 0) {
-        fetchCustomerDetails(customers[0].id);
-      }
-    } catch (err) {
-      setError(err.message);
-      setCustomers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    handleFetchCustomer();
-  }, []);
 
   const fetchCustomerDetails = async (id) => {
     if (!id) return;
-
-    setDetailLoading(true);
-
     try {
       const token = localStorage.getItem("token");
-
       const response = await fetch(`${CUSTOMERS_API_URL}/${id}`, {
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
-
       if (isUnauthorized(response.status)) {
         handleUnauthorized();
         return;
       }
-
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message);
-      }
-
+      if (!response.ok) throw new Error(result.message);
       setSelectedCustomer(result.data);
     } catch (err) {
       console.error(err);
-    } finally {
-      setDetailLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleFetchCustomer = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(CUSTOMERS_API_URL, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+
+        if (isUnauthorized(response.status)) {
+          handleUnauthorized();
+          return;
+        }
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || "Failed to fetch customers");
+        
+        const list = result.data || result.customers || result || [];
+        const customerData = Array.isArray(list) ? list : [];
+        setCustomers(customerData);
+        
+        if (customerData.length > 0) {
+          fetchCustomerDetails(customerData[0].id);
+        }
+      } catch (err) {
+        setError(err.message);
+        setCustomers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    handleFetchCustomer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const formatLastActive = (date) => {
     if (!date) return "N/A";
 

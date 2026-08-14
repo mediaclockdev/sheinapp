@@ -8,6 +8,7 @@ const BATCHES_API_URL = `${API_BASE_URL}/api/batches`;
 const APPROVED_ORDERS_API_URL = `${API_BASE_URL}/api/batches/approved-orders`;
 const CREATE_BATCH_API_URL = `${API_BASE_URL}/api/batches`;
 const MERGE_BATCH_API_URL = `${API_BASE_URL}/api/batches/merge`;
+const APPROVED_PAGE_SIZE = 10;
 const moveOrdersApiUrl = (batchId) =>
   `${BATCHES_API_URL}/${batchId}/move-orders`;
 
@@ -68,6 +69,8 @@ export default function BatchQueue() {
   const [approvedOrders, setApprovedOrders] = useState([]);
   const [approvedOrdersLoading, setApprovedOrdersLoading] = useState(true);
   const [approvedOrdersError, setApprovedOrdersError] = useState(null);
+  const [approvedTotal, setApprovedTotal] = useState(0);
+  const [pageIndex, setPageIndex] = useState(0);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [activeBatches, setActiveBatches] = useState([]);
   const [activeBatchesLoading, setActiveBatchesLoading] = useState(true);
@@ -130,13 +133,18 @@ export default function BatchQueue() {
     fetchLockedBatches();
   }, [fetchActiveBatches, fetchLockedBatches]);
 
-  const fetchApprovedOrders = useCallback(async () => {
+  const fetchApprovedOrders = useCallback(async (page = 1) => {
     setApprovedOrdersLoading(true);
     setApprovedOrdersError(null);
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch(APPROVED_ORDERS_API_URL, {
+      const params = new URLSearchParams({
+        page,
+        limit: APPROVED_PAGE_SIZE,
+      });
+
+      const response = await fetch(`${APPROVED_ORDERS_API_URL}?${params}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -152,8 +160,20 @@ export default function BatchQueue() {
       if (!response.ok)
         throw new Error(result.message || "Failed to fetch approved orders");
 
-      const list = result.data || result.orders || result || [];
-      setApprovedOrders(Array.isArray(list) ? list.map(mapApprovedOrder) : []);
+      const list =
+        result.data?.orders || result.data || result.orders || result || [];
+      const mapped = Array.isArray(list) ? list.map(mapApprovedOrder) : [];
+      setApprovedOrders(mapped);
+      setApprovedTotal(
+        Number(
+          result.total ??
+            result.totalCount ??
+            result.pagination?.total ??
+            result.data?.pagination?.total ??
+            result.meta?.total ??
+            mapped.length,
+        ),
+      );
     } catch (err) {
       setApprovedOrdersError(err.message);
       setApprovedOrders([]);
@@ -163,8 +183,13 @@ export default function BatchQueue() {
   }, []);
 
   useEffect(() => {
-    fetchApprovedOrders();
-  }, [fetchApprovedOrders]);
+    fetchApprovedOrders(pageIndex + 1);
+  }, [fetchApprovedOrders, pageIndex]);
+
+  const approvedPageCount = Math.max(
+    1,
+    Math.ceil(approvedTotal / APPROVED_PAGE_SIZE),
+  );
 
   // Modals state
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
@@ -248,9 +273,7 @@ export default function BatchQueue() {
       } else {
         setActiveBatches([...activeBatches, fallbackBatch]);
       }
-      setApprovedOrders(
-        approvedOrders.filter((o) => !selectedOrders.includes(o.id)),
-      );
+      await fetchApprovedOrders(pageIndex + 1);
       setSelectedOrders([]);
       setActiveTab("active");
       setSuccessMessage("Batch created successfully!");
@@ -659,6 +682,34 @@ export default function BatchQueue() {
                 </tbody>
               </table>
             </div>
+            {approvedOrders.length > 0 && (
+              <div className="px-4 py-3 border-t border-[#D3C3C5] bg-[#FBF7F8] flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#8C959F]">
+                  {pageIndex * APPROVED_PAGE_SIZE + 1}-
+                  {pageIndex * APPROVED_PAGE_SIZE + approvedOrders.length} of{" "}
+                  {approvedTotal}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setPageIndex(pageIndex - 1)}
+                    disabled={pageIndex === 0}
+                    className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ‹
+                  </button>
+                  <span className="text-xs font-semibold text-[#8C959F] mx-1">
+                    Page {pageIndex + 1} of {approvedPageCount}
+                  </span>
+                  <button
+                    onClick={() => setPageIndex(pageIndex + 1)}
+                    disabled={pageIndex >= approvedPageCount - 1}
+                    className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -129,7 +129,10 @@ const ScanSku = () => {
     <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4 text-center px-4">
       {scanning ? (
         <div className="w-full max-w-sm flex flex-col items-center gap-4">
-          <div id={SCANNER_REGION_ID} className="w-full rounded-lg overflow-hidden" />
+          <div
+            id={SCANNER_REGION_ID}
+            className="w-full rounded-lg overflow-hidden"
+          />
           <button
             onClick={() => {
               stopScanner();
