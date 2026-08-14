@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   X,
@@ -85,10 +86,17 @@ export default function OrderSummaryDrawer({ order, onClose }) {
   const items = Array.isArray(order.items) ? order.items : [];
   const address = formatAddress(order.shippingAddress);
 
-  return (
+  // Portalled to body: the drawer sits inside <main class="overflow-y-auto">,
+  // so anything up that tree that creates a containing block would clip a
+  // position:fixed overlay to less than the viewport.
+  return createPortal(
     <>
-      <div onClick={onClose} className="fixed inset-0 z-40" aria-hidden="true" />
-      <aside className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white border-l border-[#D3C3C5] z-50 flex flex-col shadow-xl">
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[2px]"
+        aria-hidden="true"
+      />
+      <aside className="fixed top-0 right-0 h-full w-full sm:w-[520px] bg-white border-l border-[#D3C3C5] z-50 flex flex-col shadow-xl">
         <div className="px-4 py-4 flex items-start justify-between gap-3 border-b border-[#D3C3C5]">
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-10 h-10 shrink-0 rounded-full bg-[#FFD1DC] text-[#78555E] text-sm font-bold flex items-center justify-center">
@@ -147,9 +155,10 @@ export default function OrderSummaryDrawer({ order, onClose }) {
             <ul className="space-y-3 pt-0.5">
               {items.map((item) => {
                 // The API bills at the promotional price when there is one.
-                const unit = item.promotionalPrice > 0
-                  ? item.promotionalPrice
-                  : item.price;
+                const unit =
+                  item.promotionalPrice > 0
+                    ? item.promotionalPrice
+                    : item.price;
                 return (
                   <li key={item.id} className="flex gap-3">
                     {item.photoUrl ? (
@@ -193,21 +202,6 @@ export default function OrderSummaryDrawer({ order, onClose }) {
                           <span className="text-[#5C5F60]">
                             {fmtMoney(item.price)} ea
                           </span>
-                        )}
-                        {item.productStatus && (
-                          <span className="px-1.5 py-px rounded bg-[#F1EFE8] text-[#5F5E5A]">
-                            {item.productStatus}
-                          </span>
-                        )}
-                        {item.productUrl && (
-                          <a
-                            href={item.productUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[#78555E] hover:underline"
-                          >
-                            Product <ExternalLink size={11} />
-                          </a>
                         )}
                       </div>
                     </div>
@@ -270,6 +264,7 @@ export default function OrderSummaryDrawer({ order, onClose }) {
           </button>
         </div>
       </aside>
-    </>
+    </>,
+    document.body,
   );
 }
