@@ -33,10 +33,19 @@ function App() {
     if (messaging) {
       unsubscribe = onMessage(messaging, (payload) => {
         console.log("Foreground message received: ", payload);
-        notificationToast.message({
-          title: payload.notification?.title || "New Notification",
-          body: payload.notification?.body || "",
-        });
+        
+        // Skip firing the generic FCM toast for chat messages, 
+        // because Conversations.jsx fires a rich, clickable toast via Socket.io!
+        const isMessage = payload.data?.type === "MESSAGE" || 
+                          payload.data?.conversationId || 
+                          payload.notification?.title?.includes("message");
+        
+        if (!isMessage) {
+          notificationToast.message({
+            title: payload.notification?.title || "New Notification",
+            body: payload.notification?.body || "",
+          });
+        }
       });
     }
 

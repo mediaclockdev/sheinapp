@@ -470,7 +470,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                       </span>
                       <input
                         type="number"
-                        step="1.00"
+                        step="00.1"
                         min="0.01"
                         max={d.maxFinalAmount.toFixed(2)}
                         value={d.finalAmount}
