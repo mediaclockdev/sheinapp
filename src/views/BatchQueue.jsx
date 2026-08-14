@@ -624,7 +624,7 @@ export default function BatchQueue() {
       const token = localStorage.getItem("token");
 
       const response = await fetch(removeOrdersApiUrl(selectedBatchId), {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
