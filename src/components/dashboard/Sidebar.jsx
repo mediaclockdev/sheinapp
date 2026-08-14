@@ -18,12 +18,33 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [referralLink, setReferralLink] = useState();
 
-  const agentCode = localStorage.getItem("agentCode");
+  const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au/api";
 
-  const referralLink = agentCode
-    ? `https://app.shelynx.com/invite?code=${encodeURIComponent(agentCode)}`
-    : "";
+  const handleReferralLink = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_BASE_URL}/agent-profile/invite-link`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch referral link");
+      }
+      const data = await response.json();
+      console.log(data);
+      setReferralLink(data.data.inviteLink);
+    } catch (error) {
+      console.error("Error fetching referral link:", error);
+    }
+  };
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(referralLink);
@@ -123,6 +144,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <button
             onClick={() => {
               setInviteOpen(true);
+              handleReferralLink();
               onClose();
             }}
             className="flex w-full items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B] transition duration-200 cursor-pointer"
@@ -251,12 +273,13 @@ const Sidebar = ({ isOpen, onClose }) => {
               <input
                 type="text"
                 readOnly
-                value={referralLink}
+                value={referralLink ?? "Loading…"}
                 className="flex-1 text-sm px-3 py-2 rounded-lg border border-[#D3C3C5] bg-[#F6FAFF] text-[#5C5F60] truncate"
               />
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-[#FFE8EF] text-[#D24D77] hover:bg-[#FFD1DC] transition duration-200 shrink-0 cursor-pointer"
+                disabled={!referralLink}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-[#FFE8EF] text-[#D24D77] hover:bg-[#FFD1DC] transition duration-200 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? "Copied" : "Copy"}

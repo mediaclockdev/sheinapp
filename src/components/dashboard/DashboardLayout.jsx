@@ -40,6 +40,8 @@ const DashboardLayout = () => {
     return () => clearInterval(timer);
   }, []);
 
+  console.log("Now ", now);
+
   useEffect(() => {
     if (!socket) return;
     const handleNotification = (message) => {
@@ -49,6 +51,7 @@ const DashboardLayout = () => {
             id: Date.now(),
             type: "message",
             title: "New Message",
+            senderName: message.chatPartner?.name || "Customer",
             body: message.content ? message.content.substring(0, 80) : "",
             conversationId: message.conversationId,
             time: new Date(),
@@ -77,16 +80,18 @@ const DashboardLayout = () => {
   };
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
   const handleNotificationClick = (notif) => {
-    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)),
+    );
     setIsNotificationOpen(false);
     navigate("/conversation");
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const [isAgentActive, setIsAgentActive] = useState(true);
 
   useEffect(() => {
@@ -163,7 +168,7 @@ const DashboardLayout = () => {
           <div className="flex items-center gap-3 lg:gap-6 relative">
             {/* Notification Bell */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                 className="relative p-2 rounded-lg hover:bg-slate-100 transition duration-200"
               >
@@ -180,47 +185,67 @@ const DashboardLayout = () => {
               {isNotificationOpen && (
                 <>
                   {/* Invisible backdrop to close when clicking outside */}
-                  <div 
+                  <div
                     className="fixed inset-0 z-40"
                     onClick={() => setIsNotificationOpen(false)}
                   ></div>
-                  
+
                   <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-[#E8DFE1] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-4 border-b border-[#E8DFE1] flex items-center justify-between bg-[#FAFAFA]/90">
-                      <h3 className="font-bold text-[#17222B]">Notifications</h3>
+                      <h3 className="font-bold text-[#17222B]">
+                        Notifications
+                      </h3>
                       {unreadCount > 0 && (
-                        <button onClick={markAllRead} className="text-xs font-bold text-[#D24D77] hover:underline">Mark all read</button>
+                        <button
+                          onClick={markAllRead}
+                          className="text-xs font-bold text-[#D24D77] hover:underline"
+                        >
+                          Mark all read
+                        </button>
                       )}
                     </div>
                     <div className="max-h-[300px] overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="p-8 text-center text-[#8C959F] flex flex-col items-center">
                           <span className="text-4xl mb-2">📭</span>
-                          <p className="text-sm font-medium">No new notifications</p>
+                          <p className="text-sm font-medium">
+                            No new notifications
+                          </p>
                         </div>
                       ) : (
                         notifications.map((notif) => (
-                          <div 
+                          <div
                             key={notif.id}
                             onClick={() => handleNotificationClick(notif)}
-                            className={`p-4 border-b border-[#E8DFE1] hover:bg-[#F8FAFF] cursor-pointer transition flex gap-3 ${notif.read ? 'opacity-60' : ''}`}
+                            className={`p-4 border-b border-[#E8DFE1] hover:bg-[#F8FAFF] cursor-pointer transition flex gap-3 ${notif.read ? "opacity-60" : ""}`}
                           >
                             <div className="h-10 w-10 shrink-0 rounded-full bg-[#FFE8EF] flex items-center justify-center text-lg">
                               💬
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-[#141D23] truncate">{notif.title}</p>
-                              <p className="text-xs text-[#5C5F60] mt-0.5 line-clamp-2">{notif.body}</p>
-                              <p className="text-[10px] text-[#8C959F] mt-1 font-medium">{getRelativeTime(notif.time)}</p>
+                              <p className="text-[10px] font-bold text-[#D24D77] uppercase tracking-wider mb-0.5">{notif.title}</p>
+                              <p className="text-sm font-semibold text-[#141D23] truncate leading-tight">{notif.senderName || "Customer"}</p>
+                              <p className="text-xs text-[#5C5F60] mt-1 line-clamp-2 leading-snug">{notif.body}</p>
+                              <p className="text-[10px] text-[#8C959F] mt-1.5 font-medium">{getRelativeTime(notif.time)}</p>
                             </div>
-                            {!notif.read && <div className="h-2 w-2 rounded-full bg-[#D24D77] shrink-0 mt-1"></div>}
+                            {!notif.read && (
+                              <div className="h-2 w-2 rounded-full bg-[#D24D77] shrink-0 mt-1"></div>
+                            )}
                           </div>
                         ))
                       )}
                     </div>
                     {notifications.length > 0 && (
                       <div className="p-3 border-t border-[#E8DFE1] bg-[#FAFAFA]/90 text-center">
-                        <button onClick={() => { setIsNotificationOpen(false); navigate("/conversation"); }} className="text-sm font-semibold text-[#141D23] hover:text-[#D24D77] transition">View all conversations</button>
+                        <button
+                          onClick={() => {
+                            setIsNotificationOpen(false);
+                            navigate("/conversation");
+                          }}
+                          className="text-sm font-semibold text-[#141D23] hover:text-[#D24D77] transition"
+                        >
+                          View all conversations
+                        </button>
                       </div>
                     )}
                   </div>

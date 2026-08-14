@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Send,
@@ -11,8 +10,9 @@ import {
   Check,
   CheckCheck,
   Image as ImageIcon,
-  Video,
   File,
+  MessageSquarePlus,
+  Search,
 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { useSocket } from "../hooks/useSocket";
@@ -50,11 +50,17 @@ const renderInboxMessage = (msg) => {
   return msg.content;
 };
 
+const resolveAvatarUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
+  return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+};
+
 const Avatar = ({ name, avatarUrl }) => (
   <div className="relative shrink-0">
     <img
       src={
-        avatarUrl ||
+        resolveAvatarUrl(avatarUrl) ||
         `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "")}`
       }
       alt={name}
@@ -65,7 +71,6 @@ const Avatar = ({ name, avatarUrl }) => (
 
 const Conversations = () => {
   const { socket } = useSocket();
-  const navigate = useNavigate();
   const [threads, setThreads] = useState([]);
   const [inboxLoading, setInboxLoading] = useState(true);
   const [activeId, setActiveId] = useState(null);
@@ -82,6 +87,13 @@ const Conversations = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [caption, setCaption] = useState("");
+
+  // New Message Modal state
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -108,14 +120,69 @@ const Conversations = () => {
           authHeaders(),
         );
         if (response.data.success) setThreads(response.data.data);
-      } catch (error) {
-        console.error("Failed to fetch inbox", error);
+      } catch (err) {
+        console.error("Failed to load threads:", err);
       } finally {
         setInboxLoading(false);
       }
     };
+
     fetchInbox();
   }, []);
+
+  useEffect(() => {
+    if (!showNewMessageModal) return;
+    
+    const fetchCustomers = async () => {
+      setCustomersLoading(true);
+      try {
+        const query = customerSearch.trim() ? `?search=${encodeURIComponent(customerSearch)}` : "";
+        const res = await axios.get(`${API_BASE}/api/customers${query}`, authHeaders());
+        const list = res.data.data || res.data.customers || res.data || [];
+        setCustomers(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error("Failed to fetch customers:", err);
+      } finally {
+        setCustomersLoading(false);
+      }
+    };
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchCustomers();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [showNewMessageModal, customerSearch]);
+
+  const startConversation = async (customerId) => {
+    setStartingChat(true);
+    try {
+      const res = await axios.post(
+        `${API_BASE}/api/chat/conversations`,
+        { customerId },
+        authHeaders()
+      );
+      if (res.data.success && res.data.data) {
+        const newThread = res.data.data;
+
+        setThreads(prev => {
+          if (!prev.find(t => t.id === newThread.id)) {
+            return [newThread, ...prev];
+          }
+          return prev;
+        });
+        setActiveId(newThread.id);
+        setMobileThreadOpen(true);
+        setShowNewMessageModal(false);
+        setCustomerSearch("");
+      }
+    } catch (err) {
+      console.error("Failed to start conversation:", err);
+      alert("Could not start conversation.");
+    } finally {
+      setStartingChat(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeId) return;
@@ -237,6 +304,7 @@ const Conversations = () => {
       socket.off("inbox_notification", handleInboxNotification);
       socket.off("message_read", handleMessageRead);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, activeId]);
 
   const scrollToBottom = () => {
@@ -247,7 +315,7 @@ const Conversations = () => {
     scrollToBottom();
   }, [messages]);
 
-  const openChat = (id) => {
+  function openChat(id) {
     setActiveId(id);
     setMobileThreadOpen(true);
     // Instantly clear the unread count when clicking the chat
@@ -256,7 +324,7 @@ const Conversations = () => {
         thread.id === id ? { ...thread, unreadCount: 0 } : thread
       )
     );
-  };
+  }
 
   const sendMessage = () => {
     const text = draft.trim();
@@ -356,8 +424,15 @@ const Conversations = () => {
           mobileThreadOpen ? "hidden md:block" : "block"
         }`}
       >
-        <div className="px-4 sm:px-5 py-4">
+        <div className="px-4 sm:px-5 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#141D23]">Recent Chats</h2>
+          <button 
+            onClick={() => setShowNewMessageModal(true)}
+            className="p-1.5 bg-[#FFE8EF] text-[#D24D77] rounded-lg hover:bg-[#FDE2E9] transition-colors"
+            title="New Message"
+          >
+            <MessageSquarePlus size={20} />
+          </button>
         </div>
         <div className="flex flex-col">
           {inboxLoading ? (
@@ -634,7 +709,7 @@ const Conversations = () => {
               )}
 
               <button
-                onClick={(e) => {
+                onClick={() => {
                   setShowEmojiPicker(false);
                   setShowAttachmentMenu(!showAttachmentMenu);
                 }}
@@ -647,7 +722,7 @@ const Conversations = () => {
                 <Plus size={20} className={showAttachmentMenu ? "rotate-45 transition-transform" : "transition-transform"} />
               </button>
               <button
-                onClick={(e) => {
+                onClick={() => {
                   setShowAttachmentMenu(false);
                   setShowEmojiPicker(!showEmojiPicker);
                 }}
@@ -763,6 +838,79 @@ const Conversations = () => {
           </div>
         )}
       </div>
+
+      {/* New Message Modal */}
+      {showNewMessageModal && (
+        <div className="fixed inset-0 z-[100] flex sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full h-full sm:h-[85vh] sm:max-w-md sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 sm:zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-[#E8DFE1] flex items-center justify-between bg-[#FAFAFA]">
+              <h2 className="text-xl font-bold text-[#141D23]">New Message</h2>
+              <button
+                onClick={() => setShowNewMessageModal(false)}
+                className="p-2 -mr-2 rounded-lg hover:bg-slate-200 text-[#5C5F60] transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="p-4 border-b border-[#E8DFE1]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C959F]" size={18} />
+                <input 
+                  type="text"
+                  placeholder="Search customer by name..."
+                  value={customerSearch}
+                  onChange={e => setCustomerSearch(e.target.value)}
+                  className="w-full bg-[#F1F3F5] border-none rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#141D23] outline-none focus:ring-2 focus:ring-[#D24D77]/20 transition"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto">
+              {customersLoading ? (
+                <div className="p-8 text-center text-[#8C959F] flex flex-col items-center">
+                  <div className="w-8 h-8 border-2 border-[#D24D77] border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-sm font-medium">Searching...</p>
+                </div>
+              ) : customers.length === 0 ? (
+                <div className="p-8 text-center text-[#8C959F] flex flex-col items-center">
+                  <span className="text-4xl mb-2">🔍</span>
+                  <p className="text-sm font-medium">No customers found.</p>
+                </div>
+              ) : (
+                customers.map(customer => (
+                  <button
+                    key={customer.id}
+                    disabled={startingChat}
+                    onClick={() => startConversation(customer.id)}
+                    className="w-full text-left p-4 border-b border-[#E8DFE1] hover:bg-[#F8FAFF] transition flex items-center gap-4 disabled:opacity-50"
+                  >
+                    <Avatar name={customer.name} avatarUrl={customer.avatarUrl} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[#141D23] truncate">{customer.name}</p>
+                      <p className="text-xs text-[#5C5F60] mt-0.5 truncate flex items-center gap-2">
+                        <span>{customer.email || "No email"}</span>
+                        <span>•</span>
+                        <span>{customer.phone || "No phone"}</span>
+                      </p>
+                    </div>
+                    {/* Metrics if available */}
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-bold text-[#D24D77] uppercase">Orders</p>
+                      <p className="text-sm font-semibold text-[#141D23]">{customer.totalOrders || 0}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
