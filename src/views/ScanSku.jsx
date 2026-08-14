@@ -3,33 +3,11 @@ import { Html5Qrcode } from "html5-qrcode";
 import cameraicon from "../assets/cameraicon.webp";
 import { toast } from "../components/Toast";
 import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
+import { formatAddress, getInitials } from "../lib/format";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const SCAN_API_URL = `${API_BASE_URL}/api/orders/scan`;
 const SCANNER_REGION_ID = "sku-scanner-region";
-
-const getInitials = (name = "") =>
-  name
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "NA";
-
-const formatAddress = (addr) => {
-  if (typeof addr === "string") {
-    try {
-      addr = JSON.parse(addr);
-    } catch {
-      return addr;
-    }
-  }
-  if (!addr || typeof addr !== "object") return "";
-  return [addr.addressLine, addr.city, addr.state, addr.zipCode]
-    .filter(Boolean)
-    .join(", ");
-};
 
 const ScanSku = () => {
   const [scanning, setScanning] = useState(false);
