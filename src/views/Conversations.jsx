@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Plus,
@@ -70,6 +71,7 @@ const Avatar = ({ name, avatarUrl }) => (
 );
 
 const Conversations = () => {
+  const location = useLocation();
   const { socket } = useSocket();
   const [threads, setThreads] = useState([]);
   const [inboxLoading, setInboxLoading] = useState(true);
@@ -111,6 +113,14 @@ const Conversations = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (location.state?.conversationId) {
+      openChat(location.state.conversationId);
+      // Optional: Clear state to avoid reopening if user navigates back later
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchInbox = async () => {

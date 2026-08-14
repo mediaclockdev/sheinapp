@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
+import axios from "axios";
 import Sidebar from "./Sidebar";
 import { handleUnauthorized, isUnauthorized } from "../../lib/sessionExpiry";
 import { useSocket } from "../../hooks/useSocket";
@@ -33,6 +35,10 @@ const DashboardLayout = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [now, setNow] = useState(new Date());
+  const API_BASE = "https://shelynx.mediaclocksoft.com.au";
+  const authHeaders = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
 
   // Update time for relative timestamps
   useEffect(() => {
@@ -47,18 +53,23 @@ const DashboardLayout = () => {
     const handleNotification = (message) => {
       if (message.senderType === "CUSTOMER") {
         setNotifications((prev) => {
+          // Map the live socket message to match the backend API structure!
           const newNotif = {
-            id: Date.now(),
-            type: "message",
+            id: Date.now(), // Temporary ID for the live incoming message
             title: "New Message",
-            senderName: message.chatPartner?.name || "Customer",
             body: message.content ? message.content.substring(0, 80) : "",
-            conversationId: message.conversationId,
-            time: new Date(),
-            read: false,
+            type: "MESSAGE",
+            metadata: {
+              sender: {
+                name: message.chatPartner?.name || "Customer",
+              },
+              conversationId: message.conversationId,
+            },
+            isRead: false,
+            createdAt: new Date().toISOString(), // The API uses createdAt, not time!
           };
-          const updated = [newNotif, ...prev];
-          return updated.slice(0, 20); // max 20
+
+          return [newNotif, ...prev];
         });
       }
     };
@@ -67,6 +78,26 @@ const DashboardLayout = () => {
       socket.off("inbox_notification", handleNotification);
     };
   }, [socket]);
+
+  // 2. Fetch it exactly once when the Dashboard loads
+  useEffect(() => {
+    // 1. Create the fetch function
+    const fetchNotifications = async () => {
+      try {
+        const res = await axios.get(
+          `${API_BASE}/api/notifications?page=1&limit=20`,
+          authHeaders(),
+        );
+        // The backend returns { message: "...", data: [...] }
+        if (res.data && res.data.data) {
+          setNotifications(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      }
+    };
+    fetchNotifications();
+  }, []);
 
   const getRelativeTime = (date) => {
     const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
@@ -79,22 +110,110 @@ const DashboardLayout = () => {
     return `${diffInDays}d ago`;
   };
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  // const markAllRead = () => {
+  //   setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  // };
+  const markAllRead = async () => {
+    try {
+      // Optimistic UI update
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+
+      await axios.patch(
+        `${API_BASE}/api/notifications/read-all`,
+        {},
+        authHeaders(),
+      );
+    } catch (error) {
+      console.error("Failed to mark all as read", error);
+    }
   };
 
-  const handleNotificationClick = (notif) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)),
-    );
-    setIsNotificationOpen(false);
-    navigate("/conversation");
+  const clearAllNotifications = async () => {
+    try {
+      // Optimistic UI update
+      setNotifications([]);
+
+      await axios.delete(
+        `${API_BASE}/api/notifications/clear-all`,
+        authHeaders(),
+      );
+    } catch (error) {
+      console.error("Failed to clear all notifications", error);
+    }
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const clearNotification = async (id, e) => {
+    e.stopPropagation(); // Don't trigger the click that navigates
+    try {
+      // Optimistic update
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+
+      await axios.delete(
+        `${API_BASE}/api/notifications/${id}`,
+        authHeaders(),
+      );
+    } catch (error) {
+      console.error("Failed to clear notification", error);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    console.log("Clicked notification:", notif);
+    
+    // Sometimes backend returns metadata as a stringified JSON
+    let meta = notif.metadata;
+    if (typeof meta === "string") {
+      try { meta = JSON.parse(meta); } catch (e) { console.error("Failed to parse metadata", e); }
+    }
+
+    try {
+      if (!notif.isRead) {
+        // Optimistic UI update: instantly mark as read so UI feels snappy
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
+        );
+
+        await axios.patch(
+          `${API_BASE}/api/notifications/${notif.id}/read`,
+          {},
+          authHeaders(),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to mark as read", error);
+    }
+
+    setIsNotificationOpen(false); // Close dropdown
+
+    console.log("Navigating to:", notif.type, meta);
+
+    if (notif.type === "MESSAGE" && meta?.conversationId) {
+      navigate(`/conversation`, { 
+        state: { conversationId: meta.conversationId } 
+      });
+    } else if (notif.type === "ORDER") {
+      navigate(`/orders`);
+    } else {
+      // Fallback if metadata is missing
+      navigate(`/conversation`);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
   const [isAgentActive, setIsAgentActive] = useState(true);
 
   useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        // Avoid setting state if already set to same ID to prevent loops
+        setUser((prev) => (prev?.id === parsed.id ? prev : parsed));
+      }
+    } catch (e) {
+      console.error("Failed to parse user data", e);
+    }
+
     const token = localStorage.getItem("token");
     fetch(PROFILE_API_URL, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -195,14 +314,27 @@ const DashboardLayout = () => {
                       <h3 className="font-bold text-[#17222B]">
                         Notifications
                       </h3>
-                      {unreadCount > 0 && (
-                        <button
-                          onClick={markAllRead}
-                          className="text-xs font-bold text-[#D24D77] hover:underline"
-                        >
-                          Mark all read
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllRead}
+                            className="text-[11px] font-bold text-[#D24D77] hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                        {unreadCount > 0 && notifications.length > 0 && (
+                          <span className="text-[#E8DFE1] text-[10px]">|</span>
+                        )}
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={clearAllNotifications}
+                            className="text-[11px] font-bold text-[#8C959F] hover:text-[#D24D77] hover:underline"
+                          >
+                            Clear all
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-[300px] overflow-y-auto">
                       {notifications.length === 0 ? (
@@ -217,20 +349,49 @@ const DashboardLayout = () => {
                           <div
                             key={notif.id}
                             onClick={() => handleNotificationClick(notif)}
-                            className={`p-4 border-b border-[#E8DFE1] hover:bg-[#F8FAFF] cursor-pointer transition flex gap-3 ${notif.read ? "opacity-60" : ""}`}
+                            className={`group relative p-4 border-b border-[#E8DFE1] hover:bg-[#F8FAFF] cursor-pointer transition flex gap-3 ${notif.isRead ? "opacity-60" : ""}`}
                           >
-                            <div className="h-10 w-10 shrink-0 rounded-full bg-[#FFE8EF] flex items-center justify-center text-lg">
-                              💬
+                            <div className="relative h-10 w-10 shrink-0 rounded-full bg-[#FFE8EF] flex items-center justify-center text-lg">
+                              {/* We can dynamically change this icon based on the type enum! */}
+                              {notif.type === "MESSAGE" ? "💬" : "📦"}
+
+                              {/* Unread dot as a badge on the avatar */}
+                              {!notif.isRead && (
+                                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D24D77] opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#D24D77] border-[1.5px] border-white"></span>
+                                </span>
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-bold text-[#D24D77] uppercase tracking-wider mb-0.5">{notif.title}</p>
-                              <p className="text-sm font-semibold text-[#141D23] truncate leading-tight">{notif.senderName || "Customer"}</p>
-                              <p className="text-xs text-[#5C5F60] mt-1 line-clamp-2 leading-snug">{notif.body}</p>
-                              <p className="text-[10px] text-[#8C959F] mt-1.5 font-medium">{getRelativeTime(notif.time)}</p>
+
+                            <div className="flex-1 min-w-0 pr-8">
+                              <p className="text-[10px] font-bold text-[#D24D77] uppercase tracking-wider mb-0.5">
+                                {notif.title}
+                              </p>
+
+                              <p className="text-sm font-semibold text-[#141D23] truncate leading-tight">
+                                {notif.metadata?.sender?.name || "System"}
+                              </p>
+
+                              <p className="text-xs text-[#5C5F60] mt-0.5 line-clamp-1 leading-snug">
+                                {notif.body}
+                              </p>
+
+                              <p className="text-[10px] text-[#8C959F] mt-1.5 font-medium">
+                                {getRelativeTime(notif.createdAt)}
+                              </p>
                             </div>
-                            {!notif.read && (
-                              <div className="h-2 w-2 rounded-full bg-[#D24D77] shrink-0 mt-1"></div>
-                            )}
+
+                            {/* Floating Delete button (shows on hover) */}
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => clearNotification(notif.id, e)}
+                                className="p-1.5 rounded-full bg-white shadow-sm border border-[#E8DFE1] text-[#8C959F] hover:bg-[#FFE8EF] hover:text-[#D24D77] hover:border-[#FFE8EF] transition-all"
+                                title="Clear notification"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
                           </div>
                         ))
                       )}

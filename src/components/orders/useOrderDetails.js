@@ -365,9 +365,11 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
   useEffect(() => {
     if (!selectedOrder) return;
     setFinalAmount(
-      selectedOrder.finalAmount != null
-        ? String(selectedOrder.finalAmount)
-        : calculatedTotal.toFixed(2),
+      selectedOrder.grandTotal != null
+        ? String(selectedOrder.grandTotal)
+        : selectedOrder.finalAmount != null
+          ? String(selectedOrder.finalAmount)
+          : calculatedTotal.toFixed(2),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrder]);
