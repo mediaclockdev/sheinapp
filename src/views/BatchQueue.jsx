@@ -17,6 +17,7 @@ import OrderSummaryDrawer from "../components/orders/OrderSummaryDrawer";
 import { getInitials, orderCustomerName } from "../lib/format";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
+const RECENT_LOG_API_URL = `${API_BASE_URL}/api/batches/logs/activity`;
 const BATCHES_API_URL = `${API_BASE_URL}/api/batches`;
 const APPROVED_ORDERS_API_URL = `${API_BASE_URL}/api/batches/approved-orders`;
 const CREATE_BATCH_API_URL = `${API_BASE_URL}/api/batches`;
@@ -41,6 +42,39 @@ const fmtDisplayDate = (value) => {
       })
     : "—";
 };
+
+const fmtLogTime = (value) => {
+  const d = value ? new Date(value) : null;
+  return d && !isNaN(d)
+    ? d.toLocaleString("en-AU", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+};
+
+const LOG_STATUS_STYLES = {
+  SUCCESS: "bg-[#E6F4EA] text-[#0D8246]",
+  CREATED: "bg-[#E6F4EA] text-[#0D8246]",
+  UPDATED: "bg-[#E8F0FE] text-[#1A73E8]",
+  MOVED: "bg-[#E8F0FE] text-[#1A73E8]",
+  LOCKED: "bg-[#E1F5FE] text-[#0288D1]",
+  MERGED: "bg-[#F3E8FD] text-[#7C3AED]",
+  FAILED: "bg-[#FCEBEB] text-[#C0392B]",
+  DELETED: "bg-[#FCEBEB] text-[#C0392B]",
+  REMOVED: "bg-[#FCEBEB] text-[#C0392B]",
+};
+
+const mapActivityLog = (log) => ({
+  id: log.id,
+  timestamp: log.createdAt,
+  batchName: log.batchName || "—",
+  agent: log.agentId ? `Agent #${log.agentId}` : "System",
+  action: log.action || "—",
+  status: String(log.status || "").toUpperCase(),
+});
 
 const mapApprovedOrder = (order) => {
   const user = order.customerName || order.customer?.fullName || "Unknown";
@@ -159,6 +193,9 @@ export default function BatchQueue() {
   const [lockedBatchesLoading, setLockedBatchesLoading] = useState(true);
   const [lockedBatchesError, setLockedBatchesError] = useState(null);
   const [expandedBatch, setExpandedBatch] = useState(null);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logsError, setLogsError] = useState(null);
   // Id of the order whose summary drawer is open, or null.
   const [openOrderId, setOpenOrderId] = useState(null);
 
@@ -814,6 +851,36 @@ export default function BatchQueue() {
         .find((o) => o.id === openOrderId)
     : null;
 
+  const handleActivityLogs = async () => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(RECENT_LOG_API_URL, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (isUnauthorized(response.status)) {
+      handleUnauthorized();
+      return [];
+    }
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to fetch activity logs");
+    }
+
+    const list = result.data?.logs || result.data || result.logs || result;
+    return Array.isArray(list) ? list.map(mapActivityLog) : [];
+  };
+
+  useEffect(() => {
+    handleActivityLogs()
+      .then(setActivityLogs)
+      .catch((err) => setLogsError(err.message))
+      .finally(() => setLogsLoading(false));
+  }, []);
+
   return (
     <div className="p-4 lg:p-8 bg-[#FFD1DC]/10 min-h-[calc(100vh-70px)] space-y-8 font-sans relative">
       <SuccessToast
@@ -838,17 +905,17 @@ export default function BatchQueue() {
         <div className="flex gap-8">
           <button
             onClick={() => setActiveTab("approved")}
-            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 ${
+            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
               activeTab === "approved"
-                ? "border-[#7A4E5B] text-[#141D23]"
-                : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
+                ? "border-[#7A4E5B] text-[#141D23] "
+                : "border-transparent text-[#5C5F60] hover:text-[#141D23] "
             }`}
           >
             Approved Orders ({approvedOrders.length})
           </button>
           <button
             onClick={() => setActiveTab("active")}
-            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 ${
+            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
               activeTab === "active"
                 ? "border-[#7A4E5B] text-[#141D23]"
                 : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
@@ -858,7 +925,7 @@ export default function BatchQueue() {
           </button>
           <button
             onClick={() => setActiveTab("locked")}
-            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 ${
+            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
               activeTab === "locked"
                 ? "border-[#7A4E5B] text-[#141D23]"
                 : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
@@ -922,7 +989,11 @@ export default function BatchQueue() {
                       ].map((label) => (
                         <th
                           key={label}
-                          className="py-4 px-3 text-xs lg:text-sm font-bold text-[#666] text-center"
+                          className={`py-4 px-3 text-xs lg:text-sm font-bold text-[#666] ${
+                            label === "CUSTOMER"
+                              ? "text-left w-px whitespace-nowrap"
+                              : "text-center"
+                          }`}
                         >
                           {label}
                         </th>
@@ -978,12 +1049,12 @@ export default function BatchQueue() {
                           <td className="py-4 text-center text-sm text-[#333]">
                             {order.displayId}
                           </td>
-                          <td className="py-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="w-7 h-7 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
+                          <td className="py-4 px-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 shrink-0 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
                                 {order.initials}
                               </div>
-                              <span className="text-sm text-[#333]">
+                              <span className="text-sm text-[#333] whitespace-nowrap">
                                 {order.user}
                               </span>
                             </div>
@@ -1054,9 +1125,11 @@ export default function BatchQueue() {
                   </div>
                 </div>
               )}
-              <div className="p-4 pt-0">
-                <OrderDetailsPanel d={detail} isMobile />
-              </div>
+              {detail.orderId && (
+                <div className="px-4 pb-4 lg:hidden">
+                  <OrderDetailsPanel d={detail} isMobile />
+                </div>
+              )}
             </div>
             <OrderDetailsPanel d={detail} />
           </div>
@@ -1352,45 +1425,67 @@ export default function BatchQueue() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#D3C3C5]">
-              <tr className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 text-[#5C5F60]">Oct 24, 14:22</td>
-                <td className="px-6 py-4 font-bold text-[#7A4E5B]">BATCH-15</td>
-                <td className="px-6 py-4 text-[#5C5F60]">Elena S.</td>
-                <td className="px-6 py-4 text-[#141D23]">
-                  50% Tier IDs Exported
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <span className="inline-flex bg-[#E6F4EA] text-[#0D8246] px-2 py-0.5 rounded text-[10px] font-bold tracking-wider">
-                    SUCCESS
-                  </span>
-                </td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 text-[#5C5F60]">Oct 24, 13:05</td>
-                <td className="px-6 py-4 font-bold text-[#7A4E5B]">BATCH-16</td>
-                <td className="px-6 py-4 text-[#5C5F60]">System</td>
-                <td className="px-6 py-4 text-[#141D23]">
-                  Added Ahmed (Manual Move)
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <span className="inline-flex bg-[#E8F0FE] text-[#1A73E8] px-2 py-0.5 rounded text-[10px] font-bold tracking-wider">
-                    UPDATED
-                  </span>
-                </td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 text-[#5C5F60]">Oct 24, 11:45</td>
-                <td className="px-6 py-4 font-bold text-[#7A4E5B]">BATCH-17</td>
-                <td className="px-6 py-4 text-[#5C5F60]">Elena S.</td>
-                <td className="px-6 py-4 text-[#141D23]">
-                  Manual Locked: Override
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <span className="inline-flex bg-[#E1F5FE] text-[#0288D1] px-2 py-0.5 rounded text-[10px] font-bold tracking-wider">
-                    LOCKED
-                  </span>
-                </td>
-              </tr>
+              {logsLoading && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-6 text-center text-[#5C5F60]"
+                  >
+                    Loading activity...
+                  </td>
+                </tr>
+              )}
+              {logsError && !logsLoading && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-6 text-center text-red-600"
+                  >
+                    {logsError}
+                  </td>
+                </tr>
+              )}
+              {!logsLoading && !logsError && activityLogs.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-6 text-center text-[#5C5F60]"
+                  >
+                    No activity yet.
+                  </td>
+                </tr>
+              )}
+              {!logsLoading &&
+                !logsError &&
+                activityLogs.map((log) => (
+                  <tr
+                    key={log.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="px-6 py-4 text-[#5C5F60] whitespace-nowrap">
+                      {fmtLogTime(log.timestamp)}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-[#7A4E5B] whitespace-nowrap">
+                      {log.batchName}
+                    </td>
+                    <td className="px-6 py-4 text-[#5C5F60] whitespace-nowrap">
+                      {log.agent}
+                    </td>
+                    <td className="px-6 py-4 text-[#141D23]">{log.action}</td>
+                    <td className="px-6 py-4 text-right">
+                      {log.status && (
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${
+                            LOG_STATUS_STYLES[log.status] ||
+                            "bg-slate-100 text-[#5C5F60]"
+                          }`}
+                        >
+                          {log.status}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
