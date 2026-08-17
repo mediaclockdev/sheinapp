@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Calendar, RotateCcw, Eye } from "lucide-react";
+import { Calendar, RotateCcw } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
 import editicon from "../assets/editicon.svg";
 import exporticon from "../assets/exporticon.svg";
@@ -283,7 +283,7 @@ const OrderManagement = () => {
         header: "ACTIONS",
         cell: ({ row }) => (
           <div className="flex items-center justify-center gap-2">
-            <button
+            {/* <button
               onClick={() =>
                 handleViewOrder(row.original.raw?.id ?? row.original.id)
               }
@@ -291,7 +291,7 @@ const OrderManagement = () => {
               className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6] cursor-pointer"
             >
               <Eye size={16} className="text-[#7A5C69] " />
-            </button>
+            </button> */}
             <button
               onClick={() =>
                 handleViewOrder(row.original.raw?.id ?? row.original.id, {
@@ -620,7 +620,7 @@ const OrderManagement = () => {
 
                     {/* Actions */}
                     <div className="flex justify-end gap-2 pt-1 border-t border-[#ECECEC]/50">
-                      <button
+                      {/* <button
                         onClick={() =>
                           handleViewOrder(
                             row.original.raw?.id ?? row.original.id,
@@ -630,7 +630,7 @@ const OrderManagement = () => {
                       >
                         <Eye size={14} />
                         <span>View Details</span>
-                      </button>
+                      </button> */}
                       <button
                         onClick={() =>
                           handleViewOrder(

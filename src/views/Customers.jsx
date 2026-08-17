@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   UserPlus,
   Pencil,
@@ -7,10 +7,12 @@ import {
   Phone,
   Star,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const CUSTOMERS_API_URL = `${API_BASE_URL}/api/customers`;
+const PAGE_SIZE = 10;
 
 const STATUS_STYLES = {
   DELIVERED: "bg-[#E6F4EA] text-[#0D8246]",
@@ -46,8 +48,17 @@ export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   // eslint-disable-next-line no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true);
+
+  // Deep link from the order drawer: /customers?id=<customerId>
+  const [searchParams] = useSearchParams();
+  const requestedId = searchParams.get("id");
+
+  // Read inside the fetch effect without making it a dependency (would refetch the list).
+  const hasSelectionRef = useRef(false);
 
   const fetchCustomerDetails = async (id) => {
     if (!id) return;
@@ -65,6 +76,7 @@ export default function Customers() {
       }
       const result = await response.json();
       if (!response.ok) throw new Error(result.message);
+      hasSelectionRef.current = true;
       setSelectedCustomer(result.data);
     } catch (err) {
       console.error(err);
@@ -77,7 +89,8 @@ export default function Customers() {
       setError(null);
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(CUSTOMERS_API_URL, {
+        const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+        const response = await fetch(`${CUSTOMERS_API_URL}?${params}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -90,26 +103,41 @@ export default function Customers() {
           return;
         }
         const result = await response.json();
-        if (!response.ok) throw new Error(result.message || "Failed to fetch customers");
-        
+        if (!response.ok)
+          throw new Error(result.message || "Failed to fetch customers");
+
         const list = result.data || result.customers || result || [];
         const customerData = Array.isArray(list) ? list : [];
         setCustomers(customerData);
-        
-        if (customerData.length > 0) {
-          fetchCustomerDetails(customerData[0].id);
+        setTotal(
+          Number(
+            result.total ??
+              result.totalCount ??
+              result.pagination?.total ??
+              result.meta?.total ??
+              customerData.length,
+          ),
+        );
+
+        // Deep-linked customer wins; otherwise select the first row once.
+        if (!hasSelectionRef.current && (requestedId || customerData.length)) {
+          fetchCustomerDetails(requestedId || customerData[0].id);
         }
       } catch (err) {
         setError(err.message);
         setCustomers([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }
     };
 
     handleFetchCustomer();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [page, requestedId]);
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const startRow = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const endRow = Math.min(page * PAGE_SIZE, total);
   const formatLastActive = (date) => {
     if (!date) return "N/A";
 
@@ -279,6 +307,82 @@ export default function Customers() {
                 </tbody>
               </table>
             </div>
+
+            {!loading && !error && pageCount > 1 && (
+              <div className="px-4 py-3 border-t border-[#ECECEC] bg-[#FBF7F8] flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#8C959F]">
+                  {startRow}-{endRow} of {total}
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setPage((p) => p - 1)}
+                    disabled={page <= 1}
+                    className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ‹
+                  </button>
+
+                  <span className="text-xs font-semibold text-[#8C959F] sm:hidden mx-1">
+                    Page {page} of {pageCount}
+                  </span>
+
+                  {(() => {
+                    const pageIndex = page - 1;
+                    const pages = [];
+                    const maxVisible = 5;
+                    let start = Math.max(
+                      0,
+                      pageIndex - Math.floor(maxVisible / 2),
+                    );
+                    let end = Math.min(pageCount, start + maxVisible);
+                    if (end - start < maxVisible)
+                      start = Math.max(0, end - maxVisible);
+
+                    if (start > 0) {
+                      pages.push(0);
+                      if (start > 1) pages.push("...");
+                    }
+                    for (let i = start; i < end; i++) pages.push(i);
+                    if (end < pageCount) {
+                      if (end < pageCount - 1) pages.push("...");
+                      pages.push(pageCount - 1);
+                    }
+
+                    return pages.map((p, idx) =>
+                      p === "..." ? (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          className="h-8 w-8 flex items-center justify-center text-xs text-[#5c5f60] hidden sm:flex"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p + 1)}
+                          className={`h-8 w-8 rounded-lg border flex items-center justify-center font-extrabold text-xs transition hidden sm:flex ${
+                            pageIndex === p
+                              ? "bg-[#FFE8EF] text-[#D24D77] border-[#FFE8EF]"
+                              : "border-[#E8DFE1] text-[#5c5f60] hover:bg-slate-100"
+                          }`}
+                        >
+                          {p + 1}
+                        </button>
+                      ),
+                    );
+                  })()}
+
+                  <button
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={page >= pageCount}
+                    className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

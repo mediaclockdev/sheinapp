@@ -83,6 +83,12 @@ export default function OrderSummaryDrawer({ order, onClose }) {
   if (!order) return null;
 
   const name = orderCustomerName(order);
+  const customerId =
+    order.customerId ||
+    order.customer?.id ||
+    order.customer?._id ||
+    order.userId ||
+    null;
   const items = Array.isArray(order.items) ? order.items : [];
   const address = formatAddress(order.shippingAddress);
 
@@ -256,7 +262,13 @@ export default function OrderSummaryDrawer({ order, onClose }) {
 
         <div className="p-4 border-t border-[#D3C3C5] bg-white">
           <button
-            onClick={() => navigate("/customers")}
+            onClick={() =>
+              navigate(
+                customerId
+                  ? `/customers?id=${encodeURIComponent(customerId)}`
+                  : "/customers",
+              )
+            }
             className="w-full border border-[#D3C3C5] rounded-lg py-2.5 flex items-center justify-center gap-2 text-sm text-[#5C5F60] hover:bg-[#F9F5F6] cursor-pointer"
           >
             <Users size={16} />
