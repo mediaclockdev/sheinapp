@@ -14,6 +14,9 @@ import {
   File,
   MessageSquarePlus,
   Search,
+  Download,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { useSocket } from "../hooks/useSocket";
@@ -52,23 +55,42 @@ const renderInboxMessage = (msg) => {
 };
 
 const resolveAvatarUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
-  return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url}`;
 };
 
 const Avatar = ({ name, avatarUrl }) => (
-  <div className="relative shrink-0">
+  <div className="h-12 w-12 shrink-0 rounded-full bg-slate-200 overflow-hidden shadow-sm border border-black/5">
     <img
       src={
         resolveAvatarUrl(avatarUrl) ||
         `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "")}`
       }
-      alt={name}
-      className="h-11 w-11 rounded-full border border-[#D3C3C5] object-cover bg-[#EEF4FB]"
+      alt={name || "User"}
+      className="h-full w-full object-cover"
     />
   </div>
 );
+
+const generateDownloadName = (message, defaultExtension) => {
+  if (message.originalFileName) return message.originalFileName;
+  
+  const date = new Date(message.createdAt || new Date());
+  const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} at ${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}.${String(date.getSeconds()).padStart(2, '0')}`;
+  
+  let ext = defaultExtension;
+  if (typeof message.content === 'string') {
+    const parts = message.content.split('.');
+    if (parts.length > 1) {
+      const lastPart = parts.pop();
+      if (lastPart.length <= 4 && !lastPart.includes('/')) {
+        ext = lastPart;
+      }
+    }
+  }
+  return `WhatsApp Image ${formattedDate}.${ext}`;
+};
 
 const Conversations = () => {
   const location = useLocation();
@@ -83,7 +105,31 @@ const Conversations = () => {
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [previewMessage, setPreviewMessage] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [fileAccept, setFileAccept] = useState("*/*");
+
+  const handleDownload = async (url, filename, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      // Fetch the file as a blob to bypass cross-origin download restrictions
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Network response was not ok");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Download failed, falling back to new tab:", err);
+      window.open(url, "_blank");
+    }
+  };
 
   // File Preview Modal state
   const [selectedFile, setSelectedFile] = useState(null);
@@ -118,6 +164,9 @@ const Conversations = () => {
     if (location.state?.conversationId) {
       openChat(location.state.conversationId);
       // Optional: Clear state to avoid reopening if user navigates back later
+      window.history.replaceState({}, document.title);
+    } else if (location.state?.customerId) {
+      startConversation(location.state.customerId);
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -248,7 +297,7 @@ const Conversations = () => {
           ? (message.content?.length > 60 ? message.content.substring(0, 60) + "..." : message.content)
           : message.messageType === "IMAGE" ? "📷 Sent a photo"
           : message.messageType === "VIDEO" ? "🎥 Sent a video"
-          : message.messageType === "AUDIO" ? "🎵 Sent a voice message"
+          : message.messageType === "AUDIO" ? "🎵 Voice Message"
           : "📄 Sent an attachment";
 
         notificationToast.message({
@@ -503,8 +552,7 @@ const Conversations = () => {
             <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-[#E8DFE1]">
               <button
                 onClick={() => setMobileThreadOpen(false)}
-                className="md:hidden p-1 -ml-1 rounded-lg hover:bg-slate-100 text-[#5C5F60]"
-                aria-label="Back to chat list"
+                className="md:hidden p-1 -ml-1 rounded-lg hover:bg-slate-100 text-[#5C5F60] aria-label='Back to chat list'"
               >
                 <ArrowLeft size={20} />
               </button>
@@ -561,7 +609,16 @@ const Conversations = () => {
                                 src={url}
                                 alt="Attachment"
                                 onLoad={scrollToBottom}
-                                className="max-w-[240px] sm:max-w-[300px] rounded-lg object-cover shadow-sm border border-black/5"
+                                onClick={() => {
+                                  setPreviewMessage({
+                                    ...m,
+                                    url,
+                                    senderName: isAgent ? "Sarah L." : active.chatPartner?.name,
+                                    avatarUrl: isAgent ? null : active.chatPartner?.avatarUrl
+                                  });
+                                  setZoomLevel(1);
+                                }}
+                                className="max-w-[240px] sm:max-w-[300px] rounded-lg object-cover shadow-sm border border-black/5 cursor-pointer hover:opacity-90 transition-opacity"
                               />
                             );
                           }
@@ -590,40 +647,24 @@ const Conversations = () => {
                           }
 
                           if (isDoc) {
-                            const fileName =
-                              m.originalFileName ||
-                              (typeof m.content === "string"
-                                ? m.content.split("/").pop()
-                                : "Document");
+                            const fileName = generateDownloadName(m, 'pdf').replace('WhatsApp Image', 'Document');
                             return (
                               <a
                                 href={url}
-                                target="_blank"
-                                rel="noreferrer"
+                                onClick={(e) => handleDownload(url, fileName, e)}
                                 className={
                                   bubbleClass +
-                                  " flex items-center gap-3 hover:opacity-90 transition-opacity no-underline"
+                                  " flex items-center justify-between gap-4 hover:opacity-80 transition group"
                                 }
                               >
-                                <div
-                                  className={`p-2 rounded-lg shrink-0 ${isAgent ? "bg-white/50" : "bg-black/5"}`}
-                                >
-                                  <FileText
-                                    size={20}
-                                    className={
-                                      isAgent
-                                        ? "text-[#D24D77]"
-                                        : "text-gray-500"
-                                    }
-                                  />
-                                </div>
-                                <div className="min-w-0 flex-1 max-w-[200px]">
-                                  <p className="font-medium truncate text-sm">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-xl shrink-0">📄</span>
+                                  <span className="underline truncate max-w-[180px] font-medium">
                                     {fileName}
-                                  </p>
-                                  <p className="text-[10px] opacity-70 uppercase mt-0.5">
-                                    Document
-                                  </p>
+                                  </span>
+                                </div>
+                                <div className="p-1.5 rounded-full bg-black/5 group-hover:bg-black/10 shrink-0 transition-colors">
+                                  <Download size={16} />
                                 </div>
                               </a>
                             );
@@ -631,14 +672,6 @@ const Conversations = () => {
 
                           return <div className={bubbleClass}>{m.content}</div>;
                         })()}
-                        {/* <p
-                          className={`text-[11px] text-[#8C959F] mt-1 ${
-                            isAgent ? "text-right" : "text-left"
-                          }`}
-                        >
-                          {isAgent ? "Sarah L." : active.chatPartner?.name} •{" "}
-                          {clockTime(m.createdAt)}
-                        </p> */}
                         <div
                           className={`text-[11px] text-[#8C959F] mt-1 flex items-center gap-1 ${isAgent ? "justify-end" : "justify-start"} `}
                         >
@@ -764,8 +797,12 @@ const Conversations = () => {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[#8C959F]">
-            Select a conversation
+          <div className="hidden lg:flex flex-1 flex-col items-center justify-center bg-[#FAFAFA] text-[#8C959F]">
+            <span className="text-6xl mb-4">💬</span>
+            <h2 className="text-2xl font-bold text-[#17222B] mb-2">
+              Conversations
+            </h2>
+            <p>Select a chat from the sidebar to start messaging.</p>
           </div>
         )}
 
@@ -921,6 +958,74 @@ const Conversations = () => {
         </div>
       )}
 
+
+
+      {/* Image Preview Lightbox (WhatsApp Web Style) */}
+      {previewMessage && (
+        <div 
+          className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-md transition-all duration-200 animate-in fade-in" 
+          onClick={() => setPreviewMessage(null)}
+        >
+          {/* Header Bar */}
+          <div 
+            className="flex items-center justify-between px-6 py-4 bg-black/40 text-white shadow-md z-[110]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-4">
+              <Avatar name={previewMessage.senderName} avatarUrl={previewMessage.avatarUrl} />
+              <div>
+                <p className="font-semibold text-lg">{previewMessage.senderName || "User"}</p>
+                <p className="text-xs text-white/70">
+                  {new Date(previewMessage.createdAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setZoomLevel(z => Math.min(z + 0.5, 3))}
+                className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
+                title="Zoom In"
+              >
+                <ZoomIn size={24} />
+              </button>
+              <button 
+                onClick={() => setZoomLevel(z => Math.max(z - 0.5, 0.5))}
+                className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
+                title="Zoom Out"
+              >
+                <ZoomOut size={24} />
+              </button>
+              <div className="w-px h-8 bg-white/20 mx-2"></div>
+              <button 
+                onClick={(e) => handleDownload(previewMessage.url, generateDownloadName(previewMessage, 'jpg'), e)}
+                className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
+                title="Download"
+              >
+                <Download size={24} />
+              </button>
+              <button 
+                onClick={() => setPreviewMessage(null)}
+                className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
+                title="Close"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+          
+          {/* The Image Container */}
+          <div className="flex-1 flex items-center justify-center overflow-hidden p-8">
+            <img 
+              src={previewMessage.url} 
+              alt="Preview" 
+              style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.2s ease-out' }}
+              className="max-w-full max-h-full object-contain shadow-2xl rounded-sm cursor-grab active:cursor-grabbing"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

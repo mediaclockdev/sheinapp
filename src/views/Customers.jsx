@@ -7,7 +7,7 @@ import {
   Phone,
   Star,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
@@ -45,6 +45,8 @@ const StarRating = ({ rating }) => (
 
 export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,7 +56,6 @@ export default function Customers() {
   const [isDisabled, setIsDisabled] = useState(true);
 
   // Deep link from the order drawer: /customers?id=<customerId>
-  const [searchParams] = useSearchParams();
   const requestedId = searchParams.get("id");
 
   // Read inside the fetch effect without making it a dependency (would refetch the list).
@@ -482,13 +483,12 @@ export default function Customers() {
 
               <div className="flex gap-3 mt-6">
                 <button
-                  disabled={isDisabled}
-                  className={`flex-1 bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors
-                  ${
-                    isDisabled
-                      ? " text-gray-500 border-gray-300 cursor-not-allowed opacity-60"
-                      : "bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border-[#D3C3C5]"
-                  }`}
+                  onClick={() => {
+                    navigate("/conversation", {
+                      state: { customerId: selectedCustomer.id },
+                    });
+                  }}
+                  className="flex-1 bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors"
                 >
                   Contact Customer
                 </button>
