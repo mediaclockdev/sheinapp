@@ -9,10 +9,12 @@ import {
 } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
+import { formatAddress } from "../lib/format";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const CUSTOMERS_API_URL = `${API_BASE_URL}/api/customers`;
 const PAGE_SIZE = 10;
+const STATUS_FILTERS = ["All", "Active", "Inactive"];
 
 const STATUS_STYLES = {
   DELIVERED: "bg-[#E6F4EA] text-[#0D8246]",
@@ -52,6 +54,7 @@ export default function Customers() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [status, setStatus] = useState("All");
   // eslint-disable-next-line no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true);
 
@@ -60,6 +63,9 @@ export default function Customers() {
 
   // Read inside the fetch effect without making it a dependency (would refetch the list).
   const hasSelectionRef = useRef(false);
+  // ponytail: one wasted refetch when the server jumps us to another page —
+  // drop it by tracking the last fetched page if it ever shows up in profiling.
+  const focusSyncedRef = useRef(false);
 
   const fetchCustomerDetails = async (id) => {
     if (!id) return;
@@ -91,6 +97,10 @@ export default function Customers() {
       try {
         const token = localStorage.getItem("token");
         const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+        if (status !== "All") params.set("status", status.toUpperCase());
+        // Deep link: let the server tell us which page holds this customer.
+        const focusing = Boolean(requestedId) && !focusSyncedRef.current;
+        if (focusing) params.set("focusId", requestedId);
         const response = await fetch(`${CUSTOMERS_API_URL}?${params}`, {
           method: "GET",
           headers: {
@@ -120,6 +130,15 @@ export default function Customers() {
           ),
         );
 
+        // The focus response is already the right page — sync the footer to it.
+        if (focusing) {
+          focusSyncedRef.current = true;
+          const serverPage = Number(
+            result.pagination?.page ?? result.meta?.page ?? page,
+          );
+          if (serverPage !== page) setPage(serverPage);
+        }
+
         // Deep-linked customer wins; otherwise select the first row once.
         if (!hasSelectionRef.current && (requestedId || customerData.length)) {
           fetchCustomerDetails(requestedId || customerData[0].id);
@@ -134,7 +153,7 @@ export default function Customers() {
     };
 
     handleFetchCustomer();
-  }, [page, requestedId]);
+  }, [page, status, requestedId]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startRow = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -191,6 +210,25 @@ export default function Customers() {
               <UserPlus size={16} />
               Add Customer
             </button>
+          </div>
+
+          <div className="flex gap-2 mb-3">
+            {STATUS_FILTERS.map((option) => (
+              <button
+                key={option}
+                onClick={() => {
+                  setStatus(option);
+                  setPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-sm border text-sm font-semibold transition-colors cursor-pointer ${
+                  status === option
+                    ? "bg-[#FFD1DC] text-[#7A4E5B] border-[#D3C3C5]"
+                    : "bg-white text-[#5C5F60] border-[#D3C3C5] hover:bg-slate-50"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
           </div>
 
           <div className="bg-white border border-[#D3C3C5] rounded-lg overflow-hidden">
@@ -309,7 +347,7 @@ export default function Customers() {
               </table>
             </div>
 
-            {!loading && !error && pageCount > 1 && (
+            {!loading && !error && total > 0 && (
               <div className="px-4 py-3 border-t border-[#ECECEC] bg-[#FBF7F8] flex items-center justify-between">
                 <span className="text-xs font-semibold text-[#8C959F]">
                   {startRow}-{endRow} of {total}
@@ -448,11 +486,10 @@ export default function Customers() {
                     className="text-[#5C5F60] mt-0.5 shrink-0"
                   />
                   <span>
-                    <span>
-                      {selectedCustomer.defaultAddress
-                        ? `${selectedCustomer.defaultAddress.addressLine}, ${selectedCustomer.defaultAddress.city}, ${selectedCustomer.defaultAddress.state} ${selectedCustomer.defaultAddress.zipCode}`
-                        : "No address on file"}
-                    </span>
+                    {formatAddress(
+                      selectedCustomer.defaultAddress ||
+                        selectedCustomer.addresses,
+                    ) || "No address on file"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2.5 text-sm text-[#141D23]">
@@ -488,7 +525,7 @@ export default function Customers() {
                       state: { customerId: selectedCustomer.id },
                     });
                   }}
-                  className="flex-1 bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors"
+                  className="flex-1 cursor-pointer bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#7A4E5B] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors"
                 >
                   Contact Customer
                 </button>

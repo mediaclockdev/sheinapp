@@ -1546,7 +1546,7 @@ export default function BatchQueue() {
                   disabled={!orderIdToRemove || removeLoading}
                   className="flex-1 bg-[#C0392B] text-white py-2 rounded-sm font-medium hover:bg-[#a93226] disabled:opacity-50"
                 >
-                  {removeLoading ? "Deleting..." : "Delete Order"}
+                  {removeLoading ? "Removing..." : "Remove Order"}
                 </button>
               </div>
             </div>
