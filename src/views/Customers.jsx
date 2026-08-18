@@ -14,7 +14,8 @@ import { formatAddress } from "../lib/format";
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const CUSTOMERS_API_URL = `${API_BASE_URL}/api/customers`;
 const PAGE_SIZE = 10;
-const STATUS_FILTERS = ["All", "Active", "Inactive"];
+// Label shown on the button -> value the API expects ("All" sends nothing).
+const STATUS_FILTERS = { All: null, Linked: "ACTIVE", Unlinked: "INACTIVE" };
 
 const STATUS_STYLES = {
   DELIVERED: "bg-[#E6F4EA] text-[#0D8246]",
@@ -97,7 +98,7 @@ export default function Customers() {
       try {
         const token = localStorage.getItem("token");
         const params = new URLSearchParams({ page, limit: PAGE_SIZE });
-        if (status !== "All") params.set("status", status.toUpperCase());
+        if (STATUS_FILTERS[status]) params.set("status", STATUS_FILTERS[status]);
         // Deep link: let the server tell us which page holds this customer.
         const focusing = Boolean(requestedId) && !focusSyncedRef.current;
         if (focusing) params.set("focusId", requestedId);
@@ -213,7 +214,7 @@ export default function Customers() {
           </div>
 
           <div className="flex gap-2 mb-3">
-            {STATUS_FILTERS.map((option) => (
+            {Object.keys(STATUS_FILTERS).map((option) => (
               <button
                 key={option}
                 onClick={() => {
@@ -243,6 +244,9 @@ export default function Customers() {
                       Contact
                     </th>
                     <th className="px-4 lg:px-6 py-3 font-bold tracking-wide">
+                      Connection
+                    </th>
+                    <th className="px-4 lg:px-6 py-3 font-bold tracking-wide">
                       Orders
                     </th>
                     <th className="px-4 lg:px-6 py-3 font-bold tracking-wide">
@@ -260,7 +264,7 @@ export default function Customers() {
                   {loading && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-4 lg:px-6 py-6 text-center text-[#5C5F60]"
                       >
                         Loading customers...
@@ -270,7 +274,7 @@ export default function Customers() {
                   {error && !loading && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-4 lg:px-6 py-6 text-center text-red-600"
                       >
                         {error}
@@ -280,7 +284,7 @@ export default function Customers() {
                   {!loading && !error && customers.length === 0 && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-4 lg:px-6 py-6 text-center text-[#5C5F60]"
                       >
                         No customers found.
@@ -328,6 +332,17 @@ export default function Customers() {
                               <span>{customer.phone}</span>
                             </p>
                           </div>
+                        </td>
+                        <td className="px-4 lg:px-6 py-3">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${
+                              customer.isActive
+                                ? "bg-[#E8F0FE] text-[#1A73E8]"
+                                : "bg-slate-100 text-[#5C5F60]"
+                            }`}
+                          >
+                            {customer.isActive ? "LINKED" : "UNLINKED"}
+                          </span>
                         </td>
                         <td className="px-4 lg:px-6 py-3 text-[#141D23]">
                           {customer.ordersCount}
