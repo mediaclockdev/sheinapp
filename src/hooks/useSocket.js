@@ -1,22 +1,32 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
+let globalSocket = null;
+let connectionCount = 0;
+
 export const useSocket = () => {
-  const [socket, setSocket] = useState(null);
+  const [socket, setSocket] = useState(globalSocket);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    // connecting to the backend.
-    const socketInstance = io("https://shelynx.mediaclocksoft.com.au", {
-      auth: { token },
-    });
+    if (!globalSocket) {
+      globalSocket = io("https://shelynx.mediaclocksoft.com.au", {
+        auth: { token },
+      });
+    }
 
-    setSocket(socketInstance);
+    setSocket(globalSocket);
+    connectionCount++;
 
     return () => {
-      socketInstance.disconnect();
+      connectionCount--;
+      // Optionally disconnect if everything unmounts, but usually we keep it alive
+      if (connectionCount === 0 && globalSocket) {
+        globalSocket.disconnect();
+        globalSocket = null;
+      }
     };
   }, []);
 

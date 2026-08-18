@@ -5,6 +5,7 @@ import axios from "axios";
 import Sidebar from "./Sidebar";
 import { handleUnauthorized, isUnauthorized } from "../../lib/sessionExpiry";
 import { useSocket } from "../../hooks/useSocket";
+import { requestFirebaseToken } from "../../config/firebase";
 
 const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
 const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
@@ -32,6 +33,7 @@ const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [now, setNow] = useState(new Date());
@@ -71,6 +73,7 @@ const DashboardLayout = () => {
 
           return [newNotif, ...prev];
         });
+        setUnreadCount((c) => c + 1);
       }
     };
     socket.on("inbox_notification", handleNotification);
@@ -88,9 +91,14 @@ const DashboardLayout = () => {
           `${API_BASE}/api/notifications?page=1&limit=20`,
           authHeaders(),
         );
-        // The backend returns { message: "...", data: [...] }
-        if (res.data && res.data.data) {
-          setNotifications(res.data.data);
+        // The backend returns { message: "...", data: [...], meta: { unreadCount: 5 } }
+        if (res.data) {
+          if (res.data.data) {
+            setNotifications(res.data.data);
+          }
+          if (res.data.meta && res.data.meta.unreadCount !== undefined) {
+            setUnreadCount(res.data.meta.unreadCount);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch notifications:", err);
@@ -117,6 +125,7 @@ const DashboardLayout = () => {
     try {
       // Optimistic UI update
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
 
       await axios.patch(
         `${API_BASE}/api/notifications/read-all`,
@@ -132,6 +141,7 @@ const DashboardLayout = () => {
     try {
       // Optimistic UI update
       setNotifications([]);
+      setUnreadCount(0);
 
       await axios.delete(
         `${API_BASE}/api/notifications/clear-all`,
@@ -146,7 +156,13 @@ const DashboardLayout = () => {
     e.stopPropagation(); // Don't trigger the click that navigates
     try {
       // Optimistic update
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setNotifications((prev) => {
+        const notif = prev.find((n) => n.id === id);
+        if (notif && !notif.isRead) {
+          setUnreadCount((c) => Math.max(0, c - 1));
+        }
+        return prev.filter((n) => n.id !== id);
+      });
 
       await axios.delete(
         `${API_BASE}/api/notifications/${id}`,
@@ -169,6 +185,7 @@ const DashboardLayout = () => {
     try {
       if (!notif.isRead) {
         // Optimistic UI update: instantly mark as read so UI feels snappy
+        setUnreadCount((c) => Math.max(0, c - 1));
         setNotifications((prev) =>
           prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
         );
@@ -199,7 +216,6 @@ const DashboardLayout = () => {
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
   const [isAgentActive, setIsAgentActive] = useState(true);
 
   useEffect(() => {
@@ -246,6 +262,22 @@ const DashboardLayout = () => {
         );
       })
       .catch((err) => console.error("Failed to load agent status:", err));
+
+    const setupFCM = async () => {
+      try {
+        const fcmToken = await requestFirebaseToken();
+        if (fcmToken) {
+          await axios.patch(
+            `${API_BASE_URL}/api/agent-profile/fcm-token`,
+            { fcmToken },
+            authHeaders(),
+          );
+        }
+      } catch (err) {
+        console.error("Failed to setup FCM token:", err);
+      }
+    };
+    setupFCM();
   }, []);
 
   const displayName = user?.name || "Agent";

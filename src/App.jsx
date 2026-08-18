@@ -5,30 +5,14 @@ import {
   notificationToast,
 } from "./components/NotificationToast";
 import { useEffect } from "react";
-import { requestFirebaseToken, messaging } from "./config/firebase";
+import { messaging } from "./config/firebase";
 import { onMessage } from "firebase/messaging";
 import axios from "axios";
 
 function App() {
-  const API_BASE = "https://shelynx.mediaclocksoft.com.au";
-  const authHeaders = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-  });
+
 
   useEffect(() => {
-    const setupNotifications = async () => {
-      const token = await requestFirebaseToken();
-      if (token) {
-        await axios.patch(
-          `${API_BASE}/api/agent-profile/fcm-token`,
-          {
-            fcmToken: token,
-          },
-          authHeaders(),
-        );
-      }
-    };
-    setupNotifications();
     let unsubscribe = null;
     if (messaging) {
       unsubscribe = onMessage(messaging, (payload) => {
