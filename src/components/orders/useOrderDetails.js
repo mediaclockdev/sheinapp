@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
-import { handleUnauthorized, isUnauthorized } from "../../lib/sessionExpiry";
-
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
-const ORDERS_API_URL = `${API_BASE_URL}/api/orders`;
-const ORDER_DETAIL_API_URL = `${API_BASE_URL}/api/orders`;
-const SETTINGS_API_URL = `${API_BASE_URL}/api/settings`;
+import apiClient, { getErrorMessage } from "../../lib/api/client";
+import { ENDPOINTS } from "../../lib/api/endpoints";
 
 /**
  * Owns everything the order detail panel needs: fetching an order, editing its
@@ -33,21 +29,9 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
   const [agentSurcharge, setAgentSurcharge] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    fetch(SETTINGS_API_URL, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    })
-      .then((res) => {
-        if (isUnauthorized(res.status)) {
-          handleUnauthorized();
-          return Promise.reject(res.status);
-        }
-        return res.ok ? res.json() : Promise.reject(res.status);
-      })
-      .then(({ data }) =>
+    apiClient
+      .get(ENDPOINTS.settings.get)
+      .then(({ data: { data } }) =>
         setSettings({
           pricePerKg: Number(data?.pricePerKg) || 0,
           discountRules: data?.discountRules || [],
@@ -76,27 +60,11 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
         seedOrder(order);
         return;
       }
-      const token = localStorage.getItem("token");
 
-      const response = await fetch(`${ORDER_DETAIL_API_URL}/${id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.message || "Failed to fetch order details");
-
+      const { data: result } = await apiClient.get(ENDPOINTS.orders.byId(id));
       seedOrder(result.data || result);
     } catch (err) {
-      setDetailError(err.message);
+      setDetailError(getErrorMessage(err, "Failed to fetch order details"));
     } finally {
       setDetailLoading(false);
     }
@@ -174,46 +142,13 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
     });
   };
 
-  const handleSaveOrderEdits = async (token) => {
-    const response = await fetch(`${ORDERS_API_URL}/${selectedOrderId}/edit`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        items: selectedOrder.items.map((item) => ({
-          id: item.id,
-          quantity: Number(item.quantity),
-        })),
-      }),
+  const handleSaveOrderEdits = async () => {
+    await apiClient.patch(ENDPOINTS.orders.edit(selectedOrderId), {
+      items: selectedOrder.items.map((item) => ({
+        id: item.id,
+        quantity: Number(item.quantity),
+      })),
     });
-
-    if (isUnauthorized(response.status)) {
-      handleUnauthorized();
-      return;
-    }
-    const rawText = await response.text();
-    let result = {};
-    try {
-      result = rawText ? JSON.parse(rawText) : {};
-    } catch {
-      console.error("Non-JSON response from /edit:", rawText);
-    }
-
-    if (!response.ok) {
-      console.error(
-        "Save order edits failed",
-        response.status,
-        result,
-        rawText,
-      );
-      throw new Error(
-        result.message ||
-          result.errors?.map((e) => e.message).join(", ") ||
-          `Failed to save order edits (status ${response.status})`,
-      );
-    }
   };
 
   const handleUpdateOrderStatus = async (newStatus) => {
@@ -243,40 +178,20 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
     setStatusUpdating(true);
     setStatusError(null);
     try {
-      const token = localStorage.getItem("token");
-
       if (newStatus === "APPROVED") {
-        await handleSaveOrderEdits(token);
+        await handleSaveOrderEdits();
       }
 
-      const response = await fetch(
-        `${ORDERS_API_URL}/${selectedOrderId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            status: newStatus,
-            ...(newStatus === "APPROVED"
-              ? {
-                  estimatedWeight: parseFloat(estimatedWeight) || 0,
-                  agentSurcharge: Number(agentSurcharge) || 0,
-                  roundedOff: Number(roundOff.toFixed(2)),
-                }
-              : {}),
-          }),
-        },
-      );
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return false;
-      }
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.message || "Failed to update order status");
+      await apiClient.patch(ENDPOINTS.orders.status(selectedOrderId), {
+        status: newStatus,
+        ...(newStatus === "APPROVED"
+          ? {
+              estimatedWeight: parseFloat(estimatedWeight) || 0,
+              agentSurcharge: Number(agentSurcharge) || 0,
+              roundedOff: Number(roundOff.toFixed(2)),
+            }
+          : {}),
+      });
 
       setSelectedOrder((prev) =>
         prev
@@ -300,7 +215,7 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
       onUpdated?.();
       return true;
     } catch (err) {
-      setStatusError(err.message);
+      setStatusError(getErrorMessage(err, "Failed to update order status"));
       return false;
     } finally {
       setStatusUpdating(false);

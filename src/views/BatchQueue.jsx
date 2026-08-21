@@ -10,24 +10,14 @@ import {
   Trash2,
 } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 import useOrderDetails from "../components/orders/useOrderDetails";
 import OrderDetailsPanel from "../components/orders/OrderDetailsPanel";
 import OrderSummaryDrawer from "../components/orders/OrderSummaryDrawer";
 import { getInitials, orderCustomerName } from "../lib/format";
+import apiClient, { getErrorMessage } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
-const RECENT_LOG_API_URL = `${API_BASE_URL}/api/batches/logs/activity`;
-const BATCHES_API_URL = `${API_BASE_URL}/api/batches`;
-const APPROVED_ORDERS_API_URL = `${API_BASE_URL}/api/batches/approved-orders`;
-const CREATE_BATCH_API_URL = `${API_BASE_URL}/api/batches`;
-const MERGE_BATCH_API_URL = `${API_BASE_URL}/api/batches/merge`;
-const ORDER_STATUS_API_URL = (id) => `${API_BASE_URL}/api/orders/${id}/status`;
 const APPROVED_PAGE_SIZE = 10;
-const moveOrdersApiUrl = (batchId) =>
-  `${BATCHES_API_URL}/${batchId}/move-orders`;
-const removeOrdersApiUrl = (batchId) =>
-  `${BATCHES_API_URL}/${batchId}/remove-orders`;
 
 const countOrderItems = (order) =>
   Array.isArray(order.items) ? order.items.length : Number(order.items) || 0;
@@ -200,24 +190,9 @@ export default function BatchQueue() {
   const [openOrderId, setOpenOrderId] = useState(null);
 
   const fetchBatches = useCallback(async (status) => {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${BATCHES_API_URL}?status=${status}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-
-    if (isUnauthorized(response.status)) {
-      handleUnauthorized();
-      throw new Error("Session expired");
-    }
-    const result = await response.json();
-    if (!response.ok)
-      throw new Error(result.message || `Failed to fetch ${status} batches`);
-
+    const { data: result } = await apiClient.get(
+      `${ENDPOINTS.batches.list}?status=${status}`,
+    );
     const list = result.data || result.batches || result || [];
     return Array.isArray(list) ? list.map(mapBatch) : [];
   }, []);
@@ -228,7 +203,7 @@ export default function BatchQueue() {
     try {
       setActiveBatches(await fetchBatches("ACTIVE"));
     } catch (err) {
-      setActiveBatchesError(err.message);
+      setActiveBatchesError(getErrorMessage(err, "Failed to fetch active batches"));
       setActiveBatches([]);
     } finally {
       setActiveBatchesLoading(false);
@@ -241,7 +216,7 @@ export default function BatchQueue() {
     try {
       setLockedBatches(await fetchBatches("LOCKED"));
     } catch (err) {
-      setLockedBatchesError(err.message);
+      setLockedBatchesError(getErrorMessage(err, "Failed to fetch locked batches"));
       setLockedBatches([]);
     } finally {
       setLockedBatchesLoading(false);
@@ -257,28 +232,14 @@ export default function BatchQueue() {
     setApprovedOrdersLoading(true);
     setApprovedOrdersError(null);
     try {
-      const token = localStorage.getItem("token");
-
       const params = new URLSearchParams({
         page,
         limit: APPROVED_PAGE_SIZE,
       });
 
-      const response = await fetch(`${APPROVED_ORDERS_API_URL}?${params}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.message || "Failed to fetch approved orders");
+      const { data: result } = await apiClient.get(
+        `${ENDPOINTS.batches.approvedOrders}?${params}`,
+      );
 
       const list =
         result.data?.orders || result.data || result.orders || result || [];
@@ -295,7 +256,7 @@ export default function BatchQueue() {
         ),
       );
     } catch (err) {
-      setApprovedOrdersError(err.message);
+      setApprovedOrdersError(getErrorMessage(err, "Failed to fetch approved orders"));
       setApprovedOrders([]);
     } finally {
       setApprovedOrdersLoading(false);
@@ -336,29 +297,16 @@ export default function BatchQueue() {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
     setDeletingId(order.id);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${ORDER_STATUS_API_URL(order.id)}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ status: "REJECTED" }),
+      await apiClient.patch(ENDPOINTS.orders.status(order.id), {
+        status: "REJECTED",
       });
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(result.message || "Failed to delete order");
 
       setSelectedOrders((prev) => prev.filter((id) => id !== order.id));
       if (detail.orderId === order.id) detail.close();
       setSuccessMessage("Order deleted successfully!");
       await fetchApprovedOrders(pageIndex + 1);
     } catch (err) {
-      window.alert(err.message);
+      window.alert(getErrorMessage(err, "Failed to delete order"));
     } finally {
       setDeletingId(null);
     }
@@ -406,37 +354,9 @@ export default function BatchQueue() {
     setCreatingBatch(true);
     setCreateBatchError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(CREATE_BATCH_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ orderIds: selectedOrders.map(Number) }),
+      const { data: result } = await apiClient.post(ENDPOINTS.batches.list, {
+        orderIds: selectedOrders.map(Number),
       });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const rawText = await response.text();
-      let result = {};
-      try {
-        result = rawText ? JSON.parse(rawText) : {};
-      } catch {
-        console.error("Non-JSON response from /api/batches:", rawText);
-      }
-
-      if (!response.ok) {
-        console.error("Create batch failed", response.status, result, rawText);
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to create batch (status ${response.status})`,
-        );
-      }
 
       const created = result.data || result;
       if (created?.id) {
@@ -447,9 +367,10 @@ export default function BatchQueue() {
       await fetchApprovedOrders(pageIndex + 1);
       setSelectedOrders([]);
       setActiveTab("active");
+      refreshActivityLogs();
       setSuccessMessage("Batch created successfully!");
     } catch (err) {
-      setCreateBatchError(err.message);
+      setCreateBatchError(getErrorMessage(err, "Failed to create batch"));
     } finally {
       setCreatingBatch(false);
     }
@@ -462,41 +383,13 @@ export default function BatchQueue() {
     setLockingBatchId(batch.id);
     setLockError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(`${BATCHES_API_URL}/${batch.id}/lock`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const rawText = await response.text();
-      let result = {};
-      try {
-        result = rawText ? JSON.parse(rawText) : {};
-      } catch {
-        console.error("Non-JSON response from lock:", rawText);
-      }
-
-      if (!response.ok) {
-        console.error("Lock batch failed", response.status, result, rawText);
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to lock batch (status ${response.status})`,
-        );
-      }
+      await apiClient.patch(ENDPOINTS.batches.lock(batch.id));
 
       await Promise.all([fetchActiveBatches(), fetchLockedBatches()]);
+      refreshActivityLogs();
       setSuccessMessage("Batch locked successfully!");
     } catch (err) {
-      setLockError(err.message);
+      setLockError(getErrorMessage(err, "Failed to lock batch"));
     } finally {
       setLockingBatchId(null);
     }
@@ -515,36 +408,17 @@ export default function BatchQueue() {
     setDeletingBatchId(batch.id);
     setLockError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(`${BATCHES_API_URL}/${batch.id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to delete batch (status ${response.status})`,
-        );
+      await apiClient.delete(ENDPOINTS.batches.byId(batch.id));
 
       await Promise.all([
         fetchActiveBatches(),
         fetchLockedBatches(),
         fetchApprovedOrders(pageIndex + 1),
       ]);
+      refreshActivityLogs();
       setSuccessMessage("Batch deleted successfully!");
     } catch (err) {
-      setLockError(err.message);
+      setLockError(getErrorMessage(err, "Failed to delete batch"));
     } finally {
       setDeletingBatchId(null);
     }
@@ -556,32 +430,13 @@ export default function BatchQueue() {
     setUnlockingBatchId(batch.id);
     setLockError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(`${BATCHES_API_URL}/${batch.id}/unlock`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to unlock batch (status ${response.status})`,
-        );
+      await apiClient.patch(ENDPOINTS.batches.unlock(batch.id));
 
       await Promise.all([fetchActiveBatches(), fetchLockedBatches()]);
+      refreshActivityLogs();
       setSuccessMessage("Batch unlocked successfully!");
     } catch (err) {
-      setLockError(err.message);
+      setLockError(getErrorMessage(err, "Failed to unlock batch"));
     } finally {
       setUnlockingBatchId(null);
     }
@@ -590,24 +445,7 @@ export default function BatchQueue() {
   const [batchDetailLoading, setBatchDetailLoading] = useState(false);
 
   const fetchBatchById = useCallback(async (id) => {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${BATCHES_API_URL}/${id}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-
-    if (isUnauthorized(response.status)) {
-      handleUnauthorized();
-      throw new Error("Session expired");
-    }
-    const result = await response.json();
-    if (!response.ok)
-      throw new Error(result.message || "Failed to fetch batch");
-
+    const { data: result } = await apiClient.get(ENDPOINTS.batches.byId(id));
     return mapBatch(result.data || result);
   }, []);
 
@@ -658,37 +496,19 @@ export default function BatchQueue() {
     setRemoveLoading(true);
     setRemoveError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(removeOrdersApiUrl(selectedBatchId), {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ orderIds: [Number(orderIdToRemove)] }),
+      await apiClient.patch(ENDPOINTS.batches.removeOrders(selectedBatchId), {
+        orderIds: [Number(orderIdToRemove)],
       });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to remove order (status ${response.status})`,
-        );
 
       await Promise.all([
         fetchActiveBatches(),
         fetchApprovedOrders(pageIndex + 1),
       ]);
       setRemoveModalOpen(false);
+      refreshActivityLogs();
       setSuccessMessage("Order removed from batch!");
     } catch (err) {
-      setRemoveError(err.message);
+      setRemoveError(getErrorMessage(err, "Failed to remove order"));
     } finally {
       setRemoveLoading(false);
     }
@@ -703,46 +523,17 @@ export default function BatchQueue() {
     setMoveLoading(true);
     setMoveError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(moveOrdersApiUrl(selectedBatchId), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          orderIds: [Number(selectedOrderIdToMove)],
-          destinationBatchId: Number(targetBatchIdForMove),
-        }),
+      await apiClient.post(ENDPOINTS.batches.moveOrders(selectedBatchId), {
+        orderIds: [Number(selectedOrderIdToMove)],
+        destinationBatchId: Number(targetBatchIdForMove),
       });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const rawText = await response.text();
-      let result = {};
-      try {
-        result = rawText ? JSON.parse(rawText) : {};
-      } catch {
-        console.error("Non-JSON response from move-orders:", rawText);
-      }
-
-      if (!response.ok) {
-        console.error("Move order failed", response.status, result, rawText);
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to move order (status ${response.status})`,
-        );
-      }
 
       await fetchActiveBatches();
       setMoveModalOpen(false);
+      refreshActivityLogs();
       setSuccessMessage("Order moved successfully!");
     } catch (err) {
-      setMoveError(err.message);
+      setMoveError(getErrorMessage(err, "Failed to move order"));
     } finally {
       setMoveLoading(false);
     }
@@ -786,43 +577,13 @@ export default function BatchQueue() {
     setMergeLoading(true);
     setMergeError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(MERGE_BATCH_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          sourceBatch: Number(sourceBatch.id),
-          sourceBatchId: Number(sourceBatch.id),
-          targetBatch: Number(targetBatch.id),
-          targetBatchId: Number(targetBatch.id),
-          targetBatchIds: [Number(targetBatch.id)],
-        }),
+      const { data: result } = await apiClient.post(ENDPOINTS.batches.merge, {
+        sourceBatch: Number(sourceBatch.id),
+        sourceBatchId: Number(sourceBatch.id),
+        targetBatch: Number(targetBatch.id),
+        targetBatchId: Number(targetBatch.id),
+        targetBatchIds: [Number(targetBatch.id)],
       });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const rawText = await response.text();
-      let result = {};
-      try {
-        result = rawText ? JSON.parse(rawText) : {};
-      } catch {
-        console.error("Non-JSON response from /api/batches/merge:", rawText);
-      }
-
-      if (!response.ok) {
-        console.error("Merge batch failed", response.status, result, rawText);
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to merge batches (status ${response.status})`,
-        );
-      }
 
       const created = result.data || result;
       if (created?.id) {
@@ -835,9 +596,10 @@ export default function BatchQueue() {
         );
       }
       setMergeModalOpen(false);
+      refreshActivityLogs();
       setSuccessMessage("Batches merged successfully!");
     } catch (err) {
-      setMergeError(err.message);
+      setMergeError(getErrorMessage(err, "Failed to merge batches"));
     } finally {
       setMergeLoading(false);
     }
@@ -852,32 +614,25 @@ export default function BatchQueue() {
     : null;
 
   const handleActivityLogs = async () => {
-    const token = localStorage.getItem("token");
-    const response = await fetch(RECENT_LOG_API_URL, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-
-    if (isUnauthorized(response.status)) {
-      handleUnauthorized();
-      return [];
-    }
-
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to fetch activity logs");
-    }
-
+    const { data: result } = await apiClient.get(
+      ENDPOINTS.batches.activityLogs,
+    );
     const list = result.data?.logs || result.data || result.logs || result;
     return Array.isArray(list) ? list.map(mapActivityLog) : [];
+  };
+
+  const refreshActivityLogs = () => {
+    handleActivityLogs()
+      .then(setActivityLogs)
+      .catch((err) =>
+        setLogsError(getErrorMessage(err, "Failed to fetch activity logs")),
+      );
   };
 
   useEffect(() => {
     handleActivityLogs()
       .then(setActivityLogs)
-      .catch((err) => setLogsError(err.message))
+      .catch((err) => setLogsError(getErrorMessage(err, "Failed to fetch activity logs")))
       .finally(() => setLogsLoading(false));
   }, []);
 

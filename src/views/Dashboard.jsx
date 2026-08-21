@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
+import apiClient, { API_ORIGIN } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 import newbatchicon from "../assets/newbatch.svg";
 import totalordersicon from "../assets/totalordericon.svg";
 import pendingreviewicon from "../assets/pendingreviewicon.svg";
@@ -11,37 +12,22 @@ import activebatchesicon from "../assets/activediscountbatchesicon.svg";
 import smartbatchicon from "../assets/smartbatchrecicon.svg";
 import incomingordersreviewicon from "../assets/incomingorderreviewicon.svg";
 
-const API_ORIGIN = "https://shelynx.mediaclocksoft.com.au";
-const API_BASE_URL = `${API_ORIGIN}/api`;
-
 // photoUrl is a full CDN URL for SHEIN products, a relative path for uploads
 const imageUrl = (p) =>
   !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
 
 const fetchApi = async (path) => {
-  const token = localStorage.getItem("token");
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-  if (isUnauthorized(response.status)) {
-    handleUnauthorized();
-    throw new Error("Session expired");
-  }
-  if (!response.ok) throw new Error(`Failed to fetch ${path}`);
-  const json = await response.json();
+  const { data: json } = await apiClient.get(path);
   return json.data;
 };
 
-const fetchCardData = () => fetchApi("/dashboard/card-data");
+const fetchCardData = () => fetchApi(ENDPOINTS.dashboard.cardData);
 
 // Risk labels arrive uppercase from the API; normalize to the badge strings
 const RISK_LABELS = { TRUSTED: "Trusted", "NEW CUSTOMER": "New Customer" };
 
 const fetchOrderData = async () => {
-  const data = await fetchApi("/dashboard/order-data");
+  const data = await fetchApi(ENDPOINTS.dashboard.orderData);
   return data.items.map((item) => ({
     id: String(item.id),
     productName: item.productName,
@@ -66,7 +52,7 @@ const money = (n) =>
       })}`;
 
 const fetchRevenueData = async (filter) => {
-  const d = await fetchApi(`/dashboard/revenue-data?filter=${filter}`);
+  const d = await fetchApi(`${ENDPOINTS.dashboard.revenueData}?filter=${filter}`);
   return {
     grossEarnings: money(d.grossEarning ?? 0),
     grossEarningsGrowth: d.grossEarningsGrowth ?? "",
@@ -82,7 +68,7 @@ const fetchRevenueData = async (filter) => {
 };
 
 const fetchBatchData = async () => {
-  const d = await fetchApi("/dashboard/batch-data");
+  const d = await fetchApi(ENDPOINTS.dashboard.batchData);
   const list = Array.isArray(d) ? d : (d.items ?? d.batches ?? []);
   return list.map((b) => ({
     id: String(b.id ?? b.batchId).startsWith("#")

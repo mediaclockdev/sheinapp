@@ -8,11 +8,10 @@ import {
   Star,
 } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 import { formatAddress } from "../lib/format";
+import apiClient, { getErrorMessage } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
-const CUSTOMERS_API_URL = `${API_BASE_URL}/api/customers`;
 const PAGE_SIZE = 10;
 // Label shown on the button -> value the API expects ("All" sends nothing).
 const STATUS_FILTERS = { All: null, Linked: "ACTIVE", Unlinked: "INACTIVE" };
@@ -71,19 +70,9 @@ export default function Customers() {
   const fetchCustomerDetails = async (id) => {
     if (!id) return;
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${CUSTOMERS_API_URL}/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message);
+      const { data: result } = await apiClient.get(
+        ENDPOINTS.customers.byId(id),
+      );
       hasSelectionRef.current = true;
       setSelectedCustomer(result.data);
     } catch (err) {
@@ -96,27 +85,14 @@ export default function Customers() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
         const params = new URLSearchParams({ page, limit: PAGE_SIZE });
         if (STATUS_FILTERS[status]) params.set("status", STATUS_FILTERS[status]);
         // Deep link: let the server tell us which page holds this customer.
         const focusing = Boolean(requestedId) && !focusSyncedRef.current;
         if (focusing) params.set("focusId", requestedId);
-        const response = await fetch(`${CUSTOMERS_API_URL}?${params}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-
-        if (isUnauthorized(response.status)) {
-          handleUnauthorized();
-          return;
-        }
-        const result = await response.json();
-        if (!response.ok)
-          throw new Error(result.message || "Failed to fetch customers");
+        const { data: result } = await apiClient.get(
+          `${ENDPOINTS.customers.list}?${params}`,
+        );
 
         const list = result.data || result.customers || result || [];
         const customerData = Array.isArray(list) ? list : [];
@@ -145,7 +121,7 @@ export default function Customers() {
           fetchCustomerDetails(requestedId || customerData[0].id);
         }
       } catch (err) {
-        setError(err.message);
+        setError(getErrorMessage(err, "Failed to fetch customers"));
         setCustomers([]);
         setTotal(0);
       } finally {

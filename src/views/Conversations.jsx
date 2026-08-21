@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import axios from "axios";
+import apiClient, { API_ORIGIN } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 import {
   Plus,
   Send,
@@ -21,11 +22,6 @@ import {
 import EmojiPicker from "emoji-picker-react";
 import { useSocket } from "../hooks/useSocket";
 import { notificationToast } from "../components/NotificationToast";
-
-const API_BASE = "https://shelynx.mediaclocksoft.com.au";
-const authHeaders = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
 
 const relativeTime = (dateString) => {
   if (!dateString) return "";
@@ -57,7 +53,7 @@ const renderInboxMessage = (msg) => {
 const resolveAvatarUrl = (url) => {
   if (!url) return "";
   if (url.startsWith("http")) return url;
-  return `${API_BASE}${url}`;
+  return `${API_ORIGIN}${url}`;
 };
 
 const Avatar = ({ name, avatarUrl }) => (
@@ -75,16 +71,16 @@ const Avatar = ({ name, avatarUrl }) => (
 
 const generateDownloadName = (message, defaultExtension) => {
   if (message.originalFileName) return message.originalFileName;
-  
+
   const date = new Date(message.createdAt || new Date());
-  const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} at ${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}.${String(date.getSeconds()).padStart(2, '0')}`;
-  
+  const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} at ${String(date.getHours()).padStart(2, "0")}.${String(date.getMinutes()).padStart(2, "0")}.${String(date.getSeconds()).padStart(2, "0")}`;
+
   let ext = defaultExtension;
-  if (typeof message.content === 'string') {
-    const parts = message.content.split('.');
+  if (typeof message.content === "string") {
+    const parts = message.content.split(".");
     if (parts.length > 1) {
       const lastPart = parts.pop();
-      if (lastPart.length <= 4 && !lastPart.includes('/')) {
+      if (lastPart.length <= 4 && !lastPart.includes("/")) {
         ext = lastPart;
       }
     }
@@ -174,10 +170,7 @@ const Conversations = () => {
   useEffect(() => {
     const fetchInbox = async () => {
       try {
-        const response = await axios.get(
-          `${API_BASE}/api/chat/conversations`,
-          authHeaders(),
-        );
+        const response = await apiClient.get(ENDPOINTS.chat.conversations);
         if (response.data.success) setThreads(response.data.data);
       } catch (err) {
         console.error("Failed to load threads:", err);
@@ -191,12 +184,14 @@ const Conversations = () => {
 
   useEffect(() => {
     if (!showNewMessageModal) return;
-    
+
     const fetchCustomers = async () => {
       setCustomersLoading(true);
       try {
-        const query = customerSearch.trim() ? `?search=${encodeURIComponent(customerSearch)}` : "";
-        const res = await axios.get(`${API_BASE}/api/customers${query}`, authHeaders());
+        const query = customerSearch.trim()
+          ? `?search=${encodeURIComponent(customerSearch)}`
+          : "";
+        const res = await apiClient.get(`${ENDPOINTS.customers.list}${query}`);
         const list = res.data.data || res.data.customers || res.data || [];
         setCustomers(Array.isArray(list) ? list : []);
       } catch (err) {
@@ -216,16 +211,14 @@ const Conversations = () => {
   const startConversation = async (customerId) => {
     setStartingChat(true);
     try {
-      const res = await axios.post(
-        `${API_BASE}/api/chat/conversations`,
-        { customerId },
-        authHeaders()
-      );
+      const res = await apiClient.post(ENDPOINTS.chat.conversations, {
+        customerId,
+      });
       if (res.data.success && res.data.data) {
         const newThread = res.data.data;
 
-        setThreads(prev => {
-          if (!prev.find(t => t.id === newThread.id)) {
+        setThreads((prev) => {
+          if (!prev.find((t) => t.id === newThread.id)) {
             return [newThread, ...prev];
           }
           return prev;
@@ -248,9 +241,8 @@ const Conversations = () => {
     const fetchHistory = async () => {
       setMessagesLoading(true);
       try {
-        const response = await axios.get(
-          `${API_BASE}/api/chat/conversations/${activeId}/messages?skip=0`,
-          authHeaders(),
+        const response = await apiClient.get(
+          `${ENDPOINTS.chat.messages(activeId)}?skip=0`,
         );
         if (response.data.success) setMessages(response.data.data.reverse());
         if (socket) {
@@ -272,7 +264,7 @@ const Conversations = () => {
       if (newMessage.conversationId === activeId) {
         // Add the message to the screen
         setMessages((prev) => [...prev, newMessage]);
-        
+
         // IMPORTANT: We MUST only emit mark_as_read if the message came from the customer.
         // If we emit it for our own message, the backend might broadcast a read receipt
         // and instantly turn our own checkmarks blue!
@@ -290,15 +282,25 @@ const Conversations = () => {
 
     const handleInboxNotification = (message) => {
       // Fire a rich toast if the message is from a customer and it's not the active chat!
-      if (message.conversationId !== activeId && message.senderType === "CUSTOMER") {
+      if (
+        message.conversationId !== activeId &&
+        message.senderType === "CUSTOMER"
+      ) {
         const thread = threads.find((t) => t.id === message.conversationId);
-        const senderName = message.chatPartner?.name || thread?.chatPartner?.name || "Customer";
-        const preview = message.messageType === "TEXT"
-          ? (message.content?.length > 60 ? message.content.substring(0, 60) + "..." : message.content)
-          : message.messageType === "IMAGE" ? "📷 Sent a photo"
-          : message.messageType === "VIDEO" ? "🎥 Sent a video"
-          : message.messageType === "AUDIO" ? "🎵 Voice Message"
-          : "📄 Sent an attachment";
+        const senderName =
+          message.chatPartner?.name || thread?.chatPartner?.name || "Customer";
+        const preview =
+          message.messageType === "TEXT"
+            ? message.content?.length > 60
+              ? message.content.substring(0, 60) + "..."
+              : message.content
+            : message.messageType === "IMAGE"
+              ? "📷 Sent a photo"
+              : message.messageType === "VIDEO"
+                ? "🎥 Sent a video"
+                : message.messageType === "AUDIO"
+                  ? "🎵 Voice Message"
+                  : "📄 Sent an attachment";
 
         notificationToast.message({
           title: senderName,
@@ -317,7 +319,8 @@ const Conversations = () => {
             return {
               ...thread,
               lastMessage: message,
-              unreadCount: thread.id === activeId ? 0 : (thread.unreadCount || 0) + 1,
+              unreadCount:
+                thread.id === activeId ? 0 : (thread.unreadCount || 0) + 1,
             };
           }
           return thread;
@@ -330,7 +333,7 @@ const Conversations = () => {
             lastMessage: message,
             unreadCount: message.conversationId === activeId ? 0 : 1,
             createdAt: message.createdAt || new Date().toISOString(),
-            updatedAt: message.createdAt || new Date().toISOString()
+            updatedAt: message.createdAt || new Date().toISOString(),
           });
         }
 
@@ -347,10 +350,10 @@ const Conversations = () => {
       if (data.conversationId === activeId) {
         // Only turn OUR ticks blue if the CUSTOMER was the one who triggered the read event!
         if (data.readBy === "CUSTOMER") {
-          setMessages((prev) => 
-            prev.map((m) => 
-              m.senderType === "AGENT" ? { ...m, isRead: true } : m
-            )
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.senderType === "AGENT" ? { ...m, isRead: true } : m,
+            ),
           );
         }
       }
@@ -380,8 +383,8 @@ const Conversations = () => {
     // Instantly clear the unread count when clicking the chat
     setThreads((prev) =>
       prev.map((thread) =>
-        thread.id === id ? { ...thread, unreadCount: 0 } : thread
-      )
+        thread.id === id ? { ...thread, unreadCount: 0 } : thread,
+      ),
     );
   }
 
@@ -440,11 +443,7 @@ const Conversations = () => {
       formData.append("conversationId", activeId.toString());
       formData.append("messageType", typeStr);
 
-      const response = await axios.post(
-        `${API_BASE}/api/chat/upload`,
-        formData,
-        authHeaders(),
-      );
+      const response = await apiClient.post(ENDPOINTS.chat.upload, formData);
 
       if (response.data.success && socket) {
         // Send attachment message
@@ -473,7 +472,7 @@ const Conversations = () => {
   };
 
   const fileUrl = (content) =>
-    content.startsWith("http") ? content : `${API_BASE}${content}`;
+    content.startsWith("http") ? content : `${API_ORIGIN}${content}`;
 
   return (
     <div className="flex h-[calc(100vh-70px)] bg-white">
@@ -485,7 +484,7 @@ const Conversations = () => {
       >
         <div className="px-4 sm:px-5 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#141D23]">Recent Chats</h2>
-          <button 
+          <button
             onClick={() => setShowNewMessageModal(true)}
             className="p-1.5 bg-[#FFE8EF] text-[#D24D77] rounded-lg hover:bg-[#FDE2E9] transition-colors"
             title="New Message"
@@ -597,7 +596,7 @@ const Conversations = () => {
                             m.messageType === "DOCUMENT" ||
                             m.messageType === "FILE";
 
-                          const bubbleClass = `rounded-2xl px-4 py-3 text-sm ${
+                          const bubbleClass = `rounded-2xl px-4 py-3 text-sm break-all ${
                             isAgent
                               ? "bg-[#FDE2E9] text-[#141D23]"
                               : "bg-[#F1F3F5] text-[#141D23]"
@@ -613,8 +612,12 @@ const Conversations = () => {
                                   setPreviewMessage({
                                     ...m,
                                     url,
-                                    senderName: isAgent ? "Sarah L." : active.chatPartner?.name,
-                                    avatarUrl: isAgent ? null : active.chatPartner?.avatarUrl
+                                    senderName: isAgent
+                                      ? "Sarah L."
+                                      : active.chatPartner?.name,
+                                    avatarUrl: isAgent
+                                      ? null
+                                      : active.chatPartner?.avatarUrl,
                                   });
                                   setZoomLevel(1);
                                 }}
@@ -647,11 +650,16 @@ const Conversations = () => {
                           }
 
                           if (isDoc) {
-                            const fileName = generateDownloadName(m, 'pdf').replace('WhatsApp Image', 'Document');
+                            const fileName = generateDownloadName(
+                              m,
+                              "pdf",
+                            ).replace("WhatsApp Image", "Document");
                             return (
                               <a
                                 href={url}
-                                onClick={(e) => handleDownload(url, fileName, e)}
+                                onClick={(e) =>
+                                  handleDownload(url, fileName, e)
+                                }
                                 className={
                                   bubbleClass +
                                   " flex items-center justify-between gap-4 hover:opacity-80 transition group"
@@ -706,7 +714,10 @@ const Conversations = () => {
               accept={fileAccept}
             />
 
-            <div ref={inputBarRef} className="relative flex items-center gap-2 px-3 sm:px-4 py-3 border-t border-[#E8DFE1]">
+            <div
+              ref={inputBarRef}
+              className="relative flex items-center gap-2 px-3 sm:px-4 py-3 border-t border-[#E8DFE1]"
+            >
               {/* Attachment Menu */}
               {showAttachmentMenu && (
                 <div className="absolute bottom-16 left-4 bg-white rounded-xl shadow-xl border border-[#E8DFE1] p-2 flex flex-col gap-1 w-56 z-50">
@@ -762,7 +773,14 @@ const Conversations = () => {
                 } ${showAttachmentMenu ? "bg-slate-200" : ""}`}
                 aria-label="Attach"
               >
-                <Plus size={20} className={showAttachmentMenu ? "rotate-45 transition-transform" : "transition-transform"} />
+                <Plus
+                  size={20}
+                  className={
+                    showAttachmentMenu
+                      ? "rotate-45 transition-transform"
+                      : "transition-transform"
+                  }
+                />
               </button>
               <button
                 onClick={() => {
@@ -904,12 +922,15 @@ const Conversations = () => {
             {/* Search */}
             <div className="p-4 border-b border-[#E8DFE1]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C959F]" size={18} />
-                <input 
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C959F]"
+                  size={18}
+                />
+                <input
                   type="text"
                   placeholder="Search customer by name..."
                   value={customerSearch}
-                  onChange={e => setCustomerSearch(e.target.value)}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
                   className="w-full bg-[#F1F3F5] border-none rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#141D23] outline-none focus:ring-2 focus:ring-[#D24D77]/20 transition"
                   autoFocus
                 />
@@ -929,16 +950,21 @@ const Conversations = () => {
                   <p className="text-sm font-medium">No customers found.</p>
                 </div>
               ) : (
-                customers.map(customer => (
+                customers.map((customer) => (
                   <button
                     key={customer.id}
                     disabled={startingChat}
                     onClick={() => startConversation(customer.id)}
                     className="w-full text-left p-4 border-b border-[#E8DFE1] hover:bg-[#F8FAFF] transition flex items-center gap-4 disabled:opacity-50"
                   >
-                    <Avatar name={customer.name} avatarUrl={customer.avatarUrl} />
+                    <Avatar
+                      name={customer.name}
+                      avatarUrl={customer.avatarUrl}
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#141D23] truncate">{customer.name}</p>
+                      <p className="font-bold text-[#141D23] truncate">
+                        {customer.name}
+                      </p>
                       <p className="text-xs text-[#5C5F60] mt-0.5 truncate flex items-center gap-2">
                         <span>{customer.email || "No email"}</span>
                         <span>•</span>
@@ -947,8 +973,12 @@ const Conversations = () => {
                     </div>
                     {/* Metrics if available */}
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] font-bold text-[#D24D77] uppercase">Orders</p>
-                      <p className="text-sm font-semibold text-[#141D23]">{customer.totalOrders || 0}</p>
+                      <p className="text-[10px] font-bold text-[#D24D77] uppercase">
+                        Orders
+                      </p>
+                      <p className="text-sm font-semibold text-[#141D23]">
+                        {customer.totalOrders || 0}
+                      </p>
                     </div>
                   </button>
                 ))
@@ -958,23 +988,26 @@ const Conversations = () => {
         </div>
       )}
 
-
-
       {/* Image Preview Lightbox (WhatsApp Web Style) */}
       {previewMessage && (
-        <div 
-          className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-md transition-all duration-200 animate-in fade-in" 
+        <div
+          className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-md transition-all duration-200 animate-in fade-in"
           onClick={() => setPreviewMessage(null)}
         >
           {/* Header Bar */}
-          <div 
+          <div
             className="flex items-center justify-between px-6 py-4 bg-black/40 text-white shadow-md z-[110]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-4">
-              <Avatar name={previewMessage.senderName} avatarUrl={previewMessage.avatarUrl} />
+              <Avatar
+                name={previewMessage.senderName}
+                avatarUrl={previewMessage.avatarUrl}
+              />
               <div>
-                <p className="font-semibold text-lg">{previewMessage.senderName || "User"}</p>
+                <p className="font-semibold text-lg">
+                  {previewMessage.senderName || "User"}
+                </p>
                 <p className="text-xs text-white/70">
                   {new Date(previewMessage.createdAt).toLocaleString()}
                 </p>
@@ -982,29 +1015,35 @@ const Conversations = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setZoomLevel(z => Math.min(z + 0.5, 3))}
+              <button
+                onClick={() => setZoomLevel((z) => Math.min(z + 0.5, 3))}
                 className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
                 title="Zoom In"
               >
                 <ZoomIn size={24} />
               </button>
-              <button 
-                onClick={() => setZoomLevel(z => Math.max(z - 0.5, 0.5))}
+              <button
+                onClick={() => setZoomLevel((z) => Math.max(z - 0.5, 0.5))}
                 className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
                 title="Zoom Out"
               >
                 <ZoomOut size={24} />
               </button>
               <div className="w-px h-8 bg-white/20 mx-2"></div>
-              <button 
-                onClick={(e) => handleDownload(previewMessage.url, generateDownloadName(previewMessage, 'jpg'), e)}
+              <button
+                onClick={(e) =>
+                  handleDownload(
+                    previewMessage.url,
+                    generateDownloadName(previewMessage, "jpg"),
+                    e,
+                  )
+                }
                 className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
                 title="Download"
               >
                 <Download size={24} />
               </button>
-              <button 
+              <button
                 onClick={() => setPreviewMessage(null)}
                 className="p-3 bg-white/5 hover:bg-white/20 rounded-full transition-colors"
                 title="Close"
@@ -1013,13 +1052,16 @@ const Conversations = () => {
               </button>
             </div>
           </div>
-          
+
           {/* The Image Container */}
           <div className="flex-1 flex items-center justify-center overflow-hidden p-8">
-            <img 
-              src={previewMessage.url} 
-              alt="Preview" 
-              style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.2s ease-out' }}
+            <img
+              src={previewMessage.url}
+              alt="Preview"
+              style={{
+                transform: `scale(${zoomLevel})`,
+                transition: "transform 0.2s ease-out",
+              }}
               className="max-w-full max-h-full object-contain shadow-2xl rounded-sm cursor-grab active:cursor-grabbing"
               onClick={(e) => e.stopPropagation()}
             />

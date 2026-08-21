@@ -3,18 +3,8 @@ import { useOutletContext } from "react-router-dom";
 import { ChevronRight, BadgeCheck, Pencil, Eye, EyeOff } from "lucide-react";
 import tick from "../assets/tickicon.svg";
 import { toast } from "../components/Toast";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
-
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
-const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
-
-const authHeaders = () => {
-  const token = localStorage.getItem("token");
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
+import apiClient, { API_ORIGIN, getErrorMessage } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 
 const NOTIFICATIONS = [
   {
@@ -126,15 +116,9 @@ export default function Profile() {
   const [passwordError, setPasswordError] = useState(null);
 
   useEffect(() => {
-    fetch(PROFILE_API_URL, { headers: authHeaders() })
-      .then((res) => {
-        if (isUnauthorized(res.status)) {
-          handleUnauthorized();
-          return Promise.reject(res.status);
-        }
-        return res.ok ? res.json() : Promise.reject(res.status);
-      })
-      .then(({ data }) => {
+    apiClient
+      .get(ENDPOINTS.agentProfile.get)
+      .then(({ data: { data } }) => {
         if (!data) return;
         setProfile(data);
         const agentCode = `AGT${String(data.id).padStart(5, "0")}`;
@@ -159,34 +143,14 @@ export default function Profile() {
 
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`${PROFILE_API_URL}/update`, {
-        method: "PATCH",
-        headers: authHeaders(),
-        body: JSON.stringify({
+      const { data: result } = await apiClient.patch(
+        ENDPOINTS.agentProfile.update,
+        {
           name: form.name,
           phone: form.phone.trim(),
           countryCode: form.countryCode.trim(),
-        }),
-      });
-      if (isUnauthorized(res.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        const fieldErrors = (result.errors || []).reduce(
-          (acc, e) => ({ ...acc, [e.field]: e.message }),
-          {},
-        );
-        setFormErrors(fieldErrors);
-        toast.error(
-          result.errors?.[0]?.message ||
-            result.message ||
-            "Failed to update profile",
-        );
-        return;
-      }
+        },
+      );
 
       setFormErrors({});
       const updated = result.data || result;
@@ -208,32 +172,18 @@ export default function Profile() {
       toast.success("Profile updated");
     } catch (err) {
       console.error("Failed to update profile:", err);
-      toast.error("Failed to update profile");
+      const fieldErrors = (err.response?.data?.errors || []).reduce(
+        (acc, e) => ({ ...acc, [e.field]: e.message }),
+        {},
+      );
+      setFormErrors(fieldErrors);
+      toast.error(getErrorMessage(err, "Failed to update profile"));
     }
   };
 
   const handleChangePassword = async () => {
     try {
-      const res = await fetch(`${PROFILE_API_URL}/password`, {
-        method: "PATCH",
-        headers: authHeaders(),
-        body: JSON.stringify(passwordForm),
-      });
-      if (isUnauthorized(res.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        const message =
-          result.errors?.[0]?.message ||
-          result.message ||
-          "Failed to change password";
-        setPasswordError(message);
-        toast.error(message);
-        return;
-      }
+      await apiClient.patch(ENDPOINTS.agentProfile.password, passwordForm);
 
       setPasswordError(null);
       setPasswordForm({ currentPassword: "", newPassword: "" });
@@ -241,7 +191,7 @@ export default function Profile() {
       toast.success("Password changed");
     } catch (err) {
       console.error("Failed to change password:", err);
-      const message = "Failed to change password";
+      const message = getErrorMessage(err, "Failed to change password");
       setPasswordError(message);
       toast.error(message);
     }
@@ -251,20 +201,12 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const token = localStorage.getItem("token");
       const body = new FormData();
       body.append("image", file);
-      const res = await fetch(`${PROFILE_API_URL}/photo`, {
-        method: "PATCH",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const { data: result } = await apiClient.patch(
+        ENDPOINTS.agentProfile.photo,
         body,
-      });
-      if (isUnauthorized(res.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(`Photo upload failed (${res.status})`);
+      );
       const avatarUrl =
         result.data?.avatarUrl || result.avatarUrl || URL.createObjectURL(file);
       setProfile((p) => ({ ...(p || {}), avatarUrl }));
@@ -272,7 +214,7 @@ export default function Profile() {
       toast.success("Photo uploaded");
     } catch (err) {
       console.error("Failed to upload photo:", err);
-      toast.error("Failed to upload photo");
+      toast.error(getErrorMessage(err, "Failed to upload photo"));
     } finally {
       e.target.value = "";
     }
@@ -292,7 +234,7 @@ export default function Profile() {
                 src={
                   profile.avatarUrl.startsWith("http")
                     ? profile.avatarUrl
-                    : `${API_BASE_URL}${profile.avatarUrl}`
+                    : `${API_ORIGIN}${profile.avatarUrl}`
                 }
                 alt={form.name}
                 className="h-24 w-24 rounded-2xl object-cover border-2 border-[#FFD1DC] p-1"

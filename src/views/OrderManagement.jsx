@@ -10,13 +10,11 @@ import {
   flexRender,
   getCoreRowModel,
 } from "@tanstack/react-table";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 import { getInitials } from "../lib/format";
 import useOrderDetails from "../components/orders/useOrderDetails";
 import OrderDetailsPanel from "../components/orders/OrderDetailsPanel";
-
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
-const ORDERS_API_URL = `${API_BASE_URL}/api/orders`;
+import apiClient, { getErrorMessage } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 
 const mapOrder = (order) => {
   const customerName =
@@ -93,8 +91,6 @@ const OrderManagement = () => {
     setOrdersLoading(true);
     setOrdersError(null);
     try {
-      const token = localStorage.getItem("token");
-
       const params = new URLSearchParams({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
@@ -104,21 +100,9 @@ const OrderManagement = () => {
       if (startDate) params.set("startDate", fmtDate(startDate));
       if (endDate) params.set("endDate", fmtDate(endDate));
 
-      const response = await fetch(`${ORDERS_API_URL}?${params.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.message || "Failed to fetch orders");
+      const { data: result } = await apiClient.get(
+        `${ENDPOINTS.orders.list}?${params.toString()}`,
+      );
 
       const list = result.data || result.orders || result || [];
       const mapped = Array.isArray(list) ? list.map(mapOrder) : [];
@@ -134,7 +118,7 @@ const OrderManagement = () => {
         ),
       );
     } catch (err) {
-      setOrdersError(err.message);
+      setOrdersError(getErrorMessage(err, "Failed to fetch orders"));
       setOrders([]);
     } finally {
       setOrdersLoading(false);
@@ -178,19 +162,10 @@ const OrderManagement = () => {
       .rows.map((row) => row.original.raw?.id ?? row.original.id);
     if (!selectedIds.length) return;
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${ORDERS_API_URL}/export?ids=${selectedIds.join(",")}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
+      const { data: blob } = await apiClient.get(
+        `${ENDPOINTS.orders.export}?ids=${selectedIds.join(",")}`,
+        { responseType: "blob" },
       );
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      if (!response.ok) throw new Error(`Export failed (${response.status})`);
-      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

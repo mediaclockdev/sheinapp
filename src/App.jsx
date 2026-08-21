@@ -7,7 +7,6 @@ import {
 import { useEffect } from "react";
 import { messaging } from "./config/firebase";
 import { onMessage } from "firebase/messaging";
-import axios from "axios";
 
 function App() {
 

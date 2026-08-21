@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import cameraicon from "../assets/cameraicon.webp";
 import { toast } from "../components/Toast";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
 import { formatAddress, getInitials } from "../lib/format";
+import apiClient, { getErrorMessage } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
-const SCAN_API_URL = `${API_BASE_URL}/api/orders/scan`;
 const SCANNER_REGION_ID = "sku-scanner-region";
 
 const ScanSku = () => {
@@ -31,32 +30,17 @@ const ScanSku = () => {
   const fetchBySku = async (sku) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${SCAN_API_URL}?sku=${encodeURIComponent(sku)}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        },
+      const { data } = await apiClient.get(
+        `${ENDPOINTS.orders.scan}?sku=${encodeURIComponent(sku)}`,
       );
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-
-      const data = await response.json();
-      if (!response.ok || data.success === false)
-        throw new Error(data.message || "SKU not found");
+      if (data.success === false) throw new Error(data.message || "SKU not found");
 
       const item = Array.isArray(data.data) ? data.data[0] : data.data;
       if (!item) throw new Error("SKU not found");
 
       setResult(item);
     } catch (err) {
-      toast.error(err.message || "Failed to fetch SKU details");
+      toast.error(getErrorMessage(err, "Failed to fetch SKU details"));
     } finally {
       setLoading(false);
     }

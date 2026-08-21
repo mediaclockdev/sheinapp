@@ -12,6 +12,8 @@ import reportsicon from "../../assets/reportsicon.svg";
 import settingsicon from "../../assets/settingsicon.svg";
 import cameraicon from "../../assets/cameraicon.svg";
 import { LogOut, MessageSquare, UserPlus, Copy, Check, X } from "lucide-react";
+import apiClient from "../../lib/api/client";
+import { ENDPOINTS } from "../../lib/api/endpoints";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { pathname } = useLocation();
@@ -20,26 +22,9 @@ const Sidebar = ({ isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
   const [referralLink, setReferralLink] = useState();
 
-  const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au/api";
-
   const handleReferralLink = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_BASE_URL}/agent-profile/invite-link`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch referral link");
-      }
-      const data = await response.json();
-      console.log(data);
+      const { data } = await apiClient.get(ENDPOINTS.agentProfile.inviteLink);
       setReferralLink(data.data.inviteLink);
     } catch (error) {
       console.error("Error fetching referral link:", error);
@@ -66,7 +51,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Payments", path: "/payments", iconSrc: paymentsicon },
     { name: "Tracking", path: "/tracking", iconSrc: trackingicon },
     { name: "Customers", path: "/customers", iconSrc: customericon },
-    { name: "Conversations", path: "/conversation", icon: MessageSquare },
+    { name: "Inbox", path: "/conversation", icon: MessageSquare },
     { name: "Reports", path: "/reports", iconSrc: reportsicon },
     { name: "Settings", path: "/settings", iconSrc: settingsicon },
     { name: "Scan SKU", path: "/scanSku", iconSrc: cameraicon },
@@ -87,7 +72,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Top Section */}
+        {/* Top Section */} 
         <div className="flex flex-col gap-6">
           {/* Logo and Brand Title */}
           <div>

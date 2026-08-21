@@ -3,11 +3,10 @@ import { formatAddress } from "../../lib/format";
 import approve from "../../assets/approveicon.svg";
 import reject from "../../assets/rejecticon.svg";
 import customermessage from "../../assets/customermessage.svg";
-
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
+import { API_ORIGIN } from "../../lib/api/client";
 
 const imageUrl = (p) =>
-  !p ? null : p.startsWith("http") ? p : `${API_BASE_URL}${p}`;
+  !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
 
 /** Order detail panel. `d` is the bag returned by useOrderDetails(). */
 export default function OrderDetailsPanel({ d, isMobile = false }) {

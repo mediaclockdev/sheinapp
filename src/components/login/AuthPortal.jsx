@@ -10,6 +10,8 @@ import {
 } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 // import logo2 from "../../assets/logo2.svg";
+import apiClient, { getErrorMessage } from "../../lib/api/client";
+import { ENDPOINTS } from "../../lib/api/endpoints";
 
 const screenMeta = {
   "/login": {
@@ -244,24 +246,11 @@ function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        "https://shelynx.mediaclocksoft.com.au/api/auth/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, rememberMe }),
-        },
-      );
-      const result = await response.json();
-      if (!response.ok) {
-        if (Array.isArray(result.errors) && result.errors.length) {
-          setFieldErrors(
-            Object.fromEntries(result.errors.map((e) => [e.field, e.message])),
-          );
-          return;
-        }
-        throw new Error(result.message || "Login failed");
-      }
+      const { data: result } = await apiClient.post(ENDPOINTS.auth.login, {
+        email,
+        password,
+        rememberMe,
+      });
 
       if (result.token) {
         localStorage.setItem("token", result.token);
@@ -273,7 +262,14 @@ function LoginScreen() {
       }
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message);
+      const result = err.response?.data;
+      if (Array.isArray(result?.errors) && result.errors.length) {
+        setFieldErrors(
+          Object.fromEntries(result.errors.map((e) => [e.field, e.message])),
+        );
+      } else {
+        setError(result?.message || "Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -392,25 +388,12 @@ function ForgotScreen() {
     }
     setLoading(true);
     try {
-      const response = await fetch(
-        "https://shelynx.mediaclocksoft.com.au/api/auth/forgot-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        },
-      );
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.message || "Failed to send reset link");
-      }
+      await apiClient.post(ENDPOINTS.auth.forgotPassword, { email });
       setSuccess(
         "Password reset link has been sent to your email. Please check your inbox.",
       );
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Failed to send reset link"));
     } finally {
       setLoading(false);
     }
@@ -567,31 +550,16 @@ function ResetScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        "https://shelynx.mediaclocksoft.com.au/api/auth/reset-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            newPassword: passVal,
-            token,
-          }),
-        },
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Failed to reset password");
-      }
+      await apiClient.post(ENDPOINTS.auth.resetPassword, {
+        newPassword: passVal,
+        token,
+      });
       setSuccess("Password updated successfully! Redirecting to login...");
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Failed to reset password"));
     } finally {
       setLoading(false);
     }
@@ -761,24 +729,13 @@ function RegisterScreen() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        "https://shelynx.mediaclocksoft.com.au/api/auth/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, countryCode, phone, password }),
-        },
-      );
-      const result = await response.json();
-      if (!response.ok) {
-        if (Array.isArray(result.errors) && result.errors.length) {
-          setFieldErrors(
-            Object.fromEntries(result.errors.map((e) => [e.field, e.message])),
-          );
-          return;
-        }
-        throw new Error(result.message || "Registration failed");
-      }
+      const { data: result } = await apiClient.post(ENDPOINTS.auth.register, {
+        name,
+        email,
+        countryCode,
+        phone,
+        password,
+      });
 
       if (result.token) {
         localStorage.setItem("token", result.token);
@@ -787,7 +744,14 @@ function RegisterScreen() {
       }
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message);
+      const result = err.response?.data;
+      if (Array.isArray(result?.errors) && result.errors.length) {
+        setFieldErrors(
+          Object.fromEntries(result.errors.map((e) => [e.field, e.message])),
+        );
+      } else {
+        setError(result?.message || "Registration failed");
+      }
     } finally {
       setLoading(false);
     }

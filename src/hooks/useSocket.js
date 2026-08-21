@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { API_ORIGIN } from "../lib/api/client";
 
 let globalSocket = null;
 let connectionCount = 0;
@@ -12,7 +13,7 @@ export const useSocket = () => {
     if (!token) return;
 
     if (!globalSocket) {
-      globalSocket = io("https://shelynx.mediaclocksoft.com.au", {
+      globalSocket = io(API_ORIGIN, {
         auth: { token },
       });
     }

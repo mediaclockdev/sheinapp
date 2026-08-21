@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
-import axios from "axios";
 import Sidebar from "./Sidebar";
-import { handleUnauthorized, isUnauthorized } from "../../lib/sessionExpiry";
 import { useSocket } from "../../hooks/useSocket";
 import { requestFirebaseToken } from "../../config/firebase";
-
-const API_BASE_URL = "https://shelynx.mediaclocksoft.com.au";
-const PROFILE_API_URL = `${API_BASE_URL}/api/agent-profile`;
-const SETTINGS_API_URL = `${API_BASE_URL}/api/settings`;
+import apiClient, { API_ORIGIN } from "../../lib/api/client";
+import { ENDPOINTS } from "../../lib/api/endpoints";
 
 const PAGE_TITLES = {
   "/dashboard": "Dashboard",
@@ -37,10 +33,6 @@ const DashboardLayout = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [now, setNow] = useState(new Date());
-  const API_BASE = "https://shelynx.mediaclocksoft.com.au";
-  const authHeaders = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-  });
 
   // Update time for relative timestamps
   useEffect(() => {
@@ -87,9 +79,8 @@ const DashboardLayout = () => {
     // 1. Create the fetch function
     const fetchNotifications = async () => {
       try {
-        const res = await axios.get(
-          `${API_BASE}/api/notifications?page=1&limit=20`,
-          authHeaders(),
+        const res = await apiClient.get(
+          `${ENDPOINTS.notifications.list}?page=1&limit=20`,
         );
         // The backend returns { message: "...", data: [...], meta: { unreadCount: 5 } }
         if (res.data) {
@@ -127,11 +118,7 @@ const DashboardLayout = () => {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
 
-      await axios.patch(
-        `${API_BASE}/api/notifications/read-all`,
-        {},
-        authHeaders(),
-      );
+      await apiClient.patch(ENDPOINTS.notifications.readAll, {});
     } catch (error) {
       console.error("Failed to mark all as read", error);
     }
@@ -143,10 +130,7 @@ const DashboardLayout = () => {
       setNotifications([]);
       setUnreadCount(0);
 
-      await axios.delete(
-        `${API_BASE}/api/notifications/clear-all`,
-        authHeaders(),
-      );
+      await apiClient.delete(ENDPOINTS.notifications.clearAll);
     } catch (error) {
       console.error("Failed to clear all notifications", error);
     }
@@ -164,10 +148,7 @@ const DashboardLayout = () => {
         return prev.filter((n) => n.id !== id);
       });
 
-      await axios.delete(
-        `${API_BASE}/api/notifications/${id}`,
-        authHeaders(),
-      );
+      await apiClient.delete(ENDPOINTS.notifications.byId(id));
     } catch (error) {
       console.error("Failed to clear notification", error);
     }
@@ -190,11 +171,7 @@ const DashboardLayout = () => {
           prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
         );
 
-        await axios.patch(
-          `${API_BASE}/api/notifications/${notif.id}/read`,
-          {},
-          authHeaders(),
-        );
+        await apiClient.patch(ENDPOINTS.notifications.read(notif.id), {});
       }
     } catch (error) {
       console.error("Failed to mark as read", error);
@@ -230,31 +207,17 @@ const DashboardLayout = () => {
       console.error("Failed to parse user data", e);
     }
 
-    const token = localStorage.getItem("token");
-    fetch(PROFILE_API_URL, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => {
-        if (isUnauthorized(res.status)) {
-          handleUnauthorized();
-          return Promise.reject(res.status);
-        }
-        return res.ok ? res.json() : Promise.reject(res.status);
-      })
-      .then(({ data }) => {
+    apiClient
+      .get(ENDPOINTS.agentProfile.get)
+      .then(({ data: { data } }) => {
         setAvatarUrl(data?.avatarUrl || null);
         if (data) setUser(data);
       })
       .catch((err) => console.error("Failed to load agent profile:", err));
 
-    fetch(SETTINGS_API_URL, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => {
-        if (isUnauthorized(res.status)) return Promise.reject(res.status);
-        return res.ok ? res.json() : Promise.reject(res.status);
-      })
-      .then(({ data }) => {
+    apiClient
+      .get(ENDPOINTS.settings.get)
+      .then(({ data: { data } }) => {
         setIsAgentActive(
           data?.isAcceptingOrders != null
             ? Boolean(data.isAcceptingOrders)
@@ -267,11 +230,9 @@ const DashboardLayout = () => {
       try {
         const fcmToken = await requestFirebaseToken();
         if (fcmToken) {
-          await axios.patch(
-            `${API_BASE_URL}/api/agent-profile/fcm-token`,
-            { fcmToken },
-            authHeaders(),
-          );
+          await apiClient.patch(ENDPOINTS.agentProfile.fcmToken, {
+            fcmToken,
+          });
         }
       } catch (err) {
         console.error("Failed to setup FCM token:", err);
@@ -468,7 +429,7 @@ const DashboardLayout = () => {
                       src={
                         avatarUrl.startsWith("http")
                           ? avatarUrl
-                          : `${API_BASE_URL}${avatarUrl}`
+                          : `${API_ORIGIN}${avatarUrl}`
                       }
                       alt={displayName}
                       className="h-full w-full object-cover"

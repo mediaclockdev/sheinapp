@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SuccessToast from "../components/common/SuccessToast";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
+import apiClient, { getErrorMessage } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 import usericon from "../assets/CustomerInformationicon.svg";
 import addnewordericon from "../assets/addnewproduct.svg";
 import productdetailsicon from "../assets/productdetailicon.svg";
@@ -10,8 +11,6 @@ import plusicon from "../assets/plusicon.svg";
 import minus from "../assets/minusicon.svg";
 import camera from "../assets/cameraicon.svg";
 import linkicon from "../assets/linkicon.svg";
-
-const ORDERS_API_URL = "https://shelynx.mediaclocksoft.com.au/api/orders";
 
 const initialCustomer = {
   fullName: "",
@@ -79,7 +78,9 @@ const NewOrders = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
+      if (!localStorage.getItem("token")) {
+        throw new Error("You are not logged in. Please log in again.");
+      }
 
       const items = [
         {
@@ -104,43 +105,12 @@ const NewOrders = () => {
       formData.append("items", JSON.stringify(items));
       productImages.forEach(({ file }) => formData.append("files", file));
 
-      if (!token) {
-        throw new Error("You are not logged in. Please log in again.");
-      }
-
-      const response = await fetch(ORDERS_API_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-      const rawText = await response.text();
-      let result = {};
-      try {
-        result = rawText ? JSON.parse(rawText) : {};
-      } catch {
-        console.error("Non-JSON response from /api/orders:", rawText);
-      }
-
-      if (!response.ok) {
-        console.error("Create order failed", response.status, result, rawText);
-        throw new Error(
-          result.message ||
-            result.errors?.map((e) => e.message).join(", ") ||
-            `Failed to create order (status ${response.status})`,
-        );
-      }
+      await apiClient.post(ENDPOINTS.orders.list, formData);
 
       setSuccessMessage("Order created successfully!");
       setTimeout(() => navigate("/orders"), 1200);
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Failed to create order"));
     } finally {
       setLoading(false);
     }

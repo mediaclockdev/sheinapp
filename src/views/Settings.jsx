@@ -2,21 +2,10 @@ import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Save } from "lucide-react";
 import { toast } from "../components/Toast";
-import { handleUnauthorized, isUnauthorized } from "../lib/sessionExpiry";
-
-const SETTINGS_API_URL = "https://shelynx.mediaclocksoft.com.au/api/settings";
-const AGENT_STATUS_API_URL =
-  "https://shelynx.mediaclocksoft.com.au/api/settings/status";
+import apiClient, { getErrorMessage } from "../lib/api/client";
+import { ENDPOINTS } from "../lib/api/endpoints";
 
 const initialTiers = [{ min: "100", max: "199", discount: "5" }];
-
-const authHeaders = () => {
-  const token = localStorage.getItem("token");
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
 
 export default function Settings() {
   const { onStatusChange } = useOutletContext() ?? {};
@@ -31,15 +20,9 @@ export default function Settings() {
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
 
   useEffect(() => {
-    fetch(SETTINGS_API_URL, { headers: authHeaders() })
-      .then((res) => {
-        if (isUnauthorized(res.status)) {
-          handleUnauthorized();
-          return Promise.reject(res.status);
-        }
-        return res.ok ? res.json() : Promise.reject(res.status);
-      })
-      .then(({ data }) => {
+    apiClient
+      .get(ENDPOINTS.settings.get)
+      .then(({ data: { data } }) => {
         if (data?.pricePerKg != null) setPricePerKg(String(data.pricePerKg));
         if (data?.customfee != null) setCustomFee(String(data.customfee));
         else if (data?.customFee != null) setCustomFee(String(data.customFee));
@@ -73,46 +56,25 @@ export default function Settings() {
     setSaving(true);
     setSaveStatus(null);
     try {
-      const [shippingRes, rulesRes, feesRes, statusRes] = await Promise.all([
-        fetch(`${SETTINGS_API_URL}/shipping`, {
-          method: "PATCH",
-          headers: authHeaders(),
-          body: JSON.stringify({ pricePerKg: parseFloat(pricePerKg) || 0 }),
+      await Promise.all([
+        apiClient.patch(ENDPOINTS.settings.shipping, {
+          pricePerKg: parseFloat(pricePerKg) || 0,
         }),
-        fetch(`${SETTINGS_API_URL}/discount-rules`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({
-            rules: tiers.map((t) => ({
-              ...(t.id != null ? { id: t.id } : {}),
-              minOrderAmount: parseFloat(t.min) || 0,
-              maxOrderAmount: parseFloat(t.max) || 0,
-              discountRate: parseFloat(t.discount) || 0,
-            })),
-          }),
+        apiClient.put(ENDPOINTS.settings.discountRules, {
+          rules: tiers.map((t) => ({
+            ...(t.id != null ? { id: t.id } : {}),
+            minOrderAmount: parseFloat(t.min) || 0,
+            maxOrderAmount: parseFloat(t.max) || 0,
+            discountRate: parseFloat(t.discount) || 0,
+          })),
         }),
-        fetch(`${SETTINGS_API_URL}/fees`, {
-          method: "PATCH",
-          headers: authHeaders(),
-          body: JSON.stringify({
-            customFee: parseFloat(customFee) || 0,
-            deliveryFee: parseFloat(deliveryFee) || 0,
-            agentDiscount: parseFloat(agentDiscount) || 0,
-          }),
+        apiClient.patch(ENDPOINTS.settings.fees, {
+          customFee: parseFloat(customFee) || 0,
+          deliveryFee: parseFloat(deliveryFee) || 0,
+          agentDiscount: parseFloat(agentDiscount) || 0,
         }),
       ]);
 
-      if (
-        isUnauthorized(shippingRes.status) ||
-        isUnauthorized(rulesRes.status) ||
-        isUnauthorized(feesRes.status)
-      ) {
-        handleUnauthorized();
-        return;
-      }
-      if (!shippingRes.ok || !rulesRes.ok || !feesRes.ok || !statusRes.ok) {
-        throw new Error("Save failed");
-      }
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus(null), 3000);
       toast.success("Settings saved");
@@ -120,7 +82,7 @@ export default function Settings() {
       console.error("Failed to save settings:", err);
       setSaveStatus("error");
       setTimeout(() => setSaveStatus(null), 4000);
-      toast.error("Failed to save settings");
+      toast.error(getErrorMessage(err, "Failed to save settings"));
     } finally {
       setSaving(false);
     }
@@ -130,22 +92,9 @@ export default function Settings() {
     const newStatus = !isAcceptingOrders;
 
     try {
-      const response = await fetch(AGENT_STATUS_API_URL, {
-        method: "PATCH",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          isAcceptingOrders: newStatus,
-        }),
+      await apiClient.patch(ENDPOINTS.settings.status, {
+        isAcceptingOrders: newStatus,
       });
-
-      if (isUnauthorized(response.status)) {
-        handleUnauthorized();
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error("Failed to update status");
-      }
 
       setIsAcceptingOrders(newStatus);
       onStatusChange?.(newStatus);
@@ -155,7 +104,7 @@ export default function Settings() {
         toast.inactive("Agent status is now Inactive.");
       }
     } catch (err) {
-      toast.error("Failed to update status");
+      toast.error(getErrorMessage(err, "Failed to update status"));
     }
   };
   const kg = parseFloat(weight) || 0;
