@@ -18,6 +18,10 @@ import {
   Download,
   ZoomIn,
   ZoomOut,
+  MoreVertical,
+  Trash2,
+  ListChecks,
+  Eraser,
 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { useSocket } from "../hooks/useSocket";
@@ -138,6 +142,15 @@ const Conversations = () => {
   const [customerSearch, setCustomerSearch] = useState("");
   const [customersLoading, setCustomersLoading] = useState(false);
   const [startingChat, setStartingChat] = useState(false);
+
+  // New Chat deletion state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // --- Sidebar Bulk Clear States ---
+  const [sidebarSelectionMode, setSidebarSelectionMode] = useState(false);
+  const [selectedThreadIds, setSelectedThreadIds] = useState([]);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -260,10 +273,23 @@ const Conversations = () => {
 
   useEffect(() => {
     if (!socket || !activeId) return;
+
     const handleReceive = (newMessage) => {
       if (newMessage.conversationId === activeId) {
         // Add the message to the screen
         setMessages((prev) => [...prev, newMessage]);
+
+        // 👉 Update the sidebar preview text & re-sort to top
+        setThreads((prev) => {
+          const updated = prev.map((t) =>
+            t.id === activeId ? { ...t, lastMessage: newMessage } : t,
+          );
+          return updated.sort((a, b) => {
+            const aTime = a.lastMessage?.createdAt || a.updatedAt;
+            const bTime = b.lastMessage?.createdAt || b.updatedAt;
+            return new Date(bTime) - new Date(aTime);
+          });
+        });
 
         // IMPORTANT: We MUST only emit mark_as_read if the message came from the customer.
         // If we emit it for our own message, the backend might broadcast a read receipt
@@ -273,8 +299,46 @@ const Conversations = () => {
         }
       }
     };
+
     socket.on("receive_message", handleReceive);
-    return () => socket.off("receive_message", handleReceive);
+    socket.on("chat_cleared", (data) => {
+      const { conversationId, deletedBy } = data;
+
+      if (deletedBy === "AGENT") {
+        setMessages((prev) => {
+          if (activeId === conversationId) return [];
+          return prev;
+        });
+        // 👉 NEW: Instantly wipe the text from the sidebar list so it says "No messages yet"
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.id === conversationId ? { ...t, lastMessage: null } : t,
+          ),
+        );
+      }
+    });
+    socket.on("conversation_deleted", (data) => {
+      const { conversationId, deletedBy } = data;
+      if (deletedBy === "AGENT") {
+        // Rip it out of the sidebar list completely
+        setThreads((prev) => prev.filter((t) => t.id !== conversationId));
+      }
+    });
+    socket.on("messages_deleted", (data) => {
+      const { messageIds, deletedBy } = data;
+      if (deletedBy === "AGENT") {
+        setMessages((prev) =>
+          prev.filter((msg) => !messageIds.includes(msg.id)),
+        );
+      }
+    });
+
+    return () => {
+      socket.off("receive_message", handleReceive);
+      socket.off("chat_cleared");
+      socket.off("messages_deleted");
+      socket.off("conversation_deleted");
+    };
   }, [socket, activeId]);
 
   useEffect(() => {
@@ -399,6 +463,133 @@ const Conversations = () => {
     setDraft("");
   };
 
+  const handleClearChat = async () => {
+    if (!activeId) return;
+    const confirmClear = window.confirm(
+      "Are you sure you want to clear all messages? The chat will remain in your list.",
+    );
+    if (!confirmClear) return;
+
+    // 1. Save state for potential rollback
+    const previousMessages = [...messages];
+    const previousThreads = [...threads];
+
+    // 2. Optimistic UI: Empty the messages array AND set the sidebar preview to null
+    setMessages([]);
+    setThreads((prev) =>
+      prev.map((t) => (t.id === activeId ? { ...t, lastMessage: null } : t)),
+    );
+    setIsDropdownOpen(false);
+
+    // 3. Make API Call
+    try {
+      await apiClient.delete(`/api/chat/conversations/${activeId}/clear`);
+    } catch (err) {
+      console.error("Failed to clear chat:", err);
+      // Rollback on failure
+      setMessages(previousMessages);
+      setThreads(previousThreads);
+      alert("Failed to clear chat. Please try again.");
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!activeId) return;
+    const confirmDelete = window.confirm(
+      "Are you sure you want to permanently delete this chat? It will be removed from your list.",
+    );
+    if (!confirmDelete) return;
+
+    // 1. Save state for potential rollback
+    const previousThreads = [...threads];
+    const previousMessages = [...messages];
+
+    // 2. Optimistic UI: Rip it out of the sidebar list completely!
+    setThreads((prev) => prev.filter((t) => t.id !== activeId));
+    setMessages([]);
+    setIsDropdownOpen(false);
+
+    // (Optional but recommended): Deselect it so the center screen goes blank
+    // setActiveId(null);
+
+    // 3. Make the API Call
+    try {
+      await apiClient.delete(`/api/chat/conversations/${activeId}/delete`);
+    } catch (err) {
+      console.error("Failed to delete chat:", err);
+      // Rollback on failure
+      setThreads(previousThreads);
+      setMessages(previousMessages);
+      alert("Failed to delete chat. Please try again.");
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedMessageIds.length === 0) return;
+
+    const idsToDelete = [...selectedMessageIds];
+    const previousMessages = [...messages]; // Save state for potential rollback
+
+    setMessages((prev) => prev.filter((msg) => !idsToDelete.includes(msg.id)));
+
+    // Exit selection mode
+    setSelectionMode(false);
+    setSelectedMessageIds([]);
+
+    try {
+      await apiClient.delete(`/api/chat/messages/bulk-delete`, {
+        data: { messageIds: idsToDelete },
+      });
+    } catch (err) {
+      console.error("Failed to delete messages:", err);
+      setMessages(previousMessages); // Rollback on failure
+      alert("Failed to delete messages.");
+    }
+  };
+
+  const handleBulkClearConversations = async () => {
+    if (selectedThreadIds.length === 0) return;
+
+    const confirmClear = window.confirm(
+      `Are you sure you want to clear ${selectedThreadIds.length} conversations? This cannot be undone.`,
+    );
+    if (!confirmClear) return;
+
+    // 1. SAVE a snapshot in case of failure
+    const previousThreads = [...threads];
+    const idsToClear = [...selectedThreadIds];
+
+    // 2. Optimistic UI: Immediately hide them from the sidebar by faking their lastMessage as null
+    setThreads((prev) =>
+      prev.map((thread) =>
+        idsToClear.includes(thread.id)
+          ? { ...thread, lastMessage: null }
+          : thread,
+      ),
+    );
+
+    // If the active chat was one of the cleared ones, wipe its messages instantly
+    if (idsToClear.includes(activeId)) {
+      setMessages([]);
+    }
+
+    // Exit selection mode
+    setSidebarSelectionMode(false);
+    setSelectedThreadIds([]);
+
+    // 3. Make the API Call
+    try {
+      await apiClient.delete(`/api/chat/conversations/bulk-clear`, {
+        data: { conversationIds: idsToClear },
+      });
+    } catch (err) {
+      console.error("Failed to bulk clear conversations:", err);
+      // Rollback on failure!
+      setThreads(previousThreads);
+      alert("Failed to clear conversations.");
+    }
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file || !activeId) return;
@@ -482,7 +673,7 @@ const Conversations = () => {
           mobileThreadOpen ? "hidden md:block" : "block"
         }`}
       >
-        <div className="px-4 sm:px-5 py-4 flex items-center justify-between">
+        {/* <div className="px-4 sm:px-5 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#141D23]">Recent Chats</h2>
           <button
             onClick={() => setShowNewMessageModal(true)}
@@ -491,6 +682,53 @@ const Conversations = () => {
           >
             <MessageSquarePlus size={20} />
           </button>
+        </div> */}
+        <div className="px-4 sm:px-5 py-4 flex items-center justify-between min-h-[64px]">
+          {sidebarSelectionMode ? (
+            <div className="flex items-center w-full justify-between gap-1">
+              <button
+                onClick={() => {
+                  setSidebarSelectionMode(false);
+                  setSelectedThreadIds([]);
+                }}
+                className="text-sm font-semibold text-[#5C5F60] hover:text-[#141D23] transition-colors cursor-pointer shrink-0"
+              >
+                Cancel
+              </button>
+
+              <span className="font-bold text-sm text-[#141D23] truncate">
+                {selectedThreadIds.length} Selected
+              </span>
+
+              <button
+                onClick={handleBulkClearConversations}
+                disabled={selectedThreadIds.length === 0}
+                className="text-sm font-bold text-white bg-[#D24D77] hover:bg-[#b03d61] px-2.5 py-1 rounded-lg disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+              >
+                Delete
+              </button>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-lg font-bold text-[#141D23]">Recent Chats</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSidebarSelectionMode(true)}
+                  className="p-1.5 bg-[#F1F5F9] text-[#5C5F60] hover:bg-[#E2E8F0] rounded-lg transition-colors cursor-pointer"
+                  title="Select Chats"
+                >
+                  <ListChecks size={20} />
+                </button>
+                <button
+                  onClick={() => setShowNewMessageModal(true)}
+                  className="p-1.5 bg-[#FFE8EF] text-[#D24D77] rounded-lg hover:bg-[#FDE2E9] transition-colors cursor-pointer"
+                  title="New Message"
+                >
+                  <MessageSquarePlus size={20} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex flex-col">
           {inboxLoading ? (
@@ -500,42 +738,83 @@ const Conversations = () => {
               No active conversations.
             </p>
           ) : (
-            threads.map((chat) => (
-              <button
-                key={chat.id}
-                onClick={() => openChat(chat.id)}
-                className={`flex gap-3 text-left px-4 sm:px-5 py-4 border-l-4 transition-colors ${
-                  chat.id === activeId
-                    ? "bg-[#FDF2F4] border-[#D24D77]"
-                    : "border-transparent hover:bg-[#FAFAFA]"
-                }`}
-              >
-                <Avatar
-                  name={chat.chatPartner?.name}
-                  avatarUrl={chat.chatPartner?.avatarUrl}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-[#141D23] truncate">
-                      {chat.chatPartner?.name || "N/A"}
-                    </span>
-                    <span className="text-xs text-[#8C959F] shrink-0">
-                      {relativeTime(
-                        chat.lastMessage?.createdAt || chat.updatedAt,
+            threads
+              // 👉 1. HIDE EMPTY CHATS: If the chat is cleared, instantly vanish it from the list
+              .map((chat) => {
+                // Checkbox Logic
+                const isSelected = selectedThreadIds.includes(chat.id);
+                const toggleSelection = () => {
+                  if (isSelected) {
+                    setSelectedThreadIds((prev) =>
+                      prev.filter((id) => id !== chat.id),
+                    );
+                  } else {
+                    setSelectedThreadIds((prev) => [...prev, chat.id]);
+                  }
+                };
+
+                return (
+                  <button
+                    key={chat.id}
+                    // 👉 2. DYNAMIC ONCLICK: Toggle the checkbox OR open the chat
+                    onClick={() => {
+                      if (sidebarSelectionMode) toggleSelection();
+                      else openChat(chat.id);
+                    }}
+                    className={`flex items-center gap-3 text-left px-3 sm:px-4 py-4 border-l-4 transition-colors w-full ${
+                      !sidebarSelectionMode && chat.id === activeId
+                        ? "bg-[#FDF2F4] border-[#D24D77]"
+                        : "border-transparent hover:bg-[#FAFAFA]"
+                    }`}
+                  >
+                    {/* 👉 3. RENDER CHECKBOX IF IN SELECTION MODE */}
+                    {sidebarSelectionMode && (
+                      <div
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                          isSelected
+                            ? "bg-[#D24D77] border-[#D24D77]"
+                            : "border-gray-300 bg-white"
+                        }`}
+                      >
+                        {isSelected && (
+                          <Check
+                            size={12}
+                            className="text-white"
+                            strokeWidth={3}
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    <Avatar
+                      name={chat.chatPartner?.name}
+                      avatarUrl={chat.chatPartner?.avatarUrl}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-bold text-[#141D23] truncate">
+                          {chat.chatPartner?.name || "N/A"}
+                        </span>
+                        {!sidebarSelectionMode && (
+                          <span className="text-xs text-[#8C959F] shrink-0">
+                            {relativeTime(
+                              chat.lastMessage?.createdAt || chat.updatedAt,
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-[#5C5F60] line-clamp-1 mt-0.5">
+                        {renderInboxMessage(chat.lastMessage)}
+                      </p>
+                      {!sidebarSelectionMode && chat.unreadCount > 0 && (
+                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFE8EF] text-[#D24D77]">
+                          {chat.unreadCount} NEW
+                        </span>
                       )}
-                    </span>
-                  </div>
-                  <p className="text-sm text-[#5C5F60] line-clamp-2 mt-0.5">
-                    {renderInboxMessage(chat.lastMessage)}
-                  </p>
-                  {chat.unreadCount > 0 && (
-                    <span className="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFE8EF] text-[#D24D77]">
-                      {chat.unreadCount} NEW
-                    </span>
-                  )}
-                </div>
-              </button>
-            ))
+                    </div>
+                  </button>
+                );
+              })
           )}
         </div>
       </div>
@@ -548,7 +827,7 @@ const Conversations = () => {
       >
         {active ? (
           <>
-            <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-[#E8DFE1]">
+            {/* <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-[#E8DFE1]">
               <button
                 onClick={() => setMobileThreadOpen(false)}
                 className="md:hidden p-1 -ml-1 rounded-lg hover:bg-slate-100 text-[#5C5F60] aria-label='Back to chat list'"
@@ -562,6 +841,108 @@ const Conversations = () => {
               <p className="font-bold text-[#141D23]">
                 {active.chatPartner?.name || "Customer"}
               </p>
+            </div> */}
+
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E8DFE1]">
+              {/* Left Side: Avatar/Name OR Selection Counter */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setMobileThreadOpen(false)}
+                  className="md:hidden p-1 -ml-1 rounded-lg hover:bg-slate-100 text-[#5C5F60] aria-label='Back to chat list'"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+
+                {selectionMode ? (
+                  <span className="font-bold text-[#141D23]">
+                    {selectedMessageIds.length} Selected
+                  </span>
+                ) : (
+                  <>
+                    <Avatar
+                      name={active.chatPartner?.name}
+                      avatarUrl={active.chatPartner?.avatarUrl}
+                    />
+                    <p className="font-bold text-[#141D23]">
+                      {active.chatPartner?.name || "Customer"}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Right Side: 3-Dots Menu OR Cancel/Delete Buttons */}
+              <div className="relative flex items-center gap-2">
+                {selectionMode ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectionMode(false);
+                        setSelectedMessageIds([]);
+                      }}
+                      className="px-3 py-1.5 text-sm font-semibold text-[#5C5F60] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteSelected}
+                      disabled={selectedMessageIds.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-white bg-[#D24D77] hover:bg-[#b03d61] disabled:opacity-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="p-1.5 text-[#5C5F60] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <MoreVertical size={20} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {isDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10 cursor-default"
+                          onClick={() => setIsDropdownOpen(false)}
+                        ></div>
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-100 rounded-lg shadow-lg z-20 py-1 overflow-hidden">
+                          <button
+                            onClick={() => {
+                              setSelectionMode(true);
+                              setIsDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm text-[#141D23] hover:bg-slate-50 transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            <ListChecks size={16} className="text-[#5C5F60]" />
+                            Select Messages
+                          </button>
+
+                          {/* The CLEAR CHAT Button (Eraser Icon) */}
+                          <button
+                            onClick={handleClearChat}
+                            className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm text-[#141D23] hover:bg-slate-50 transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            <Eraser size={16} className="text-[#5C5F60]" />
+                            Clear Chat
+                          </button>
+
+                          {/* The DELETE CHAT Button (Red Trash Icon) */}
+                          <button
+                            onClick={handleDeleteChat}
+                            className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm text-[#D24D77] hover:bg-[#FFE8EF] transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            <Trash2 size={16} />
+                            Delete Chat
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4">
@@ -569,15 +950,51 @@ const Conversations = () => {
                 <p className="text-center text-sm text-[#8C959F]">
                   Loading messages...
                 </p>
+              ) : messages.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center h-full text-center">
+                  <span className="text-5xl mb-3">💬</span>
+                  <p className="text-[#141D23] font-bold text-base">No messages yet</p>
+                  <p className="text-sm text-[#8C959F] mt-1">
+                    Send a message to start the conversation.
+                  </p>
+                </div>
               ) : (
                 messages.map((m, i) => {
                   const isAgent = m.senderType === "AGENT";
+                  const isSelected = selectedMessageIds.includes(m.id);
+                  const toggleSelection = () => {
+                    if (isSelected) {
+                      setSelectedMessageIds((prev) =>
+                        prev.filter((id) => id !== m.id),
+                      );
+                    } else {
+                      setSelectedMessageIds((prev) => [...prev, m.id]);
+                    }
+                  };
                   return (
                     <div
                       key={m.id || i}
-                      className={`flex ${isAgent ? "justify-end" : "justify-start"}`}
+                      onClick={selectionMode ? toggleSelection : undefined}
+                      className={`flex items-center gap-3 ${
+                        isAgent ? "justify-end" : "justify-start"
+                      } ${selectionMode ? "cursor-pointer" : ""}`}
                     >
-                      <div className="max-w-[85%] sm:max-w-[420px]">
+                      {selectionMode && !isAgent && (
+                        <div
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected
+                              ? "bg-[#D24D77] border-[#D24D77]"
+                              : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && (
+                            <Check size={14} className="text-white" />
+                          )}
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[85%] sm:max-w-[420px] ${selectionMode ? "pointer-events-none" : ""}`}
+                      >
                         {(() => {
                           const url = fileUrl(m.content);
                           const isImage =
@@ -595,11 +1012,10 @@ const Conversations = () => {
                           const isDoc =
                             m.messageType === "DOCUMENT" ||
                             m.messageType === "FILE";
-
                           const bubbleClass = `rounded-2xl px-4 py-3 text-sm break-all ${
                             isAgent
-                              ? "bg-[#FDE2E9] text-[#141D23]"
-                              : "bg-[#F1F3F5] text-[#141D23]"
+                              ? "bg-[#D24D77] text-white rounded-tr-none"
+                              : "bg-[#F5F5F5] text-[#141D23] rounded-tl-none border border-[#E8DFE1]"
                           }`;
 
                           if (isImage) {
@@ -699,6 +1115,21 @@ const Conversations = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Right Checkbox (Agent Messages) */}
+                      {selectionMode && isAgent && (
+                        <div
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected
+                              ? "bg-[#D24D77] border-[#D24D77]"
+                              : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && (
+                            <Check size={14} className="text-white" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })
