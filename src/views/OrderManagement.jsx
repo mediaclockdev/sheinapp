@@ -146,7 +146,7 @@ const OrderManagement = () => {
   const getStatusClass = (s) => {
     switch (s) {
       case "WAITING":
-        return "bg-[#FEF3C7] text-[#F59E0B]";
+        return "bg-[#FEF3C9] text-[#000000]";
       case "REJECTED":
         return "bg-[#FA8072] text-[#420D09]";
       case "APPROVED":
@@ -254,8 +254,8 @@ const OrderManagement = () => {
         ),
       },
       {
-        id: "actions",
-        header: "ACTIONS",
+        id: "action",
+        header: "ACTION",
         cell: ({ row }) => (
           <div className="flex items-center justify-center gap-2">
             {/* <button
@@ -274,9 +274,9 @@ const OrderManagement = () => {
                 })
               }
               title="Approve / Reject"
-              className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6] cursor-pointer"
+              className="w-15 h-9 border border-[#D6C5CC] rounded flex items-center justify-center cursor-pointer py-1 px-2 text-sm  text-black font-medium"
             >
-              <img src={editicon} alt="edit icon" className="size-3.5 " />
+              Open
             </button>
           </div>
         ),
@@ -593,7 +593,7 @@ const OrderManagement = () => {
                       {fmtDisplayDate(row.original.date)}
                     </p>
 
-                    {/* Actions */}
+                    {/* Action */}
                     <div className="flex justify-end gap-2 pt-1 border-t border-[#ECECEC]/50">
                       {/* <button
                         onClick={() =>

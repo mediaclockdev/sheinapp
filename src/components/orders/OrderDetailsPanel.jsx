@@ -312,7 +312,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                           d.setFinalAmount(newCalculatedTotal.toFixed(2));
                         }}
                         placeholder="0"
-                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-sm lg:text-base font-bold text-[#78555E] outline-none"
+                        className="w-17 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-sm lg:text-base font-bold text-[#78555E] outline-none"
                       />
                       {d.weightError && (
                         <p className="mt-2 text-xs text-red-500">
@@ -361,7 +361,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                           }
                         }}
                         placeholder="13"
-                        className="w-16 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
+                        className="w-17 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
                       />
                       {d.agentSurchargeError && (
                         <p className="mt-1 text-[10px] text-red-500 whitespace-nowrap">
@@ -469,12 +469,12 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                       </span>
                       <input
                         type="number"
-                        step="00.1"
+                        step="00.01"
                         min="0.01"
                         max={d.maxFinalAmount.toFixed(2)}
                         value={d.finalAmount}
                         onChange={(e) => d.setFinalAmount(e.target.value)}
-                        className="w-24 bg-white border border-green-300 rounded px-2 py-1 text-right text-base lg:text-xl font-bold text-green-600 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                        className="w-28 bg-white border border-green-300 rounded px-2 py-1 text-right text-base lg:text-xl font-bold text-green-600 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
                       />
                     </div>
                   ) : (
@@ -506,7 +506,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    className="flex items-center gap-1 justify-center flex-1 h-14 rounded-xl border border-[#EEB1D7] bg-[#FFD1DC] text-[#78555E] font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1 justify-center flex-1 h-14 rounded-xl border border-[#D3C3C5] bg-green-200 text-black font-medium shadow-md hover:opacity-90 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={async () => {
                       if (await d.handleUpdateOrderStatus("APPROVED"))
                         d.close();
