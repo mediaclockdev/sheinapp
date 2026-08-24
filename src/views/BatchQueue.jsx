@@ -1040,17 +1040,9 @@ export default function BatchQueue() {
                       onClick={() => handleUnlockBatch(batch)}
                       disabled={unlockingBatchId === batch.id}
                       title="Unlock batch"
-                      className="bg-[#7A4E5B]/10 hover:bg-[#7A4E5B]/20 p-2 border-b border-l border-[#FFD1DC] disabled:opacity-50 cursor-pointer transition-colors"
+                      className="bg-[#7A4E5B]/10 hover:bg-[#7A4E5B]/20 p-2 rounded-bl-md border-b border-l border-[#FFD1DC] disabled:opacity-50 cursor-pointer transition-colors"
                     >
                       <LockKeyholeOpen size={16} className="text-[#7A4E5B]" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteBatch(batch)}
-                      disabled={deletingBatchId === batch.id}
-                      title="Delete batch"
-                      className="bg-[#C0392B]/10 hover:bg-[#C0392B]/20 p-2 rounded-bl-md border-b border-l border-[#FFD1DC] disabled:opacity-50 cursor-pointer transition-colors"
-                    >
-                      <Trash2 size={16} className="text-[#C0392B]" />
                     </button>
                   </div>
 
