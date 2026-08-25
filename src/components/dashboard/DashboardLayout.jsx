@@ -47,9 +47,24 @@ const DashboardLayout = () => {
     const handleNotification = (message) => {
       if (message.senderType === "CUSTOMER") {
         setNotifications((prev) => {
-          // Map the live socket message to match the backend API structure!
+          let wasUnread = false;
+
+          // Remove any existing notification for this same conversation to prevent spam
+          const filtered = prev.filter((n) => {
+            if (n.type === "MESSAGE" && n.metadata?.conversationId === message.conversationId) {
+              if (!n.isRead) wasUnread = true;
+              return false; // Remove the old one
+            }
+            return true;
+          });
+
+          // Only increment global badge if there wasn't ALREADY an unread notification for this chat
+          if (!wasUnread) {
+            setUnreadCount((c) => c + 1);
+          }
+
           const newNotif = {
-            id: Date.now(), // Temporary ID for the live incoming message
+            id: Date.now(),
             title: "New Message",
             body: message.content ? message.content.substring(0, 80) : "",
             type: "MESSAGE",
@@ -60,17 +75,42 @@ const DashboardLayout = () => {
               conversationId: message.conversationId,
             },
             isRead: false,
-            createdAt: new Date().toISOString(), // The API uses createdAt, not time!
+            createdAt: new Date().toISOString(),
           };
 
-          return [newNotif, ...prev];
+          // Put the newest message at the top
+          return [newNotif, ...filtered];
         });
-        setUnreadCount((c) => c + 1);
       }
     };
+
+    const handleMessageRead = (data) => {
+      // If the AGENT read the message, we clear the global bell notifications for this chat!
+      if (data.readBy === "AGENT" && data.conversationId) {
+        setNotifications((prev) => {
+          let readCount = 0;
+          const updated = prev.map((n) => {
+            if (!n.isRead && n.type === "MESSAGE" && n.metadata?.conversationId === data.conversationId) {
+              readCount++;
+              return { ...n, isRead: true };
+            }
+            return n;
+          });
+          
+          if (readCount > 0) {
+            setUnreadCount((c) => Math.max(0, c - readCount));
+          }
+          return updated;
+        });
+      }
+    };
+
     socket.on("inbox_notification", handleNotification);
+    socket.on("message_read", handleMessageRead);
+
     return () => {
       socket.off("inbox_notification", handleNotification);
+      socket.off("message_read", handleMessageRead);
     };
   }, [socket]);
 
@@ -171,7 +211,11 @@ const DashboardLayout = () => {
           prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
         );
 
-        await apiClient.patch(ENDPOINTS.notifications.read(notif.id), {});
+        // For MESSAGE notifications, opening the chat emits 'mark_as_read' via socket, 
+        // which magically handles the backend cleanup. No need to hit the notifications API!
+        if (notif.type !== "MESSAGE") {
+          await apiClient.patch(ENDPOINTS.notifications.read(notif.id), {});
+        }
       }
     } catch (error) {
       console.error("Failed to mark as read", error);

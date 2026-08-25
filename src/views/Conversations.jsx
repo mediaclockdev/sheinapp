@@ -425,6 +425,15 @@ const Conversations = () => {
           );
         }
       }
+      
+      // If the AGENT triggered the read event (from any tab/device), clear the sidebar badge!
+      if (data.readBy === "AGENT") {
+        setThreads((prev) =>
+          prev.map((thread) =>
+            thread.id === data.conversationId ? { ...thread, unreadCount: 0 } : thread,
+          ),
+        );
+      }
     };
 
     socket.on("inbox_notification", handleInboxNotification);
@@ -458,6 +467,11 @@ const Conversations = () => {
         thread.id === id ? { ...thread, unreadCount: 0 } : thread,
       ),
     );
+
+    // Emit mark_as_read immediately on click to clear backend notifications
+    if (socket) {
+      socket.emit("mark_as_read", { conversationId: id });
+    }
   }
 
   const sendMessage = () => {
