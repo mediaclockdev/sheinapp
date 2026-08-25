@@ -199,11 +199,15 @@ const Conversations = () => {
     if (!showNewMessageModal) return;
 
     const fetchCustomers = async () => {
+      // Don't fetch until the agent types at least 2 characters
+      if (customerSearch.trim().length < 2) {
+        setCustomers([]);
+        return;
+      }
+
       setCustomersLoading(true);
       try {
-        const query = customerSearch.trim()
-          ? `?search=${encodeURIComponent(customerSearch)}`
-          : "";
+        const query = `?search=${encodeURIComponent(customerSearch)}`;
         const res = await apiClient.get(`${ENDPOINTS.customers.list}${query}`);
         const list = res.data.data || res.data.customers || res.data || [];
         setCustomers(Array.isArray(list) ? list : []);
@@ -444,6 +448,10 @@ const Conversations = () => {
   function openChat(id) {
     setActiveId(id);
     setMobileThreadOpen(true);
+    // Reset selection state from previous chat
+    setSelectionMode(false);
+    setSelectedMessageIds([]);
+    setIsDropdownOpen(false);
     // Instantly clear the unread count when clicking the chat
     setThreads((prev) =>
       prev.map((thread) =>
@@ -508,9 +516,8 @@ const Conversations = () => {
     setThreads((prev) => prev.filter((t) => t.id !== activeId));
     setMessages([]);
     setIsDropdownOpen(false);
-
-    // (Optional but recommended): Deselect it so the center screen goes blank
-    // setActiveId(null);
+    setActiveId(null);
+    setMobileThreadOpen(false);
 
     // 3. Make the API Call
     try {
@@ -739,7 +746,6 @@ const Conversations = () => {
             </p>
           ) : (
             threads
-              // 👉 1. HIDE EMPTY CHATS: If the chat is cleared, instantly vanish it from the list
               .map((chat) => {
                 // Checkbox Logic
                 const isSelected = selectedThreadIds.includes(chat.id);
@@ -1370,15 +1376,21 @@ const Conversations = () => {
 
             {/* List */}
             <div className="flex-1 overflow-y-auto">
-              {customersLoading ? (
-                <div className="p-8 text-center text-[#8C959F] flex flex-col items-center">
+              {customerSearch.trim().length < 2 ? (
+                <div className="p-8 text-center text-[#8C959F] flex flex-col items-center mt-10">
+                  <span className="text-4xl mb-3">👋</span>
+                  <p className="text-base font-bold text-[#141D23]">Search for a customer</p>
+                  <p className="text-sm mt-1">Type at least 2 characters to find a customer.</p>
+                </div>
+              ) : customersLoading ? (
+                <div className="p-8 text-center text-[#8C959F] flex flex-col items-center mt-10">
                   <div className="w-8 h-8 border-2 border-[#D24D77] border-t-transparent rounded-full animate-spin mb-3" />
                   <p className="text-sm font-medium">Searching...</p>
                 </div>
               ) : customers.length === 0 ? (
-                <div className="p-8 text-center text-[#8C959F] flex flex-col items-center">
+                <div className="p-8 text-center text-[#8C959F] flex flex-col items-center mt-10">
                   <span className="text-4xl mb-2">🔍</span>
-                  <p className="text-sm font-medium">No customers found.</p>
+                  <p className="text-sm font-medium">No customers found matching &quot;{customerSearch}&quot;.</p>
                 </div>
               ) : (
                 customers.map((customer) => (
