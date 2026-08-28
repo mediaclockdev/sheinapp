@@ -381,7 +381,7 @@ function ForgotScreen() {
     setError("");
     setSuccess("");
     const formData = new FormData(event.target);
-    const email = formData.get("email");
+    const email = formData.get("email"); 
     if (!email?.trim()) {
       setError("Email is required.");
       return;
@@ -442,63 +442,6 @@ function ForgotScreen() {
     </>
   );
 }
-
-// function OtpScreen() {
-//   const navigate = useNavigate();
-//   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-
-//   const updateOtp = (index, value) => {
-//     const next = [...otp];
-//     next[index] = value.slice(-1).replace(/\D/g, "");
-//     setOtp(next);
-//   };
-
-//   return (
-//     <>
-//       <div className="w-full max-w-[456px] rounded-lg border border-[#78555e]/20 bg-white/95 px-9 py-10 text-center shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
-//         <div className="mx-auto grid h-[70px] w-[70px] place-items-center rounded-xl bg-[#ffc6d8] text-[#7a4e5b]">
-//           <Icon name="shield" className="h-8 w-8" />
-//         </div>
-//         <h1 className="mt-8 text-[36px] font-extrabold tracking-tight text-[#17222b]">
-//           Verify OTP
-//         </h1>
-//         <p className="mt-2 text-[15px] text-[#626973]">Sent to your email</p>
-//         <form
-//           className="mt-9"
-//           onSubmit={(event) => {
-//             event.preventDefault();
-//             navigate("/dashboard");
-//           }}
-//         >
-//           <div className="grid grid-cols-6 gap-3">
-//             {otp.map((digit, index) => (
-//               <input
-//                 key={index}
-//                 className="h-[62px] rounded border border-[#c9cfd6] bg-[#f7fbff] text-center text-2xl font-bold outline-none focus:border-[#ff5f96] focus:ring-2 focus:ring-pink-100"
-//                 inputMode="numeric"
-//                 maxLength="1"
-//                 value={digit}
-//                 onChange={(event) => updateOtp(index, event.target.value)}
-//               />
-//             ))}
-//           </div>
-//           <PrimaryButton className="mt-8 h-[54px] text-[14px]">
-//             Verify and Continue
-//           </PrimaryButton>
-//         </form>
-//         <p className="mt-10 text-[13px] text-[#80848a]">
-//           Didn't receive the code?
-//         </p>
-//         <Link
-//           to="/forgot-password"
-//           className="mt-3 inline-block text-[14px] font-bold text-[#7a4e5b]"
-//         >
-//           Resend code
-//         </Link>
-//       </div>
-//     </>
-//   );
-// }
 
 function getPasswordStrength(password) {
   if (!password) return { score: 0, label: "None", color: "bg-[#d7dee6]" };

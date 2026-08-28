@@ -10,7 +10,7 @@ import { ENDPOINTS } from "../../lib/api/endpoints";
 const PAGE_TITLES = {
   "/dashboard": "Dashboard",
   "/orders": "Order Management",
-  "/neworders": "New Orders",
+  "/neworders": "MarketPlace",
   "/payments": "Payments",
   "/batch-queue": "Batch Queue",
   "/tracking": "Tracking",
@@ -51,7 +51,10 @@ const DashboardLayout = () => {
 
           // Remove any existing notification for this same conversation to prevent spam
           const filtered = prev.filter((n) => {
-            if (n.type === "MESSAGE" && n.metadata?.conversationId === message.conversationId) {
+            if (
+              n.type === "MESSAGE" &&
+              n.metadata?.conversationId === message.conversationId
+            ) {
               if (!n.isRead) wasUnread = true;
               return false; // Remove the old one
             }
@@ -90,13 +93,17 @@ const DashboardLayout = () => {
         setNotifications((prev) => {
           let readCount = 0;
           const updated = prev.map((n) => {
-            if (!n.isRead && n.type === "MESSAGE" && n.metadata?.conversationId === data.conversationId) {
+            if (
+              !n.isRead &&
+              n.type === "MESSAGE" &&
+              n.metadata?.conversationId === data.conversationId
+            ) {
               readCount++;
               return { ...n, isRead: true };
             }
             return n;
           });
-          
+
           if (readCount > 0) {
             setUnreadCount((c) => Math.max(0, c - readCount));
           }
@@ -196,11 +203,15 @@ const DashboardLayout = () => {
 
   const handleNotificationClick = async (notif) => {
     console.log("Clicked notification:", notif);
-    
+
     // Sometimes backend returns metadata as a stringified JSON
     let meta = notif.metadata;
     if (typeof meta === "string") {
-      try { meta = JSON.parse(meta); } catch (e) { console.error("Failed to parse metadata", e); }
+      try {
+        meta = JSON.parse(meta);
+      } catch (e) {
+        console.error("Failed to parse metadata", e);
+      }
     }
 
     try {
@@ -211,7 +222,7 @@ const DashboardLayout = () => {
           prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
         );
 
-        // For MESSAGE notifications, opening the chat emits 'mark_as_read' via socket, 
+        // For MESSAGE notifications, opening the chat emits 'mark_as_read' via socket,
         // which magically handles the backend cleanup. No need to hit the notifications API!
         if (notif.type !== "MESSAGE") {
           await apiClient.patch(ENDPOINTS.notifications.read(notif.id), {});
@@ -226,8 +237,8 @@ const DashboardLayout = () => {
     console.log("Navigating to:", notif.type, meta);
 
     if (notif.type === "MESSAGE" && meta?.conversationId) {
-      navigate(`/conversation`, { 
-        state: { conversationId: meta.conversationId } 
+      navigate(`/conversation`, {
+        state: { conversationId: meta.conversationId },
       });
     } else if (notif.type === "ORDER") {
       navigate(`/orders`);
@@ -286,9 +297,7 @@ const DashboardLayout = () => {
   }, []);
 
   const displayName = user?.name || "Agent";
-  const agentText = user?.id
-    ? `Verified Agent #${user.id}`
-    : "Verified Agent";
+  const agentText = user?.id ? `Verified Agent #${user.id}` : "Verified Agent";
   const initials = displayName
     .split(" ")
     .map((n) => n[0])

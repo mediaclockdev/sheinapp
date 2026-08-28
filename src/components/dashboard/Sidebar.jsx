@@ -72,7 +72,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Top Section */} 
+        {/* Top Section */}
         <div className="flex flex-col gap-6">
           {/* Logo and Brand Title */}
           <div>
@@ -126,6 +126,15 @@ const Sidebar = ({ isOpen, onClose }) => {
               </NavLink>
             ))}
           </nav>
+          <button
+            onClick={() => navigate("/neworders")}
+            className="cursor-pointer w-full bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-semibold py-2.5 rounded-xl text-base transition duration-200 shadow-sm flex items-center justify-center gap-1.5"
+          >
+            {/* Commented out plus/batch icon */}
+            {/* <img src="plus.svg" alt="Add" className="h-3.5 w-3.5" /> */}
+            <span>+</span>
+            <span>Marketplace</span>
+          </button>
           <button
             onClick={() => {
               setInviteOpen(true);
@@ -210,15 +219,6 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Bottom Section */}
         <div className="flex flex-col gap-2">
           {/* New Order Action Button */}
-          {/* <button
-            onClick={() => navigate("/neworders")}
-            className="cursor-pointer w-full bg-[#FFD1DC] hover:bg-[#FFD4E1] text-[#7A5761] font-semibold py-2.5 rounded-xl text-base transition duration-200 shadow-sm flex items-center justify-center gap-1.5"
-          > */}
-          {/* Commented out plus/batch icon */}
-          {/* <img src="plus.svg" alt="Add" className="h-3.5 w-3.5" /> */}
-          {/* <span>+</span>
-            <span>New Order</span>
-          </button> */}
 
           {/* Help Center Item */}
           {/* <a

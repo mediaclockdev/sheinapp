@@ -61,4 +61,9 @@ export const ENDPOINTS = {
     messages: (id) => `/api/chat/conversations/${id}/messages`,
     upload: "/api/chat/upload",
   },
+  marketplace: {
+    list: "/api/products",
+    create: "/api/products",
+    byId: (id) => `/api/products/${id}`,
+  },
 };
