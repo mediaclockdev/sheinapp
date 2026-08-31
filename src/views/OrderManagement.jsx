@@ -617,12 +617,12 @@ const OrderManagement = () => {
                         }
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] transition"
                       >
-                        <img
+                        {/* <img
                           src={editicon}
                           alt="edit icon"
                           className="size-3.5"
-                        />
-                        <span>Edit</span>
+                        /> */}
+                        <span>open</span>
                       </button>
                     </div>
                   </div>

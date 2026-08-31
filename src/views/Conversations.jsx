@@ -425,12 +425,14 @@ const Conversations = () => {
           );
         }
       }
-      
+
       // If the AGENT triggered the read event (from any tab/device), clear the sidebar badge!
       if (data.readBy === "AGENT") {
         setThreads((prev) =>
           prev.map((thread) =>
-            thread.id === data.conversationId ? { ...thread, unreadCount: 0 } : thread,
+            thread.id === data.conversationId
+              ? { ...thread, unreadCount: 0 }
+              : thread,
           ),
         );
       }
@@ -759,82 +761,81 @@ const Conversations = () => {
               No active conversations.
             </p>
           ) : (
-            threads
-              .map((chat) => {
-                // Checkbox Logic
-                const isSelected = selectedThreadIds.includes(chat.id);
-                const toggleSelection = () => {
-                  if (isSelected) {
-                    setSelectedThreadIds((prev) =>
-                      prev.filter((id) => id !== chat.id),
-                    );
-                  } else {
-                    setSelectedThreadIds((prev) => [...prev, chat.id]);
-                  }
-                };
+            threads.map((chat) => {
+              // Checkbox Logic
+              const isSelected = selectedThreadIds.includes(chat.id);
+              const toggleSelection = () => {
+                if (isSelected) {
+                  setSelectedThreadIds((prev) =>
+                    prev.filter((id) => id !== chat.id),
+                  );
+                } else {
+                  setSelectedThreadIds((prev) => [...prev, chat.id]);
+                }
+              };
 
-                return (
-                  <button
-                    key={chat.id}
-                    // 👉 2. DYNAMIC ONCLICK: Toggle the checkbox OR open the chat
-                    onClick={() => {
-                      if (sidebarSelectionMode) toggleSelection();
-                      else openChat(chat.id);
-                    }}
-                    className={`flex items-center gap-3 text-left px-3 sm:px-4 py-4 border-l-4 transition-colors w-full ${
-                      !sidebarSelectionMode && chat.id === activeId
-                        ? "bg-[#FDF2F4] border-[#D24D77]"
-                        : "border-transparent hover:bg-[#FAFAFA]"
-                    }`}
-                  >
-                    {/* 👉 3. RENDER CHECKBOX IF IN SELECTION MODE */}
-                    {sidebarSelectionMode && (
-                      <div
-                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                          isSelected
-                            ? "bg-[#D24D77] border-[#D24D77]"
-                            : "border-gray-300 bg-white"
-                        }`}
-                      >
-                        {isSelected && (
-                          <Check
-                            size={12}
-                            className="text-white"
-                            strokeWidth={3}
-                          />
-                        )}
-                      </div>
-                    )}
+              return (
+                <button
+                  key={chat.id}
+                  // 👉 2. DYNAMIC ONCLICK: Toggle the checkbox OR open the chat
+                  onClick={() => {
+                    if (sidebarSelectionMode) toggleSelection();
+                    else openChat(chat.id);
+                  }}
+                  className={`flex items-center gap-3 text-left px-3 sm:px-4 py-4 border-l-4 transition-colors w-full ${
+                    !sidebarSelectionMode && chat.id === activeId
+                      ? "bg-[#FDF2F4] border-[#D24D77]"
+                      : "border-transparent hover:bg-[#FAFAFA]"
+                  }`}
+                >
+                  {/* 👉 3. RENDER CHECKBOX IF IN SELECTION MODE */}
+                  {sidebarSelectionMode && (
+                    <div
+                      className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected
+                          ? "bg-[#D24D77] border-[#D24D77]"
+                          : "border-gray-300 bg-white"
+                      }`}
+                    >
+                      {isSelected && (
+                        <Check
+                          size={12}
+                          className="text-white"
+                          strokeWidth={3}
+                        />
+                      )}
+                    </div>
+                  )}
 
-                    <Avatar
-                      name={chat.chatPartner?.name}
-                      avatarUrl={chat.chatPartner?.avatarUrl}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-bold text-[#141D23] truncate">
-                          {chat.chatPartner?.name || "N/A"}
-                        </span>
-                        {!sidebarSelectionMode && (
-                          <span className="text-xs text-[#8C959F] shrink-0">
-                            {relativeTime(
-                              chat.lastMessage?.createdAt || chat.updatedAt,
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-[#5C5F60] line-clamp-1 mt-0.5">
-                        {renderInboxMessage(chat.lastMessage)}
-                      </p>
-                      {!sidebarSelectionMode && chat.unreadCount > 0 && (
-                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFE8EF] text-[#D24D77]">
-                          {chat.unreadCount} NEW
+                  <Avatar
+                    name={chat.chatPartner?.name}
+                    avatarUrl={chat.chatPartner?.avatarUrl}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-[#141D23] truncate">
+                        {chat.chatPartner?.name || "N/A"}
+                      </span>
+                      {!sidebarSelectionMode && (
+                        <span className="text-xs text-[#8C959F] shrink-0">
+                          {relativeTime(
+                            chat.lastMessage?.createdAt || chat.updatedAt,
+                          )}
                         </span>
                       )}
                     </div>
-                  </button>
-                );
-              })
+                    <p className="text-sm text-[#5C5F60] line-clamp-1 mt-0.5">
+                      {renderInboxMessage(chat.lastMessage)}
+                    </p>
+                    {!sidebarSelectionMode && chat.unreadCount > 0 && (
+                      <span className="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFE8EF] text-[#D24D77]">
+                        {chat.unreadCount} NEW
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
       </div>
@@ -973,7 +974,9 @@ const Conversations = () => {
               ) : messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center h-full text-center">
                   <span className="text-5xl mb-3">💬</span>
-                  <p className="text-[#141D23] font-bold text-base">No messages yet</p>
+                  <p className="text-[#141D23] font-bold text-base">
+                    No messages yet
+                  </p>
                   <p className="text-sm text-[#8C959F] mt-1">
                     Send a message to start the conversation.
                   </p>
@@ -1219,7 +1222,7 @@ const Conversations = () => {
                   setShowAttachmentMenu(!showAttachmentMenu);
                 }}
                 disabled={uploading}
-                className={`hidden sm:block p-2 rounded-lg hover:bg-slate-100 text-[#5C5F60] transition ${
+                className={` block p-2 rounded-lg hover:bg-slate-100 text-[#5C5F60] transition ${
                   uploading ? "opacity-50 cursor-not-allowed" : ""
                 } ${showAttachmentMenu ? "bg-slate-200" : ""}`}
                 aria-label="Attach"
@@ -1393,8 +1396,12 @@ const Conversations = () => {
               {customerSearch.trim().length < 2 ? (
                 <div className="p-8 text-center text-[#8C959F] flex flex-col items-center mt-10">
                   <span className="text-4xl mb-3">👋</span>
-                  <p className="text-base font-bold text-[#141D23]">Search for a customer</p>
-                  <p className="text-sm mt-1">Type at least 2 characters to find a customer.</p>
+                  <p className="text-base font-bold text-[#141D23]">
+                    Search for a customer
+                  </p>
+                  <p className="text-sm mt-1">
+                    Type at least 2 characters to find a customer.
+                  </p>
                 </div>
               ) : customersLoading ? (
                 <div className="p-8 text-center text-[#8C959F] flex flex-col items-center mt-10">
@@ -1404,7 +1411,9 @@ const Conversations = () => {
               ) : customers.length === 0 ? (
                 <div className="p-8 text-center text-[#8C959F] flex flex-col items-center mt-10">
                   <span className="text-4xl mb-2">🔍</span>
-                  <p className="text-sm font-medium">No customers found matching &quot;{customerSearch}&quot;.</p>
+                  <p className="text-sm font-medium">
+                    No customers found matching &quot;{customerSearch}&quot;.
+                  </p>
                 </div>
               ) : (
                 customers.map((customer) => (

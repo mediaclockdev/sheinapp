@@ -60,6 +60,11 @@ const stockTone = (qty) =>
 
 const LIMIT = 20;
 
+// The surviving photo paths are sent under every name the backend might read,
+// because deletions are ignored if it looks at the wrong one.
+// ponytail: shotgun field names; drop to the single real one once the API is confirmed.
+const KEPT_IMAGES_FIELDS = ["existingImages", "images", "keepImages"];
+
 // `images` come back as server-relative paths, so they need the API origin
 const imageUrl = (path) =>
   !path || path.startsWith("http") ? path : `${API_ORIGIN}${path}`;
@@ -95,6 +100,8 @@ const NewOrders = () => {
   const [editing, setEditing] = useState(null);
   const [product, setProduct] = useState(emptyForm);
   const [touched, setTouched] = useState({});
+  // One list for every photo on the form. Saved ones carry `path` (server-relative),
+  // newly picked ones carry `file`. Adding pushes, removing splices — same array either way.
   const [productImages, setProductImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -137,16 +144,23 @@ const NewOrders = () => {
   const markTouched = (name) => () =>
     setTouched((prev) => ({ ...prev, [name]: true }));
 
+  // object URLs are only created for newly picked files, so only those need revoking
+  const releaseImages = (images) =>
+    images.forEach((img) => img.file && URL.revokeObjectURL(img.src));
+
   const openForm = (existing) => {
     setProduct(existing ? toForm(existing) : emptyForm);
     setEditing(existing || {});
     setTouched({});
-    setProductImages([]);
+    releaseImages(productImages);
+    setProductImages(
+      (existing?.images || []).map((path) => ({ path, src: imageUrl(path) })),
+    );
     setError(null);
   };
 
   const closeForm = () => {
-    productImages.forEach((img) => URL.revokeObjectURL(img.preview));
+    releaseImages(productImages);
     setProductImages([]);
     setEditing(null);
   };
@@ -157,14 +171,14 @@ const NewOrders = () => {
 
     setProductImages((prev) => [
       ...prev,
-      ...files.map((file) => ({ file, preview: URL.createObjectURL(file) })),
+      ...files.map((file) => ({ file, src: URL.createObjectURL(file) })),
     ]);
     event.target.value = "";
   };
 
   const handleRemoveImage = (index) => {
     setProductImages((prev) => {
-      URL.revokeObjectURL(prev[index].preview);
+      releaseImages([prev[index]]);
       return prev.filter((_, i) => i !== index);
     });
   };
@@ -228,7 +242,16 @@ const NewOrders = () => {
       formData.append("color", draft.color);
       formData.append("skuCode", draft.skuCode);
       formData.append("tag", draft.tag);
-      productImages.forEach(({ file }) => formData.append("photos", file));
+      // whatever is left in the array is the product's photo set after this save
+      productImages.forEach(
+        ({ file }) => file && formData.append("photos", file),
+      );
+      if (editing.id) {
+        const kept = JSON.stringify(
+          productImages.filter((img) => img.path).map((img) => img.path),
+        );
+        KEPT_IMAGES_FIELDS.forEach((field) => formData.append(field, kept));
+      }
 
       const { data } = editing.id
         ? await apiClient.put(ENDPOINTS.marketplace.byId(editing.id), formData)
@@ -260,7 +283,6 @@ const NewOrders = () => {
     }
   };
 
-  const existingPhotos = (editing?.images || []).map(imageUrl);
   const term = query.trim();
   const pages = Math.max(1, Math.ceil(total / LIMIT));
 
@@ -639,21 +661,13 @@ const NewOrders = () => {
                 </span>
               </label>
 
-              {(existingPhotos.length > 0 || productImages.length > 0) && (
+              {productImages.length > 0 && (
                 <div className="flex flex-wrap gap-3">
-                  {existingPhotos.map((url) => (
-                    <img
-                      key={url}
-                      src={url}
-                      alt="Product"
-                      className="w-20 h-20 object-cover rounded-md border border-[#D3C3C5]"
-                    />
-                  ))}
-                  {productImages.map((img, index) => (
-                    <div key={img.preview} className="relative w-20 h-20">
+                  {productImages.map((photo, index) => (
+                    <div key={photo.src} className="relative w-20 h-20">
                       <img
-                        src={img.preview}
-                        alt={`New photo ${index + 1}`}
+                        src={photo.src}
+                        alt={`Product photo ${index + 1}`}
                         className="w-full h-full object-cover rounded-md border border-[#D3C3C5]"
                       />
                       <button
