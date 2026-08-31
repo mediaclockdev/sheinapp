@@ -361,7 +361,7 @@ const NewOrders = () => {
             </div>
           ) : products.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-20 px-6 text-center">
-              <Image src={term.image} alt="" />
+              <Store size={32} className="text-[#B9A6AB]" />
               <p className="text-[#17222B] font-semibold">
                 {term ? "No products match that search" : "No products yet"}
               </p>
