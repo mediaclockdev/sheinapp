@@ -236,15 +236,16 @@ const DashboardLayout = () => {
 
     console.log("Navigating to:", notif.type, meta);
 
-    if (notif.type === "MESSAGE" && meta?.conversationId) {
+    // Route on metadata, not `type`: order notifications arrive as SYSTEM_ALERT,
+    // so matching type strings sent them to the chat fallback.
+    if (meta?.conversationId) {
       navigate(`/conversation`, {
         state: { conversationId: meta.conversationId },
       });
-    } else if (notif.type === "ORDER") {
+    } else if (meta?.orderId) {
       navigate(`/orders`);
     } else {
-      // Fallback if metadata is missing
-      navigate(`/conversation`);
+      navigate(`/dashboard`);
     }
   };
 

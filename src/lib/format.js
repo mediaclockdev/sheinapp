@@ -1,3 +1,10 @@
+import { API_ORIGIN } from "./api/client";
+
+// Uploaded paths come back relative ("/uploads/..."); anything already absolute
+// is left alone.
+export const imageUrl = (p) =>
+  !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
+
 export const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 
 export const getInitials = (name = "") =>

@@ -11,11 +11,18 @@ import {
 import logo from "../../assets/logo.svg";
 // import logo2 from "../../assets/logo2.svg";
 import apiClient, { getErrorMessage } from "../../lib/api/client";
+import { landingPath } from "../../lib/auth";
 import { ENDPOINTS } from "../../lib/api/endpoints";
 
 const screenMeta = {
   "/login": {
     kicker: "Agent Portal",
+    footerNote: "Systems Operational",
+    copyright: "2026 Shelynx Logistics. v2.4.0-release",
+    stageClass: "pt-[86px]",
+  },
+  "/admin/login": {
+    kicker: "Admin Portal",
     footerNote: "Systems Operational",
     copyright: "2026 Shelynx Logistics. v2.4.0-release",
     stageClass: "pt-[86px]",
@@ -221,7 +228,7 @@ function ErrorAlert({ message }) {
   );
 }
 
-function LoginScreen() {
+function LoginScreen({ admin = false }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -246,21 +253,23 @@ function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { data: result } = await apiClient.post(ENDPOINTS.auth.login, {
-        email,
-        password,
-        rememberMe,
-      });
+      const { data: result } = await apiClient.post(
+        admin ? ENDPOINTS.auth.adminLogin : ENDPOINTS.auth.login,
+        admin ? { email, password } : { email, password, rememberMe },
+      );
 
-      if (result.token) {
-        localStorage.setItem("token", result.token);
-        if (result.data)
-          localStorage.setItem(
-            "user",
-            JSON.stringify({ id: result.data.id, name: result.data.name }),
-          );
+      // Agent returns { token, data }, admin returns { data: { token, admin } }.
+      const token = result.token ?? result.data?.token;
+      const user = result.data?.admin ?? result.data;
+
+      if (!token) {
+        setError(result?.message || "Login failed: no token returned.");
+        return;
       }
-      navigate("/dashboard");
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      navigate(admin ? "/admin" : "/dashboard");
     } catch (err) {
       const result = err.response?.data;
       if (Array.isArray(result?.errors) && result.errors.length) {
@@ -276,14 +285,16 @@ function LoginScreen() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto  lg:px-5 pt-4 pb-3">
+    <div className="w-full max-w-screen-2xl mx-auto  lg:px-5 pt-4 pb-3">
       <div className="w-full max-w-[500px] rounded-md border border-[#78555e]/20 bg-white/95 shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
         <div className="px-3 lg:px-8 py-4">
           <h1 className="text-2xl font-semibold tracking-tight text-[#17222b] text-center">
-            Welcome Back
+            {admin ? "Admin Sign In" : "Welcome Back"}
           </h1>
           <p className="mt-1 text-sm text-[#5c5f60]">
-            Please enter your agent credentials to continue.
+            {admin
+              ? "Administrator credentials required."
+              : "Please enter your agent credentials to continue."}
           </p>
 
           <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
@@ -338,12 +349,16 @@ function LoginScreen() {
 
             <label className="flex items-center justify-between text-xs text-[#4f4446] block">
               <div className="flex items-center gap-1 ">
-                <input
-                  name="rememberMe"
-                  className="h-3 w-3 accent-[#ff5f96]"
-                  type="checkbox"
-                />
-                <p className="text-xs">Stay logged in for 30 days</p>
+                {!admin && (
+                  <>
+                    <input
+                      name="rememberMe"
+                      className="h-3 w-3 accent-[#ff5f96]"
+                      type="checkbox"
+                    />
+                    <p className="text-xs">Stay logged in for 30 days</p>
+                  </>
+                )}
               </div>
               <div>
                 <Link
@@ -361,10 +376,26 @@ function LoginScreen() {
           </form>
         </div>
         <div className="rounded-b-md border-t border-[#d4e0ec] bg-[#eef7ff] px-8 py-3 text-center text-xs text-[#5c5f60]">
-          Don't have an account?{" "}
-          <Link to="/register" className="font-bold text-[#78555e]">
-            Sign Up
-          </Link>
+          {admin ? (
+            <>
+              Not an administrator?{" "}
+              <Link to="/login" className="font-bold text-[#78555e]">
+                Agent Login
+              </Link>
+            </>
+          ) : (
+            <>
+              Don't have an account?{" "}
+              <Link to="/register" className="font-bold text-[#78555e]">
+                Sign Up
+              </Link>
+              <span className="mt-1 block">
+                <Link to="/admin/login" className="font-bold text-[#78555e]">
+                  Login as an Admin
+                </Link>
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -682,10 +713,15 @@ function RegisterScreen() {
 
       if (result.token) {
         localStorage.setItem("token", result.token);
-        //   if (result.data)
-        //     localStorage.setItem("user", JSON.stringify(result.data));
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...result.data,
+            role: result.data?.role,
+          }),
+        );
       }
-      navigate("/dashboard");
+      navigate(landingPath());
     } catch (err) {
       const result = err.response?.data;
       if (Array.isArray(result?.errors) && result.errors.length) {
@@ -852,6 +888,7 @@ function StageFooter({ meta }) {
 
 function PortalLayout() {
   const { pathname } = useLocation();
+  const isAdminLogin = pathname === "/admin/login";
   const meta = screenMeta[pathname] ?? screenMeta["/login"];
 
   useLayoutEffect(() => {
@@ -862,11 +899,11 @@ function PortalLayout() {
     <div className="flex min-h-screen flex-col bg-white font-sans text-[#202a33] antialiased">
       <header className="flex h-[55px] items-center border-b border-[#dec9ce] bg-white px-7 sm:px-9">
         <Link
-          to="/login"
+          to={isAdminLogin ? "/admin/login" : "/login"}
           className="flex items-center gap-3 text-xl lg:text-2xl font-bold tracking-tight text-[#ee5d8d]"
         >
           <BrandLogo compact />
-          Shelynx Agent Portal
+          {isAdminLogin ? "Shelynx Admin Portal" : "Shelynx Agent Portal"}
         </Link>
       </header>
 
@@ -883,6 +920,7 @@ function PortalLayout() {
           )}
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
+            <Route path="/admin/login" element={<LoginScreen admin />} />
             <Route path="/forgot-password" element={<ForgotScreen />} />
             {/* <Route path="/verify-otp" element={<OtpScreen />} /> */}
             <Route path="/reset-password" element={<ResetScreen />} />

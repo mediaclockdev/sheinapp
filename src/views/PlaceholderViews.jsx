@@ -1,6 +1,6 @@
 import React from "react";
 
-function PagePlaceholder({ title, description }) {
+export function PagePlaceholder({ title, description }) {
   return (
     <div className="flex-1 p-8 bg-[#f8fbff] min-h-[calc(100vh-70px)]">
       <div className="max-w-4xl mx-auto">

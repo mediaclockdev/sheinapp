@@ -11,9 +11,18 @@ import customericon from "../../assets/customersicon.svg";
 import reportsicon from "../../assets/reportsicon.svg";
 import settingsicon from "../../assets/settingsicon.svg";
 import cameraicon from "../../assets/cameraicon.svg";
-import { LogOut, MessageSquare, UserPlus, Copy, Check, X } from "lucide-react";
+import {
+  LogOut,
+  MessageSquare,
+  UserPlus,
+  Copy,
+  Check,
+  X,
+  Shield,
+} from "lucide-react";
 import apiClient from "../../lib/api/client";
 import { ENDPOINTS } from "../../lib/api/endpoints";
+import { isAdmin, logout } from "../../lib/auth";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { pathname } = useLocation();
@@ -38,10 +47,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    sessionStorage.removeItem("token");
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("user");
+    logout();
     navigate("/login");
   };
   const menuItems = [
@@ -55,7 +61,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Reports", path: "/reports", iconSrc: reportsicon },
     { name: "Settings", path: "/settings", iconSrc: settingsicon },
     { name: "Scan SKU", path: "/scanSku", iconSrc: cameraicon },
-  ];
+    { name: "Admin", path: "/admin", icon: Shield, adminOnly: true },
+  ].filter((item) => !item.adminOnly || isAdmin());
 
   return (
     <>

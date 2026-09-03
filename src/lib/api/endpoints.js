@@ -1,6 +1,7 @@
 export const ENDPOINTS = {
   auth: {
     login: "/api/auth/login",
+    adminLogin: "/api/admin/auth/login",
     forgotPassword: "/api/auth/forgot-password",
     resetPassword: "/api/auth/reset-password",
     register: "/api/auth/register",
@@ -65,5 +66,12 @@ export const ENDPOINTS = {
     list: "/api/products",
     create: "/api/products",
     byId: (id) => `/api/products/${id}`,
+  },
+  admin: {
+    dashboard: "/api/admin/dashboard",
+    activityLogs: "/api/admin/activity-logs",
+    getAllAgents: "/api/admin/agents",
+    agentById: (id) => `/api/admin/agents/${id}`,
+    updateAgentStatus: (id) => `/api/admin/agents/${id}/status`,
   },
 };

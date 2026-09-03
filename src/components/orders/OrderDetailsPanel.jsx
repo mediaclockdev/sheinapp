@@ -8,6 +8,24 @@ import { API_ORIGIN } from "../../lib/api/client";
 const imageUrl = (p) =>
   !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
 
+/** Promo price struck through the original; just the price when there's no promo. */
+const ItemPrice = ({ price, promotionalPrice }) => {
+  const promo = Number(promotionalPrice) || 0;
+  const full = Number(price) || 0;
+  return promo > 0 && promo !== full ? (
+    <div>
+      <p className="font-bold text-xs text-red-600">${promo.toFixed(2)}</p>
+      <p className="font-bold text-[10px] text-[#78555E] line-through">
+        ${full.toFixed(2)}
+      </p>
+    </div>
+  ) : (
+    <div>
+      <p className="font-bold text-xs text-[#141D23]">${full.toFixed(2)}</p>
+    </div>
+  );
+};
+
 /** Order detail panel. `d` is the bag returned by useOrderDetails(). */
 export default function OrderDetailsPanel({ d, isMobile = false }) {
   if (!d.orderId) return null;
@@ -117,14 +135,10 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                             {item.productName}
                           </p>
                           <div className="flex items-center gap-2 shrink-0">
-                            <div>
-                              <p className="font-bold text-xs  text-red-600">
-                                ${Number(item.promotionalPrice).toFixed(2)}
-                              </p>
-                              <p className="font-bold text-[10px] text-[#78555E] line-through">
-                                ${Number(item.price).toFixed(2)}
-                              </p>
-                            </div>
+                            <ItemPrice
+                              price={item.price}
+                              promotionalPrice={item.promotionalPrice}
+                            />
                             {d.canModerate && (
                               <button
                                 onClick={() => d.handleDeleteItem(item.id)}
@@ -217,14 +231,10 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                       {/* Right Side */}
                       <div className="flex flex-col items-end justify-between h-20 shrink-0">
                         <div className="flex items-center gap-3">
-                          <div>
-                            <p className="font-bold text-xs  text-red-600">
-                              ${Number(item.promotionalPrice).toFixed(2)}
-                            </p>
-                            <p className="font-bold text-[10px] text-[#78555E] line-through">
-                              ${Number(item.price).toFixed(2)}
-                            </p>
-                          </div>
+                          <ItemPrice
+                            price={item.price}
+                            promotionalPrice={item.promotionalPrice}
+                          />
                           {d.canModerate && (
                             <button
                               onClick={() => d.handleDeleteItem(item.id)}
