@@ -88,7 +88,7 @@ const AgentDetail = () => {
     try {
       await apiClient.patch(ENDPOINTS.admin.updateAgentStatus(id), {
         status,
-        ...(message.trim() && { message: message.trim() }),
+        ...(message.trim() && { messageToAgent: message.trim() }),
       });
       // Stay put so the new status is visible and can be changed again.
       setAgent((prev) => ({ ...prev, status }));
@@ -189,7 +189,7 @@ const AgentDetail = () => {
                     null,
                 )}
               </Field>
-              <Field label="Location">{dash(agent.location)}</Field>
+
               <Field label="Referral Code" accent>
                 {dash(agent.referralCode)}
               </Field>
@@ -201,8 +201,8 @@ const AgentDetail = () => {
               <Field label="Accepting Orders">
                 {agent.isAcceptingOrders ? "Yes" : "No"}
               </Field>
-              <Field label="Description">{dash(agent.description)}</Field>
-              <Field label="Tags">{dash(agent.tags?.join(", ") || null)}</Field>
+              {/* <Field label="Description">{dash(agent.description)}</Field>
+              <Field label="Tags">{dash(agent.tags?.join(", ") || null)}</Field> */}
             </div>
           </Panel>
 

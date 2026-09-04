@@ -352,7 +352,7 @@ const AdminDashboard = () => {
                 <thead>
                   <tr className="border-y border-[#E8DFE1] text-[11px] font-semibold text-[#8C959F]">
                     <th className="px-5 py-3">Agent Name</th>
-                    <th className="px-5 py-3">Region</th>
+                    <th className="px-5 py-3">Email</th>
                     <th className="px-5 py-3">Active Batches</th>
                     <th className="px-5 py-3">Trust Rating</th>
                     <th className="px-5 py-3">Status</th>
@@ -386,7 +386,7 @@ const AdminDashboard = () => {
                         </div>
                       </td>
                       <td className="px-5 py-3 text-sm text-[#5C5F60]">
-                        {a.region}
+                        {a.email}
                       </td>
                       <td className="px-5 py-3 text-sm font-semibold text-[#141D23]">
                         {a.batches}

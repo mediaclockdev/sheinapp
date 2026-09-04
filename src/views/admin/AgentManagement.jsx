@@ -1,16 +1,17 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient, { getErrorMessage } from "../../lib/api/client";
 import { ENDPOINTS } from "../../lib/api/endpoints";
 import {
   // Eye,
   // MessageSquare,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import { filterAgents, toRow } from "../../lib/agents";
+import { toRow } from "../../lib/agents";
 import { getInitials, imageUrl } from "../../lib/format";
 
 const STATUSES = ["All", "ACTIVE", "PENDING", "SUSPENDED", "REJECTED"];
@@ -32,14 +33,22 @@ const money = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
 });
 
+// Native select chevrons render differently in every browser, so the arrow is
+// ours and the control's own is turned off. `className` sizes the wrapper.
 const Select = ({ value, onChange, children, className = "" }) => (
-  <select
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    className={`cursor-pointer rounded-lg border border-[#E8DFE1] bg-white py-2 pl-3 pr-5 text-sm font-semibold text-[#17222B] focus:border-[#D24D77] focus:outline-none ${className}`}
-  >
-    {children}
-  </select>
+  <div className={`relative inline-block ${className}`}>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full cursor-pointer appearance-none rounded-lg border border-[#E8DFE1] bg-white py-2 pl-3 pr-9 text-sm font-semibold text-[#17222B] focus:border-[#D24D77] focus:outline-none"
+    >
+      {children}
+    </select>
+    <ChevronDown
+      size={15}
+      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8C959F]"
+    />
+  </div>
 );
 
 // Row actions are parked until the message/suspend endpoints exist — clicking
@@ -59,7 +68,6 @@ const Select = ({ value, onChange, children, className = "" }) => (
 
 const AgentManagement = () => {
   const navigate = useNavigate();
-  const [region, setRegion] = useState("All");
   const [status, setStatus] = useState("All");
   const [minRating, setMinRating] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -70,14 +78,18 @@ const AgentManagement = () => {
   const [error, setError] = useState(null);
   useEffect(() => {
     let cancelled = false;
-    // ponytail: page/limit only — region/status/rating still filter client-side,
-    // so they only see the current page. Move them into params once that bites.
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
         const { data } = await apiClient.get(ENDPOINTS.admin.getAllAgents, {
-          params: { page, limit: pageSize },
+          params: {
+            page,
+            limit: pageSize,
+            status: status === "All" ? "All Statuses" : status,
+            // 1 is the dropdown's floor and means "no minimum".
+            ...(minRating > 1 && { minRating }),
+          },
         });
         if (cancelled) return;
         // { success, message, data: [...], meta: { totalItems, currentPage, totalPage, limit } }
@@ -94,12 +106,9 @@ const AgentManagement = () => {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize]);
+  }, [page, pageSize, status, minRating]);
 
-  const rows = useMemo(
-    () => filterAgents(agents, { region, status, minRating }),
-    [agents, region, status, minRating],
-  );
+  const rows = agents;
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const firstRow = (page - 1) * pageSize + 1;
@@ -124,7 +133,7 @@ const AgentManagement = () => {
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s === "All" ? "All Statuses" : s}
+                  {s === "All" ? "All Status" : s}
                 </option>
               ))}
             </Select>
@@ -141,7 +150,7 @@ const AgentManagement = () => {
             </Select>
           </div>
 
-          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+          <div className="flex w-full items-center justify-center gap-4 sm:w-auto sm:justify-end sm:gap-2">
             <span className="text-xs text-[#5C5F60]">
               Showing {firstRow}-{firstRow + rows.length - 1} of{" "}
               {total.toLocaleString()}

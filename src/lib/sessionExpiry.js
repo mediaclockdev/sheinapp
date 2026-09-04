@@ -1,17 +1,12 @@
 import { toast } from "../components/Toast";
 
 // This API returns 403 (not 401) for a missing/invalid/expired token, e.g.
-// {"error":"Invalid or Expired Token"}. But 403 is also plain "you may not touch
-// this resource" — killing the session on that logs a valid user out mid-click,
-// so a 403 only ends the session when the body actually blames the token.
-const TOKEN_BLAMED = /token|expired|session/i;
-
-export const isUnauthorized = (status, data) =>
-  status === 401 ||
-  (status === 403 &&
-    TOKEN_BLAMED.test(
-      [data?.error, data?.message].filter(Boolean).join(" ") || "token",
-    ));
+// {"error":"Invalid or Expired Token"}, and every 403 the app can hit in practice
+// is a dead session — so both codes end it.
+// ponytail: if the API later starts using 403 for real permission denials
+// ("you may not touch this resource"), this will log valid users out mid-click;
+// gate it on the body blaming the token at that point.
+export const isUnauthorized = (status) => status === 401 || status === 403;
 
 // Called wherever an authenticated API call comes back unauthorized (token missing/expired).
 export const handleUnauthorized = () => {

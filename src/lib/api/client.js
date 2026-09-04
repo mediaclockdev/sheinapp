@@ -22,8 +22,7 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (isUnauthorized(error.response?.status, error.response?.data))
-      handleUnauthorized();
+    if (isUnauthorized(error.response?.status)) handleUnauthorized();
     return Promise.reject(error);
   },
 );
