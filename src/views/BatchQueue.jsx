@@ -203,7 +203,9 @@ export default function BatchQueue() {
     try {
       setActiveBatches(await fetchBatches("ACTIVE"));
     } catch (err) {
-      setActiveBatchesError(getErrorMessage(err, "Failed to fetch active batches"));
+      setActiveBatchesError(
+        getErrorMessage(err, "Failed to fetch active batches"),
+      );
       setActiveBatches([]);
     } finally {
       setActiveBatchesLoading(false);
@@ -216,7 +218,9 @@ export default function BatchQueue() {
     try {
       setLockedBatches(await fetchBatches("LOCKED"));
     } catch (err) {
-      setLockedBatchesError(getErrorMessage(err, "Failed to fetch locked batches"));
+      setLockedBatchesError(
+        getErrorMessage(err, "Failed to fetch locked batches"),
+      );
       setLockedBatches([]);
     } finally {
       setLockedBatchesLoading(false);
@@ -256,7 +260,9 @@ export default function BatchQueue() {
         ),
       );
     } catch (err) {
-      setApprovedOrdersError(getErrorMessage(err, "Failed to fetch approved orders"));
+      setApprovedOrdersError(
+        getErrorMessage(err, "Failed to fetch approved orders"),
+      );
       setApprovedOrders([]);
     } finally {
       setApprovedOrdersLoading(false);
@@ -439,6 +445,30 @@ export default function BatchQueue() {
       setLockError(getErrorMessage(err, "Failed to unlock batch"));
     } finally {
       setUnlockingBatchId(null);
+    }
+  };
+
+  const [exportingBatchId, setExportingBatchId] = useState(null);
+
+  const handleExportBatch = async (batch) => {
+    setExportingBatchId(batch.id);
+    setLockError(null);
+    try {
+      const { data: blob } = await apiClient.get(
+        ENDPOINTS.batches.export(batch.id),
+        { responseType: "blob" },
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `batch_${batch.id}_products_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setSuccessMessage("Batch exported successfully!");
+    } catch (err) {
+      setLockError(getErrorMessage(err, "Failed to export batch"));
+    } finally {
+      setExportingBatchId(null);
     }
   };
 
@@ -632,7 +662,9 @@ export default function BatchQueue() {
   useEffect(() => {
     handleActivityLogs()
       .then(setActivityLogs)
-      .catch((err) => setLogsError(getErrorMessage(err, "Failed to fetch activity logs")))
+      .catch((err) =>
+        setLogsError(getErrorMessage(err, "Failed to fetch activity logs")),
+      )
       .finally(() => setLogsLoading(false));
   }, []);
 
@@ -1087,8 +1119,15 @@ export default function BatchQueue() {
                   </div> */}
 
                   <div className="mt-auto flex flex-col gap-3">
-                    <button className="w-full bg-[#FFD1DC]/60 hover:bg-[#FFD1DC] text-[#7A4E5B] border border-[#FFD1DC] rounded-sm py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-colors">
-                      <Copy size={16} /> Export Product IDs
+                    <button
+                      onClick={() => handleExportBatch(batch)}
+                      disabled={exportingBatchId === batch.id}
+                      className="w-full bg-[#FFD1DC]/60 hover:bg-[#FFD1DC] text-[#7A4E5B] border border-[#FFD1DC] rounded-sm py-2.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer transition-colors"
+                    >
+                      <Copy size={16} />
+                      {exportingBatchId === batch.id
+                        ? "Exporting..."
+                        : "Export Batch"}
                     </button>
                     {/* <p className="text-xs text-center text-[#5C5F60]">
                       Locked for processing by {batch.lockedBy}

@@ -56,6 +56,7 @@ export const ENDPOINTS = {
     unlock: (id) => `/api/batches/${id}/unlock`,
     moveOrders: (id) => `/api/batches/${id}/move-orders`,
     removeOrders: (id) => `/api/batches/${id}/remove-orders`,
+    export: (id) => `/api/batches/${id}/export`,
   },
   chat: {
     conversations: "/api/chat/conversations",

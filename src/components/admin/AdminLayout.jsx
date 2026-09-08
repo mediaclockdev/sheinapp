@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Bell, FileText, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Bell,
+  FileText,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
 import logo2 from "../../assets/logo2.svg";
 import { getUser, logout } from "../../lib/auth";
 
@@ -18,6 +27,7 @@ const PAGE_TITLES = {
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const title =
     PAGE_TITLES[pathname] ??
     (pathname.startsWith("/admin/agents/") ? "Agent Details" : "Dashboard");
@@ -32,9 +42,26 @@ const AdminLayout = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-[#FFD1DC33] text-[#17222B] font-sans antialiased">
       {/* Sidebar */}
-      <aside className="hidden lg:flex w-[240px] shrink-0 flex-col justify-between border-r border-[#E8DFE1] bg-white py-6 px-4">
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] shrink-0 flex-col justify-between overflow-y-auto border-r border-[#E8DFE1] bg-white py-6 px-4 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-2 px-1">
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Close menu"
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-[#5C5F60] hover:bg-slate-100 lg:hidden"
+            >
+              <X size={18} />
+            </button>
             <img src={logo2} alt="" className="h-8 w-8 object-contain" />
             <div>
               <p className="text-base font-bold text-[#7A4E5B] leading-tight">
@@ -52,6 +79,7 @@ const AdminLayout = () => {
                 key={path}
                 to={path}
                 end={end}
+                onClick={() => setIsSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors duration-200 ${
                     isActive
@@ -88,7 +116,15 @@ const AdminLayout = () => {
       {/* Right side */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-[70px] items-center justify-between gap-4 border-b border-[#E8DFE1] bg-white px-4 sm:px-8">
-          <h1 className="min-w-0 truncate  font-semibold tracking-tight text-[#17222B] text-base lg:text-3xl">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Open menu"
+            className="-ml-2 rounded-lg p-2 text-[#5C5F60] hover:bg-slate-100 lg:hidden"
+          >
+            <Menu size={20} />
+          </button>
+
+          <h1 className="min-w-0 flex-1 truncate  font-semibold tracking-tight text-[#17222B] text-base lg:text-3xl">
             {title}
           </h1>
 

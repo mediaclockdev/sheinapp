@@ -89,7 +89,7 @@ export function Toaster() {
   };
 
   return (
-    <div className="fixed top-5 right-5 z-[200] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+    <div className="fixed top-5 inset-x-4 sm:inset-x-auto sm:right-5 z-[200] flex flex-col gap-2.5 sm:w-full sm:max-w-sm pointer-events-none">
       {toasts.map((t) => {
         const config = getToastConfig(t.type);
         return (

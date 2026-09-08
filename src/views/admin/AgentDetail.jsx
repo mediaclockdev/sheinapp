@@ -10,6 +10,13 @@ import {
 import apiClient, { getErrorMessage } from "../../lib/api/client";
 import { imageUrl } from "../../lib/format";
 import { ENDPOINTS } from "../../lib/api/endpoints";
+import { toast } from "../../components/Toast";
+
+const STATUS_VERB = {
+  ACTIVE: "activated",
+  REJECTED: "rejected",
+  SUSPENDED: "suspended",
+};
 
 const dash = (v) => (v == null || v === "" ? "—" : v);
 
@@ -93,8 +100,17 @@ const AgentDetail = () => {
       // Stay put so the new status is visible and can be changed again.
       setAgent((prev) => ({ ...prev, status }));
       setMessage("");
+      toast.show({
+        type: status === "ACTIVE" ? "active" : "inactive",
+        message: `Agent ${STATUS_VERB[status] ?? status.toLowerCase()}.`,
+      });
     } catch (err) {
-      setError(getErrorMessage(err, `Failed to ${status.toLowerCase()} agent`));
+      const msg = getErrorMessage(
+        err,
+        `Failed to ${status.toLowerCase()} agent`,
+      );
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -197,7 +213,7 @@ const AgentDetail = () => {
                 {formatDate(agent.createdAt)}
               </Field>
               <Field label="Status">{dash(agent.status)}</Field>
-              <Field label="Verified">{agent.isVerified ? "Yes" : "No"}</Field>
+              {/* <Field label="Verified">{agent.isVerified ? "Yes" : "No"}</Field> */}
               <Field label="Accepting Orders">
                 {agent.isAcceptingOrders ? "Yes" : "No"}
               </Field>
