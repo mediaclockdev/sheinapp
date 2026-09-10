@@ -54,6 +54,7 @@ export const ENDPOINTS = {
     byId: (id) => `/api/batches/${id}`,
     lock: (id) => `/api/batches/${id}/lock`,
     unlock: (id) => `/api/batches/${id}/unlock`,
+    complete: (id) => `/api/batches/${id}/complete`,
     moveOrders: (id) => `/api/batches/${id}/move-orders`,
     removeOrders: (id) => `/api/batches/${id}/remove-orders`,
     export: (id) => `/api/batches/${id}/export`,
@@ -74,5 +75,6 @@ export const ENDPOINTS = {
     getAllAgents: "/api/admin/agents",
     agentById: (id) => `/api/admin/agents/${id}`,
     updateAgentStatus: (id) => `/api/admin/agents/${id}/status`,
+    generatereport: "/api/admin/agents/export",
   },
 };

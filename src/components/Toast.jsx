@@ -95,9 +95,9 @@ export function Toaster() {
         return (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-center justify-between gap-3 px-4 py-3 rounded-xl border shadow-xl transition-all duration-300 transform ${config.bg}`}
+            className={`pointer-events-auto flex items-start justify-between gap-3 px-4 py-3 rounded-xl border shadow-xl transition-all duration-300 transform ${config.bg}`}
           >
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-start gap-2.5 min-w-0">
               {config.icon}
               {config.label && (
                 <span
@@ -106,7 +106,7 @@ export function Toaster() {
                   {config.label}
                 </span>
               )}
-              <span className="text-sm font-medium leading-snug truncate">
+              <span className="text-sm font-medium leading-snug break-words">
                 {t.message}
               </span>
             </div>

@@ -84,7 +84,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
           </div>
 
           {/* customer message */}
-          {d.order.customerMessage && (
+          {/* {d.order.customerMessage && (
             <div className="p-4">
               <p className="text-[#5C5F60] font-bold text-xs mb-2">
                 CUSTOMER MESSAGE
@@ -96,7 +96,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                 </p>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* product */}
           <div className="p-4">
@@ -479,11 +479,19 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                       </span>
                       <input
                         type="number"
-                        step="00.01"
+                        step="0.01"
                         min="0.01"
-                        max={d.maxFinalAmount.toFixed(2)}
+                        max={Number(d.maxFinalAmount).toFixed(2)}
                         value={d.finalAmount}
-                        onChange={(e) => d.setFinalAmount(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*\.?\d{0,2}$/.test(value))
+                            d.setFinalAmount(value);
+                        }}
+                        onBlur={(e) =>
+                          e.target.value !== "" &&
+                          d.setFinalAmount(Number(e.target.value).toFixed(2))
+                        }
                         className="w-28 bg-white border border-green-300 rounded px-2 py-1 text-right text-base lg:text-xl font-bold text-green-600 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200"
                       />
                     </div>
@@ -510,9 +518,9 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
             {/* Footer Buttons */}
             {d.canModerate && (
               <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 space-y-3">
-                {d.statusError && (
+                {/* {d.statusError && (
                   <p className="text-sm text-red-600">{d.statusError}</p>
-                )}
+                )} */}
                 <div className="flex gap-4">
                   <button
                     type="button"

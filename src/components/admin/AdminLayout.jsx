@@ -11,6 +11,10 @@ import {
 } from "lucide-react";
 import logo2 from "../../assets/logo2.svg";
 import { getUser, logout } from "../../lib/auth";
+import apiClient from "../../lib/api/client";
+import { ENDPOINTS } from "../../lib/api/endpoints";
+import { toast } from "../Toast";
+import { getErrorMessage } from "../../lib/api/client";
 
 const NAV = [
   { name: "Dashboard", path: "/admin", end: true, icon: LayoutDashboard },
@@ -28,6 +32,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const title =
     PAGE_TITLES[pathname] ??
     (pathname.startsWith("/admin/agents/") ? "Agent Details" : "Dashboard");
@@ -38,6 +43,38 @@ const AdminLayout = () => {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  const handleGenerateReport = async () => {
+    setIsGenerating(true);
+    try {
+      const { data: blob } = await apiClient.get(
+        ENDPOINTS.admin.generatereport,
+        {
+          responseType: "blob",
+        },
+      );
+
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `agents_report_${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
+      link.click();
+      toast.success("Report downloaded successfully!");
+    } catch (err) {
+      let message;
+      try {
+        message = JSON.parse(await err.response.data.text()).message;
+      } catch {
+        message = getErrorMessage(err, "Failed to generate report");
+      }
+      toast.error(message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#FFD1DC33] text-[#17222B] font-sans antialiased">
@@ -96,9 +133,13 @@ const AdminLayout = () => {
         </div>
 
         <div className="flex flex-col gap-2">
-          <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FFE8EF] px-3.5 py-2.5 text-sm font-semibold text-[#D24D77] transition-colors duration-200 hover:bg-[#FFD1DC] cursor-pointer">
+          <button
+            onClick={handleGenerateReport}
+            disabled={isGenerating}
+            className="flex w-full items-center  gap-2 rounded-lg bg-[#FFE8EF] px-3.5 py-2.5 text-sm font-semibold text-[#D24D77] transition-colors duration-200 hover:bg-[#FFD1DC] cursor-pointer"
+          >
             <FileText size={16} />
-            <span>Generate Report</span>
+            <span>{isGenerating ? "Generating..." : "Generate Report"}</span>
           </button>
           <button
             onClick={() => {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import apiClient, { getErrorMessage } from "../../lib/api/client";
 import { ENDPOINTS } from "../../lib/api/endpoints";
+import { toast } from "../Toast";
 
 /**
  * Owns everything the order detail panel needs: fetching an order, editing its
@@ -215,7 +216,9 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
       onUpdated?.();
       return true;
     } catch (err) {
-      setStatusError(getErrorMessage(err, "Failed to update order status"));
+      const message = getErrorMessage(err, "Failed to update order status");
+      setStatusError(message);
+      toast.error(message);
       return false;
     } finally {
       setStatusUpdating(false);
@@ -279,13 +282,13 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
   // and never relies on the input's placeholder for its real value.
   useEffect(() => {
     if (!selectedOrder) return;
-    setFinalAmount(
+    const seed =
       selectedOrder.grandTotal != null
-        ? String(selectedOrder.grandTotal)
+        ? selectedOrder.grandTotal
         : selectedOrder.finalAmount != null
-          ? String(selectedOrder.finalAmount)
-          : calculatedTotal.toFixed(2),
-    );
+          ? selectedOrder.finalAmount
+          : calculatedTotal;
+    setFinalAmount(Number(seed).toFixed(2));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrder]);
 

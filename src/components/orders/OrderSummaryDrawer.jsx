@@ -11,7 +11,6 @@ import {
   Truck,
   CreditCard,
   Tag,
-  ExternalLink,
 } from "lucide-react";
 import {
   fmtMoney,

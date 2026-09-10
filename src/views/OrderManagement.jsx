@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Calendar, RotateCcw } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
-import editicon from "../assets/editicon.svg";
 import exporticon from "../assets/exporticon.svg";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -447,7 +446,7 @@ const OrderManagement = () => {
       )}
 
       {/* main content */}
-      <div className="flex flex-col lg:flex-row gap-5 ">
+      <div className="flex flex-col lg:flex-row lg:items-start gap-5">
         {/* ── NEW TABLE — TanStack React Table with Pagination ──────── */}
         <div
           className={`bg-white border border-[#D8D8D8] rounded-lg overflow-hidden w-full flex flex-col transition-all ${

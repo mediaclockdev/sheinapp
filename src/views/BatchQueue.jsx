@@ -5,6 +5,7 @@ import {
   Copy,
   Info,
   LockKeyholeOpen,
+  CheckCircle,
   X,
   Eye,
   Trash2,
@@ -182,6 +183,9 @@ export default function BatchQueue() {
   const [lockedBatches, setLockedBatches] = useState([]);
   const [lockedBatchesLoading, setLockedBatchesLoading] = useState(true);
   const [lockedBatchesError, setLockedBatchesError] = useState(null);
+  const [completedBatches, setCompletedBatches] = useState([]);
+  const [completedBatchesLoading, setCompletedBatchesLoading] = useState(true);
+  const [completedBatchesError, setCompletedBatchesError] = useState(null);
   const [expandedBatch, setExpandedBatch] = useState(null);
   const [activityLogs, setActivityLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(true);
@@ -227,10 +231,26 @@ export default function BatchQueue() {
     }
   }, [fetchBatches]);
 
+  const fetchCompletedBatches = useCallback(async () => {
+    setCompletedBatchesLoading(true);
+    setCompletedBatchesError(null);
+    try {
+      setCompletedBatches(await fetchBatches("COMPLETED"));
+    } catch (err) {
+      setCompletedBatchesError(
+        getErrorMessage(err, "Failed to fetch completed batches"),
+      );
+      setCompletedBatches([]);
+    } finally {
+      setCompletedBatchesLoading(false);
+    }
+  }, [fetchBatches]);
+
   useEffect(() => {
     fetchActiveBatches();
     fetchLockedBatches();
-  }, [fetchActiveBatches, fetchLockedBatches]);
+    fetchCompletedBatches();
+  }, [fetchActiveBatches, fetchLockedBatches, fetchCompletedBatches]);
 
   const fetchApprovedOrders = useCallback(async (page = 1) => {
     setApprovedOrdersLoading(true);
@@ -445,6 +465,25 @@ export default function BatchQueue() {
       setLockError(getErrorMessage(err, "Failed to unlock batch"));
     } finally {
       setUnlockingBatchId(null);
+    }
+  };
+
+  const [completingBatchId, setCompletingBatchId] = useState(null);
+
+  const handleCompleteBatch = async (batch) => {
+    if (completingBatchId) return;
+    setCompletingBatchId(batch.id);
+    setLockError(null);
+    try {
+      await apiClient.patch(ENDPOINTS.batches.complete(batch.id));
+
+      await Promise.all([fetchLockedBatches(), fetchCompletedBatches()]);
+      refreshActivityLogs();
+      setSuccessMessage("Batch marked as completed!");
+    } catch (err) {
+      setLockError(getErrorMessage(err, "Failed to complete batch"));
+    } finally {
+      setCompletingBatchId(null);
     }
   };
 
@@ -720,6 +759,16 @@ export default function BatchQueue() {
           >
             Locked & Processed
           </button>
+          {/* <button
+            onClick={() => setActiveTab("completed")}
+            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
+              activeTab === "completed"
+                ? "border-[#7A4E5B] text-[#141D23]"
+                : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
+            }`}
+          >
+            Completed ({completedBatches.length})
+          </button> */}
         </div>
       </div>
 
@@ -1129,6 +1178,16 @@ export default function BatchQueue() {
                         ? "Exporting..."
                         : "Export Batch"}
                     </button>
+                    {/* <button
+                      onClick={() => handleCompleteBatch(batch)}
+                      disabled={completingBatchId === batch.id}
+                      className="w-full bg-[#0D8246] hover:bg-[#0B6E3B] text-white rounded-sm py-2.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer transition-colors"
+                    >
+                      <CheckCircle size={16} />
+                      {completingBatchId === batch.id
+                        ? "Completing..."
+                        : "Mark as Purchased"}
+                    </button> */}
                     {/* <p className="text-xs text-center text-[#5C5F60]">
                       Locked for processing by {batch.lockedBy}
                     </p> */}
@@ -1140,6 +1199,77 @@ export default function BatchQueue() {
               lockedBatches.length === 0 && (
                 <div className="col-span-full py-12 text-center text-[#5C5F60]">
                   No locked batches yet.
+                </div>
+              )}
+          </div>
+        )}
+
+        {activeTab === "completed" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {completedBatchesLoading && (
+              <div className="col-span-full py-12 text-center text-[#5C5F60]">
+                Loading completed batches...
+              </div>
+            )}
+            {!completedBatchesLoading && completedBatchesError && (
+              <div className="col-span-full py-12 text-center text-red-600">
+                {completedBatchesError}
+              </div>
+            )}
+            {!completedBatchesLoading &&
+              !completedBatchesError &&
+              completedBatches.map((batch) => (
+                <div
+                  key={batch.id}
+                  className="bg-white border border-[#C8E6C9] rounded-md p-5 flex flex-col shadow-sm"
+                >
+                  <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-[#5C5F60] uppercase tracking-wider">
+                    <span>BATCH-{batch.id}</span>
+                    <span className="w-1 h-1 bg-[#D3C3C5] rounded-full"></span>
+                    <span className="text-[#141D23] font-bold">
+                      {batch.itemCount} Items
+                    </span>
+                    <span className="ml-auto flex items-center gap-1 text-[#0D8246] normal-case tracking-normal">
+                      <CheckCircle size={14} /> Completed
+                    </span>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-[#141D23] mb-4">
+                    {batch.orderCount} Orders
+                  </h3>
+
+                  <OrderChips
+                    batch={batch}
+                    tone="pink"
+                    expanded={expandedBatch === batch.id}
+                    onToggle={() =>
+                      setExpandedBatch(
+                        expandedBatch === batch.id ? null : batch.id,
+                      )
+                    }
+                    openOrderId={openOrderId}
+                    onOpen={setOpenOrderId}
+                  />
+
+                  <div className="mt-auto">
+                    <button
+                      onClick={() => handleExportBatch(batch)}
+                      disabled={exportingBatchId === batch.id}
+                      className="w-full bg-[#FFD1DC]/60 hover:bg-[#FFD1DC] text-[#7A4E5B] border border-[#FFD1DC] rounded-sm py-2.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer transition-colors"
+                    >
+                      <Copy size={16} />
+                      {exportingBatchId === batch.id
+                        ? "Exporting..."
+                        : "Export Batch"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            {!completedBatchesLoading &&
+              !completedBatchesError &&
+              completedBatches.length === 0 && (
+                <div className="col-span-full py-12 text-center text-[#5C5F60]">
+                  No completed batches yet.
                 </div>
               )}
           </div>
