@@ -177,7 +177,8 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                                 onClick={() =>
                                   d.handleItemQuantityChange(item.id, 1)
                                 }
-                                className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                                disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
+                                className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 <Plus size={12} />
                               </button>
@@ -265,7 +266,8 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                               onClick={() =>
                                 d.handleItemQuantityChange(item.id, 1)
                               }
-                              className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
+                              disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
+                              className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Plus size={12} />
                             </button>

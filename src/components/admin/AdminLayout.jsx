@@ -130,27 +130,27 @@ const AdminLayout = () => {
               </NavLink>
             ))}
           </nav>
-        </div>
 
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={handleGenerateReport}
-            disabled={isGenerating}
-            className="flex w-full items-center  gap-2 rounded-lg bg-[#FFE8EF] px-3.5 py-2.5 text-sm font-semibold text-[#D24D77] transition-colors duration-200 hover:bg-[#FFD1DC] cursor-pointer"
-          >
-            <FileText size={16} />
-            <span>{isGenerating ? "Generating..." : "Generate Report"}</span>
-          </button>
-          <button
-            onClick={() => {
-              logout();
-              navigate("/login");
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-[#5C5F60] transition-colors duration-200 hover:bg-[#EEF4FB] hover:text-[#17222B] cursor-pointer"
-          >
-            <LogOut size={16} />
-            <span>Log Out</span>
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleGenerateReport}
+              disabled={isGenerating}
+              className="flex w-full items-center  gap-2 rounded-lg  px-3.5 py-2.5 text-sm font-semibold text-[#5C5F60] transition-colors duration-200 hover:bg-[#FFD1DC] cursor-pointer"
+            >
+              <FileText size={16} />
+              <span>{isGenerating ? "Generating..." : "Generate Report"}</span>
+            </button>
+            <button
+              onClick={() => {
+                logout();
+                navigate("/login");
+              }}
+              className="flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-[#5C5F60] transition-colors duration-200 hover:bg-[#EEF4FB] hover:text-[#17222B] cursor-pointer"
+            >
+              <LogOut size={16} />
+              <span>Log Out</span>
+            </button>
+          </div>
         </div>
       </aside>
 
