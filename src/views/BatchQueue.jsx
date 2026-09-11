@@ -104,6 +104,7 @@ const mapBatch = (batch) => {
     discount: batch.discount,
     savingsText: batch.savingsText,
     lockedBy: batch.lockedBy,
+    sheinOrderRef: batch.sheinOrderRef,
     orders,
   };
 };
@@ -475,7 +476,9 @@ export default function BatchQueue() {
     setCompletingBatchId(batch.id);
     setLockError(null);
     try {
-      await apiClient.patch(ENDPOINTS.batches.complete(batch.id));
+      await apiClient.post(ENDPOINTS.batches.complete(batch.id), {
+        sheinOrderRef: batch.sheinOrderRef || undefined
+      });
 
       await Promise.all([fetchLockedBatches(), fetchCompletedBatches()]);
       refreshActivityLogs();
@@ -1178,7 +1181,7 @@ export default function BatchQueue() {
                         ? "Exporting..."
                         : "Export Batch"}
                     </button>
-                    {/* <button
+                    <button
                       onClick={() => handleCompleteBatch(batch)}
                       disabled={completingBatchId === batch.id}
                       className="w-full bg-[#0D8246] hover:bg-[#0B6E3B] text-white rounded-sm py-2.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer transition-colors"
@@ -1187,7 +1190,7 @@ export default function BatchQueue() {
                       {completingBatchId === batch.id
                         ? "Completing..."
                         : "Mark as Purchased"}
-                    </button> */}
+                    </button>
                     {/* <p className="text-xs text-center text-[#5C5F60]">
                       Locked for processing by {batch.lockedBy}
                     </p> */}
@@ -1634,6 +1637,7 @@ export default function BatchQueue() {
         order={drawerOrder}
         onClose={() => setOpenOrderId(null)}
       />
+
     </div>
   );
 }

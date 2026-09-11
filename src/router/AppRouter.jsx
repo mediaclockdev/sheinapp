@@ -11,10 +11,10 @@ import Dashboard from "../views/Dashboard";
 import OrderManagement from "../views/OrderManagement";
 import {
   PaymentsView,
-  TrackingView,
   ReportsView,
   PagePlaceholder,
 } from "../views/PlaceholderViews";
+import Tracking from "../views/Tracking";
 import Settings from "../views/Settings";
 import Profile from "../views/Profile";
 import BatchQueue from "../views/BatchQueue";
@@ -82,7 +82,7 @@ function AppRoutes() {
         <Route path="neworders" element={<NewOrders />} />
         <Route path="payments" element={<PaymentsView />} />
         <Route path="batch-queue" element={<BatchQueue />} />
-        <Route path="tracking" element={<TrackingView />} />
+        <Route path="tracking" element={<Tracking />} />
         <Route path="customers" element={<Customers />} />
         <Route path="reports" element={<ReportsView />} />
         <Route path="settings" element={<Settings />} />
