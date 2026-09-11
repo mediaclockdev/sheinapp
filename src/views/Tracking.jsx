@@ -93,7 +93,7 @@ export default function Tracking() {
     try {
       await apiClient.patch(ENDPOINTS.batches.trackingStatus(batchId), {
         newStatus: updateStatus,
-        message: updateNote
+        trackingNotes: updateNote
       });
       setUpdateNote("");
       handleManage(activeItem); // Refresh history
