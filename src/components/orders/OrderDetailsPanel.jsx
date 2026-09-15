@@ -1,4 +1,4 @@
-import { Plus, Minus, Trash2 } from "lucide-react";
+import { Plus, Minus, Trash2, ExternalLink } from "lucide-react";
 import { formatAddress } from "../../lib/format";
 import approve from "../../assets/approveicon.svg";
 import reject from "../../assets/rejecticon.svg";
@@ -7,6 +7,26 @@ import { API_ORIGIN } from "../../lib/api/client";
 
 const imageUrl = (p) =>
   !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
+
+// ponytail: field name unconfirmed; keep only the real one once the API is known
+const productLink = (item) =>
+  item.productUrl || item.productLink || item.url || item.link;
+
+/** Opens the product page in a new tab; renders nothing when the item has no link. */
+const BuyLink = ({ item }) => {
+  const href = productLink(item);
+  return href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center justify-center gap-1 px-3 py-1 rounded border border-[#D3C3C5] bg-[#FFD1DC] hover:bg-[#FFD1DC]/60 text-[10px] font-bold text-[#2D141C] whitespace-nowrap transition"
+    >
+      <ExternalLink size={12} />
+      Buy
+    </a>
+  ) : null;
+};
 
 /** Promo price struck through the original; just the price when there's no promo. */
 const ItemPrice = ({ price, promotionalPrice }) => {
@@ -189,6 +209,9 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                             </span>
                           )}
                         </div>
+                        <div className="flex justify-end">
+                          <BuyLink item={item} />
+                        </div>
                       </div>
                     </>
                   ) : (
@@ -230,7 +253,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                       </div>
 
                       {/* Right Side */}
-                      <div className="flex flex-col items-end justify-between h-20 shrink-0">
+                      <div className="flex flex-col items-end justify-between gap-2 min-h-20 shrink-0">
                         <div className="flex items-center gap-3">
                           <ItemPrice
                             price={item.price}
@@ -277,6 +300,8 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                             Qty: {item.quantity}
                           </span>
                         )}
+
+                        <BuyLink item={item} />
                       </div>
                     </div>
                   )}

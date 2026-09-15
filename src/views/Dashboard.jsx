@@ -89,6 +89,22 @@ const fetchBatchData = async () => {
   }));
 };
 
+// Local products sell over chat/offline, so revenue = salesCount × price per product
+const fetchLocalRevenue = async () => {
+  // ponytail: one big page; move this sum to the backend if agents list 1000+ products
+  const { data } = await apiClient.get(ENDPOINTS.marketplace.list, {
+    params: { page: 1, limit: 1000 },
+  });
+  const payload = data?.data ?? data;
+  const rows = Array.isArray(payload)
+    ? payload
+    : payload?.products || payload?.items || payload?.rows || [];
+  return rows.reduce(
+    (sum, p) => sum + Number(p.salesCount || 0) * Number(p.price || 0),
+    0,
+  );
+};
+
 const ORDERS_PAGE_SIZE = 5;
 
 const Dashboard = () => {
@@ -117,7 +133,8 @@ const Dashboard = () => {
       fetchCardData().catch(() => null),
       fetchOrderData().catch(() => null),
       fetchBatchData().catch(() => null),
-    ]).then(([cards, orders, batches]) => {
+      fetchLocalRevenue().catch(() => 0),
+    ]).then(([cards, orders, batches, localRevenue]) => {
       setData({
         agent: {
           name: user?.name || "Agent",
@@ -129,6 +146,7 @@ const Dashboard = () => {
           moneySavedThisMonth: `$${(cards?.moneySaved ?? 0).toLocaleString()}`,
           totalWeight: `${Number(cards?.totalWeight ?? 0).toFixed(2)} kg`,
           ordersInBatch: cards?.ordersInBatch ?? 0,
+          localRevenue: money(localRevenue),
         },
         activeDiscountBatches: batches ?? [],
         // shown only until the revenue-data call resolves
@@ -215,7 +233,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         {/* Card 1: Total Orders */}
         <div
           onClick={() => navigate("/orders")}
@@ -241,7 +259,7 @@ const Dashboard = () => {
         {/* Card 2: Pending Review */}
         <div className="bg-white p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="h-9 w-9  shrink-0">
                 <img
                   src={pendingreviewicon}
@@ -249,7 +267,7 @@ const Dashboard = () => {
                   className="h-9 w-9"
                 />
               </div>
-              <div className=" bg-[#FFD1DC] px-2 py-0.5 rounded-full text-[10px] font-bold text-[#78555E]">
+              <div className="bg-[#FFD1DC] px-2 py-1 rounded-full text-[10px] leading-none font-bold tracking-wide text-[#78555E] whitespace-nowrap">
                 ACTION REQUIRED
               </div>
             </div>
@@ -323,6 +341,24 @@ const Dashboard = () => {
             </p>
             <p className="text-2xl font-semibold text-[#2D141C]">
               {data.stats.ordersInBatch}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 6: Local Product Revenue */}
+        <div
+          onClick={() => navigate("/neworders")}
+          className="bg-white cursor-pointer p-5 rounded-2xl border border-[#E8DFE1] shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative flex flex-col justify-between min-h-[120px]"
+        >
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-bold text-[#98A2AB] uppercase tracking-wider">
+              Local Revenue
+            </p>
+            <p className="text-2xl font-semibold text-[#2D141C]">
+              {data.stats.localRevenue}
+            </p>
+            <p className="text-xs text-[#5C5F60]">
+              From marked-as-sold products
             </p>
           </div>
         </div>

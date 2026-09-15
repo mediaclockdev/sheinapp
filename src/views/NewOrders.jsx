@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, Search, Store } from "lucide-react";
+import { Pencil, Trash2, Search, Store, CircleCheck } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
 import apiClient, { API_ORIGIN, getErrorMessage } from "../lib/api/client";
 import { ENDPOINTS } from "../lib/api/endpoints";
@@ -36,7 +36,7 @@ const fieldClass =
   "w-full h-12 px-4 border border-[#D3C3C5] rounded-md text-[15px] bg-white outline-none transition duration-150 focus:border-[#78555E] focus:ring-2 focus:ring-[#FFD1DC]";
 const label = "block text-[#5C5F60] text-sm font-medium mb-2";
 const pressable = "transition duration-150 motion-safe:active:scale-[0.97]";
-const rowAction = `${pressable} flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#78555E]`;
+const rowAction = `${pressable} whitespace-nowrap shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-[#D6C5CC] rounded-lg text-xs font-bold text-[#7A5C69] hover:bg-[#F9F5F6] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#78555E]`;
 const primaryBtn = `${pressable} h-12 bg-[#FFD1DC] hover:bg-[#FFD1DC]/60 text-[#2D141C] border border-[#D3C3C5] font-normal px-5 rounded-sm whitespace-nowrap text-sm lg:text-base cursor-pointer shadow-sm flex items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-[#78555E] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100`;
 const secondaryBtn = `${pressable} h-12 bg-white/50 hover:bg-white text-[#141D23] border border-[#D3C3C5] font-normal px-5 rounded-sm whitespace-nowrap text-sm lg:text-base cursor-pointer shadow-sm flex items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-[#78555E]`;
 
@@ -94,6 +94,10 @@ const NewOrders = () => {
   const [listLoading, setListLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [pendingDelete, setPendingDelete] = useState(null);
+  // product whose sale is being recorded, plus the quantity typed in the popup
+  const [pendingSale, setPendingSale] = useState(null);
+  const [soldQty, setSoldQty] = useState(1);
+  const [selling, setSelling] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
 
   // null = listing, otherwise the product being edited ({} for a new one)
@@ -208,6 +212,47 @@ const NewOrders = () => {
       setSuccessMessage(`"${target.name}" deleted`);
     } catch (err) {
       setError(getErrorMessage(err, "Failed to delete product"));
+    }
+  };
+  const openMarkSold = (item) => {
+    setPendingSale(item);
+    setSoldQty(1);
+  };
+
+  const confirmMarkSold = async (event) => {
+    event.preventDefault();
+    const target = pendingSale;
+    const qty = Number(soldQty);
+    // the input's min/max already block this; this check covers typed or pasted values
+    if (!Number.isInteger(qty) || qty < 1 || qty > target.stockQuantity) return;
+
+    setSelling(true);
+    setError(null);
+    try {
+      const { data } = await apiClient.post(
+        ENDPOINTS.marketplace.markSold(target.id),
+        { quantity: qty },
+      );
+      // prefer the backend's numbers; fall back to doing the math ourselves
+      const saved = data?.data;
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === target.id
+            ? {
+                ...p,
+                stockQuantity: saved?.stockQuantity ?? p.stockQuantity - qty,
+                salesCount:
+                  saved?.salesCount ?? Number(p.salesCount || 0) + qty,
+              }
+            : p,
+        ),
+      );
+      setSuccessMessage(`Marked ${qty} × "${target.name}" as sold`);
+      setPendingSale(null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to mark product as sold"));
+    } finally {
+      setSelling(false);
     }
   };
 
@@ -404,7 +449,7 @@ const NewOrders = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full min-w-[960px] text-left">
                 <thead className="bg-[#F8F5F7] border-b border-[#D8D8D8]">
                   <tr>
                     {["Product", "SKU", "Price", "Stock", "Added", ""].map(
@@ -425,14 +470,14 @@ const NewOrders = () => {
                       key={item.id}
                       className="border-b border-[#EFE7EA] last:border-0 hover:bg-[#FDFAFB] transition duration-150"
                     >
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-4 min-w-[260px]">
                         <div className="flex items-center gap-3">
                           <Thumb src={imageUrl(item.images?.[0])} />
                           <div className="min-w-0">
                             <p className="font-semibold text-[#17222B] truncate">
                               {item.name}
                             </p>
-                            <p className="text-sm text-[#5C5F60] truncate max-w-[420px]">
+                            <p className="text-sm text-[#5C5F60] truncate max-w-[320px]">
                               {item.description}
                             </p>
                             {item.tag && (
@@ -480,6 +525,15 @@ const NewOrders = () => {
                           >
                             <Trash2 size={14} />
                             Delete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openMarkSold(item)}
+                            disabled={!item.stockQuantity}
+                            className={`${rowAction} text-emerald-700 border-emerald-200 hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed`}
+                          >
+                            <CircleCheck size={14} />
+                            Mark as Sold
                           </button>
                         </div>
                       </td>
@@ -800,6 +854,77 @@ const NewOrders = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Mark as sold */}
+      {pendingSale && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mark as sold"
+          className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
+          onClick={() => !selling && setPendingSale(null)}
+        >
+          <form
+            onSubmit={confirmMarkSold}
+            className="bg-white rounded-lg border border-[#D3C3C5] shadow-lg w-full max-w-sm p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h2 className="text-lg font-semibold text-[#17222B]">
+                How many items did you sell?
+              </h2>
+              <p className="text-sm text-[#5C5F60] mt-1">
+                &ldquo;{pendingSale.name}&rdquo; has {pendingSale.stockQuantity}{" "}
+                in stock.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="soldQty" className={label}>
+                Quantity sold
+              </label>
+              <input
+                id="soldQty"
+                type="number"
+                min={1}
+                max={pendingSale.stockQuantity}
+                step={1}
+                required
+                autoFocus
+                value={soldQty}
+                onChange={(e) => setSoldQty(e.target.value)}
+                className={fieldClass}
+              />
+              {Number(soldQty) > pendingSale.stockQuantity && (
+                <p className="mt-1.5 text-sm text-red-600">
+                  You only have {pendingSale.stockQuantity} in stock
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingSale(null)}
+                disabled={selling}
+                className={`${pressable} h-10 px-4 border border-[#D3C3C5] rounded-sm text-sm cursor-pointer hover:bg-[#FFF8FA] outline-none focus-visible:ring-2 focus-visible:ring-[#78555E]`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={
+                  selling ||
+                  Number(soldQty) < 1 ||
+                  Number(soldQty) > pendingSale.stockQuantity
+                }
+                className={`${pressable} h-10 px-4 bg-[#FFD1DC] hover:bg-[#FFD1DC]/60 text-[#2D141C] border border-[#D3C3C5] rounded-sm text-sm cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#78555E] disabled:opacity-60 disabled:cursor-not-allowed`}
+              >
+                {selling ? "Saving..." : "Confirm Sale"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

@@ -71,6 +71,7 @@ export const ENDPOINTS = {
     list: "/api/products",
     create: "/api/products",
     byId: (id) => `/api/products/${id}`,
+    markSold: (id) => `/api/products/${id}/mark-sold`,
   },
   admin: {
     dashboard: "/api/admin/dashboard",
