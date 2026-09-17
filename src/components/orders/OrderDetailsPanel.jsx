@@ -45,13 +45,11 @@ const Thumb = ({ item }) => (
 
 /**
  * Local edit, saved on Approve. Range 0–MAX_ITEM_QTY (and the stock limit when
- * known). Once an APPROVED order's item hits 0, "+" stays disabled: stock
- * can't be added back after approval.
+ * known), the same for every order status.
  */
 const QtyStepper = ({ item, d, compact = false }) => {
   const qty = Number(item.quantity ?? 0);
   const max = Math.min(MAX_ITEM_QTY, item.maxQuantity ?? MAX_ITEM_QTY);
-  const lockedAtZero = d.order?.status === "APPROVED" && qty === 0;
   const pad = compact ? "px-2 py-1" : "px-2.5 py-1.5";
   return (
     <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden shrink-0">
@@ -69,12 +67,7 @@ const QtyStepper = ({ item, d, compact = false }) => {
       <button
         type="button"
         onClick={() => d.handleItemQuantityChange(item.id, 1)}
-        disabled={qty >= max || lockedAtZero}
-        title={
-          lockedAtZero
-            ? "Can't add stock back after approval"
-            : undefined
-        }
+        disabled={qty >= max}
         className={`${pad} text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed`}
       >
         <Plus size={12} />
