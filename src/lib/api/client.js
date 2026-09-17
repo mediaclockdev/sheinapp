@@ -3,10 +3,12 @@ import { handleUnauthorized, isUnauthorized } from "../sessionExpiry";
 
 export const API_ORIGIN = import.meta.env.VITE_API_BASE_URL;
 
-// Axios errors carry the backend's real message under response.data; err.message
-// is just a generic "Request failed with status code 4xx" otherwise.
+// Axios errors carry the backend's real message under response.data (as
+// `message` or `error`); err.message is just a generic "Request failed with
+// status code 4xx" otherwise.
 export const getErrorMessage = (err, fallback) =>
   err.response?.data?.message ||
+  (typeof err.response?.data?.error === "string" && err.response.data.error) ||
   err.response?.data?.errors?.map((e) => e.message).join(", ") ||
   fallback ||
   err.message;

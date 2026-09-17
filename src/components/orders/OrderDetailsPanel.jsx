@@ -76,6 +76,14 @@ const QtyStepper = ({ item, d, compact = false }) => {
   );
 };
 
+/** Red badge for an item whose quantity is 0; renders nothing otherwise. */
+const OutOfStockBadge = ({ item }) =>
+  Number(item.quantity) === 0 ? (
+    <span className="flex items-center px-3 py-1 rounded border border-red-200 bg-red-50 text-[10px] font-bold text-red-700 whitespace-nowrap">
+      Out of Stock
+    </span>
+  ) : null;
+
 /** Promo price struck through the original; just the price when there's no promo. */
 const ItemPrice = ({ price, promotionalPrice }) => {
   const promo = Number(promotionalPrice) || 0;
@@ -178,7 +186,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                   key={item.id}
                   className={`border border-[#D3C3C5] rounded-xl p-4 ${
                     Number(item.quantity) === 0
-                      ? "bg-[#F3F4F6] opacity-60 grayscale"
+                      ? "bg-[#F3F4F6] opacity-60"
                       : "bg-white"
                   }`}
                 >
@@ -229,6 +237,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                           )}
                         </div>
                         <div className="flex justify-end gap-2">
+                          <OutOfStockBadge item={item} />
                           <BuyLink item={item} />
                         </div>
                       </div>
@@ -288,6 +297,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                         )}
 
                         <div className="flex items-center gap-2 shrink-0">
+                          <OutOfStockBadge item={item} />
                           <BuyLink item={item} />
                         </div>
                       </div>

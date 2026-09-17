@@ -164,8 +164,12 @@ export default function OrderSummaryDrawer({ order, onClose }) {
                   item.promotionalPrice > 0
                     ? item.promotionalPrice
                     : item.price;
+                const outOfStock = Number(item.quantity) === 0;
                 return (
-                  <li key={item.id} className="flex gap-3">
+                  <li
+                    key={item.id}
+                    className={`flex gap-3 ${outOfStock ? "opacity-60" : ""}`}
+                  >
                     {item.photoUrl ? (
                       <img
                         src={item.photoUrl}
@@ -196,6 +200,11 @@ export default function OrderSummaryDrawer({ order, onClose }) {
                         SKU: {item.skuCode}
                       </p>
                       <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px]">
+                        {outOfStock && (
+                          <span className="px-2 py-0.5 rounded border border-red-200 bg-red-50 text-[10px] font-bold text-red-700 whitespace-nowrap">
+                            Out of Stock
+                          </span>
+                        )}
                         {item.promotionalPrice > 0 ? (
                           <span className="text-[#0D8246]">
                             {fmtMoney(item.promotionalPrice)} ea

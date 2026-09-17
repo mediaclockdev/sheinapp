@@ -41,7 +41,17 @@ const hasItemList = (order) => Array.isArray(order?.items);
 
 // Server message only; the per-field validation list is left out on purpose.
 const serverMessage = (err, fallback) =>
-  err.response?.data?.message || fallback;
+  err.response?.data?.message ||
+  (typeof err.response?.data?.error === "string" && err.response.data.error) ||
+  fallback;
+
+// Statuses only move forward (PURCHASED → WAREHOUSE → IN_TRANSIT → ARRIVED),
+// so only the ones after the batch's current milestone can be picked.
+const statusRank = (status) =>
+  TRACKING_STATUSES.findIndex((s) => s.value === status);
+
+const currentRank = (row, history) =>
+  Math.max(statusRank(row?.status), statusRank(history[0]?.status));
 
 // Shipping milestones shown in the timeline; other log statuses (e.g. SUCCESS)
 // are internal assignment logs and are left out.
@@ -173,7 +183,8 @@ export default function Tracking() {
   const [updateError, setUpdateError] = useState(null);
 
   const handleUpdateStatus = async () => {
-    if (!activeItem || isUpdating) return;
+    if (!activeItem || isUpdating || !selectedStatus) return;
+    const updateStatus = selectedStatus;
     setIsUpdating(true);
     setUpdateError(null);
     const batchId = batchIdOf(activeItem);
@@ -261,6 +272,13 @@ export default function Tracking() {
       setHistoryLoading(false);
     }
   };
+
+  const rankNow = currentRank(activeItem, trackingHistory);
+  const nextStatuses = TRACKING_STATUSES.slice(rankNow + 1).map((s) => s.value);
+  // Keep the agent's pick while it's still valid, otherwise the next milestone.
+  const selectedStatus = nextStatuses.includes(updateStatus)
+    ? updateStatus
+    : nextStatuses[0];
 
   const batchItemCount = batchOrders.reduce(
     (sum, o) => sum + (o.items?.length || 0),
@@ -482,10 +500,19 @@ export default function Tracking() {
                 </h3>
                 <div className="space-y-4">
                   <select 
-                    value={updateStatus}
+                    value={selectedStatus ?? ""}
                     onChange={(e) => setUpdateStatus(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-800 bg-white focus:outline-none focus:border-gray-400 font-medium">
-                    {TRACKING_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    disabled={!selectedStatus}
+                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-800 bg-white focus:outline-none focus:border-gray-400 font-medium disabled:opacity-60">
+                    {!selectedStatus && (
+                      <option value="">Final status reached</option>
+                    )}
+                    {TRACKING_STATUSES.map((s, i) => (
+                      <option key={s.value} value={s.value} disabled={i <= rankNow}>
+                        {s.label}
+                        {i === rankNow ? " — current" : ""}
+                      </option>
+                    ))}
                   </select>
                   
                   <textarea 
@@ -503,7 +530,7 @@ export default function Tracking() {
 
                   <button 
                     onClick={handleUpdateStatus}
-                    disabled={isUpdating}
+                    disabled={isUpdating || !selectedStatus}
                     className="w-full bg-[#ffc6d8] hover:bg-[#ffb5cd] text-[#704154] font-bold py-3 rounded-md transition-colors disabled:opacity-50">
                     {isUpdating ? "Updating..." : "Update"}
                   </button>

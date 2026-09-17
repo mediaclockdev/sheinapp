@@ -150,6 +150,8 @@ const OrderManagement = () => {
         return "bg-[#FA8072] text-[#420D09]";
       case "APPROVED":
         return "bg-[#DBEAFE] text-[#1E40AF]";
+      case "PURCHASED":
+        return "bg-[#E6F4EA] text-[#0D8246]";
       default:
         return "bg-[#DBEAFE] text-[#1E40AF]";
     }
@@ -354,6 +356,7 @@ const OrderManagement = () => {
                 <option>Approved</option>
                 <option>Waiting</option>
                 <option>Rejected</option>
+                <option>Purchased</option>
               </select>
             </div>
 
