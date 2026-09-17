@@ -39,6 +39,63 @@ const batchIdOf = (row = {}) =>
 
 const hasItemList = (order) => Array.isArray(order?.items);
 
+// Server message only; the per-field validation list is left out on purpose.
+const serverMessage = (err, fallback) =>
+  err.response?.data?.message || fallback;
+
+// Shipping milestones shown in the timeline; other log statuses (e.g. SUCCESS)
+// are internal assignment logs and are left out.
+const MILESTONES = {
+  PURCHASED: {
+    title: "Ordered from SHEIN",
+    subtitle: "Order placed with supplier",
+  },
+  WAREHOUSE: {
+    title: "Arrived at Warehouse",
+    subtitle: "Package received and scanned at local hub",
+  },
+  IN_TRANSIT: {
+    title: "In Transit",
+    subtitle: "Your package is on its way",
+  },
+  ARRIVED: {
+    title: "Arrived in Country",
+    subtitle: "Package has arrived at destination country",
+  },
+};
+
+const NOTE_MARKER = "- Note:";
+
+/** One activity log → timeline entry: milestone title, agent note or default text. */
+const toTimelineEntry = (log) => {
+  const milestone = MILESTONES[log.status];
+  const action = log.action || "";
+  const note = action.includes(NOTE_MARKER)
+    ? action.split(NOTE_MARKER)[1].trim()
+    : "";
+  return {
+    id: log.id,
+    status: log.status,
+    title: milestone.title,
+    subtitle: note || milestone.subtitle,
+    createdAt: log.createdAt,
+  };
+};
+
+const toTimeline = (logs = []) =>
+  logs
+    .filter((log) => MILESTONES[log.status])
+    .map(toTimelineEntry)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+const loadHistory = async (batchId) => {
+  const { data: res } = await apiClient.get(
+    ENDPOINTS.batches.trackingDetail(batchId),
+  );
+  const logs = res.data?.activityLogs ?? res.activityLogs;
+  return toTimeline(Array.isArray(logs) ? logs : []);
+};
+
 /** Orders of a batch with their item lists, fetching any order that lacks them. */
 const loadBatchOrders = async (row) => {
   let orders = row.orders || row.batch?.orders;
@@ -96,7 +153,7 @@ export default function Tracking() {
       setTotalCount(total);
       setTotalPages(pages);
     } catch (err) {
-      setError(err.message || "Failed to fetch tracking data");
+      setError(serverMessage(err, "Failed to fetch tracking data"));
       setData([]);
     } finally {
       setLoading(false);
@@ -113,21 +170,37 @@ export default function Tracking() {
   const [updateStatus, setUpdateStatus] = useState("PURCHASED");
   const [updateNote, setUpdateNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState(null);
 
   const handleUpdateStatus = async () => {
-    if (!activeItem) return;
+    if (!activeItem || isUpdating) return;
     setIsUpdating(true);
+    setUpdateError(null);
     const batchId = batchIdOf(activeItem);
     try {
       await apiClient.patch(ENDPOINTS.batches.trackingStatus(batchId), {
         newStatus: updateStatus,
-        trackingNotes: updateNote
+        trackingNotes: updateNote,
       });
+      // Show the new status in the history right away; the server's list
+      // replaces it once it comes back with entries.
+      setTrackingHistory((prev) => [
+        toTimelineEntry({
+          id: `local-${Date.now()}`,
+          status: updateStatus,
+          action: updateNote.trim() ? `${NOTE_MARKER} ${updateNote.trim()}` : "",
+          createdAt: new Date().toISOString(),
+        }),
+        ...prev,
+      ]);
+      setActiveItem((prev) => (prev ? { ...prev, status: updateStatus } : prev));
       setUpdateNote("");
-      handleManage(activeItem); // Refresh history
-      fetchTracking();          // Refresh main list
+      fetchTracking(); // Refresh main list
+      loadHistory(batchId)
+        .then((list) => list.length > 0 && setTrackingHistory(list))
+        .catch(() => {}); // keep the local entry if the refresh fails
     } catch (err) {
-      alert("Failed to update status: " + err.message);
+      setUpdateError(serverMessage(err, "Failed to update status"));
     } finally {
       setIsUpdating(false);
     }
@@ -159,7 +232,8 @@ export default function Tracking() {
     setHistoryLoading(true);
     setHistoryError(null);
     setTrackingHistory([]);
-    
+    setUpdateError(null);
+
     // Attempt to get the batch ID. Usually tracking items are batches, but sometimes they map ID.
     const batchId = batchIdOf(item);
 
@@ -175,17 +249,14 @@ export default function Tracking() {
         setBatchOrders(orders);
       })
       .catch((err) =>
-        setOrdersError(err.message || "Failed to load batch items"),
+        setOrdersError(serverMessage(err, "Failed to load batch items")),
       )
       .finally(() => setOrdersLoading(false));
 
     try {
-      const { data: res } = await apiClient.get(ENDPOINTS.batches.trackingDetail(batchId));
-      // Map based on typical shapes. If your backend returns `res.data` or `res.tracking`
-      const historyList = res.data?.history || res.data || res.history || res || [];
-      setTrackingHistory(Array.isArray(historyList) ? historyList : []);
+      setTrackingHistory(await loadHistory(batchId));
     } catch (err) {
-      setHistoryError(err.message || "Failed to load tracking details");
+      setHistoryError(serverMessage(err, "Failed to load tracking details"));
     } finally {
       setHistoryLoading(false);
     }
@@ -424,6 +495,12 @@ export default function Tracking() {
                     placeholder="Ex- Your order is being processed, Shipped to Dubai"
                   ></textarea>
 
+                  {updateError && (
+                    <p role="alert" className="text-sm text-red-600">
+                      {updateError}
+                    </p>
+                  )}
+
                   <button 
                     onClick={handleUpdateStatus}
                     disabled={isUpdating}
@@ -521,11 +598,10 @@ export default function Tracking() {
                       <div className="text-sm text-gray-500 py-4">No tracking history found.</div>
                     ) : (
                       trackingHistory.map((hist, index) => {
-                        // Support various date fields (date/time separate or single timestamp)
-                        const d = hist.timestamp || hist.date || hist.updatedAt;
-                        const dateObj = d ? new Date(d) : null;
-                        const dateStr = dateObj ? dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : hist.date || "";
-                        const timeStr = dateObj ? dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : hist.time || "";
+                        const dateObj = hist.createdAt ? new Date(hist.createdAt) : null;
+                        const valid = dateObj && !isNaN(dateObj);
+                        const dateStr = valid ? dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "";
+                        const timeStr = valid ? dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : "";
                         
                         return (
                         <div
@@ -539,7 +615,7 @@ export default function Tracking() {
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
                               <h4 className="font-bold text-gray-900 text-sm">
-                                {hist.status || "Update"}
+                                {hist.title}
                               </h4>
                               <div className="text-right text-xs text-gray-500">
                                 <div>{dateStr}</div>
@@ -547,7 +623,7 @@ export default function Tracking() {
                               </div>
                             </div>
                             <p className="text-sm text-gray-500 mt-1 pr-12">
-                              {hist.description || hist.message || ""}
+                              {hist.subtitle}
                             </p>
                           </div>
                         </div>

@@ -89,10 +89,6 @@ const CHIP_TONES = {
     base: "bg-slate-100 border-slate-200 hover:bg-slate-200",
     active: "bg-[#FFD1DC]/30 border-[#D4537E]",
   },
-  pink: {
-    base: "bg-[#FFD1DC]/20 border-[#FFD1DC]/50 hover:bg-[#FFD1DC]/40",
-    active: "bg-[#FFD1DC]/50 border-[#D4537E]",
-  },
 };
 
 /** One chip per order on a batch card. Clicking one opens its summary drawer. */
@@ -142,9 +138,6 @@ export default function BatchQueue() {
   const [activeBatches, setActiveBatches] = useState([]);
   const [activeBatchesLoading, setActiveBatchesLoading] = useState(true);
   const [activeBatchesError, setActiveBatchesError] = useState(null);
-  const [completedBatches, setCompletedBatches] = useState([]);
-  const [completedBatchesLoading, setCompletedBatchesLoading] = useState(true);
-  const [completedBatchesError, setCompletedBatchesError] = useState(null);
   const [expandedBatch, setExpandedBatch] = useState(null);
   const [activityLogs, setActivityLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(true);
@@ -175,25 +168,9 @@ export default function BatchQueue() {
     }
   }, [fetchBatches]);
 
-  const fetchCompletedBatches = useCallback(async () => {
-    setCompletedBatchesLoading(true);
-    setCompletedBatchesError(null);
-    try {
-      setCompletedBatches(await fetchBatches("COMPLETED"));
-    } catch (err) {
-      setCompletedBatchesError(
-        getErrorMessage(err, "Failed to fetch completed batches"),
-      );
-      setCompletedBatches([]);
-    } finally {
-      setCompletedBatchesLoading(false);
-    }
-  }, [fetchBatches]);
-
   useEffect(() => {
     fetchActiveBatches();
-    fetchCompletedBatches();
-  }, [fetchActiveBatches, fetchCompletedBatches]);
+  }, [fetchActiveBatches]);
 
   // Modals state
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
@@ -245,9 +222,9 @@ export default function BatchQueue() {
         sheinOrderRef: batch.sheinOrderRef || undefined
       });
 
-      await Promise.all([fetchActiveBatches(), fetchCompletedBatches()]);
+      await fetchActiveBatches();
       refreshActivityLogs();
-      setSuccessMessage("Batch marked as completed!");
+      setSuccessMessage("Batch marked as purchased!");
     } catch (err) {
       setLockError(getErrorMessage(err, "Failed to complete batch"));
     } finally {
@@ -442,7 +419,7 @@ export default function BatchQueue() {
   const selectedBatch = activeBatches.find((b) => b.id === selectedBatchId);
 
   const drawerOrder = openOrderId
-    ? [...activeBatches, ...completedBatches]
+    ? activeBatches
         .flatMap((b) => b.orders || [])
         .find((o) => o.id === openOrderId)
     : null;
@@ -503,16 +480,6 @@ export default function BatchQueue() {
             }`}
           >
             Active Batches ({activeBatches.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("completed")}
-            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
-              activeTab === "completed"
-                ? "border-[#7A4E5B] text-[#141D23]"
-                : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
-            }`}
-          >
-            Completed ({completedBatches.length})
           </button>
         </div>
       </div>
@@ -651,81 +618,6 @@ export default function BatchQueue() {
           </div>
         )}
 
-        {activeTab === "completed" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {lockError && (
-              <div className="col-span-full bg-red-50 border border-red-300 text-red-600 text-sm font-medium rounded-md px-4 py-3">
-                {lockError}
-              </div>
-            )}
-            {completedBatchesLoading && (
-              <div className="col-span-full py-12 text-center text-[#5C5F60]">
-                Loading completed batches...
-              </div>
-            )}
-            {!completedBatchesLoading && completedBatchesError && (
-              <div className="col-span-full py-12 text-center text-red-600">
-                {completedBatchesError}
-              </div>
-            )}
-            {!completedBatchesLoading &&
-              !completedBatchesError &&
-              completedBatches.map((batch) => (
-                <div
-                  key={batch.id}
-                  className="bg-white border border-[#C8E6C9] rounded-md p-5 flex flex-col shadow-sm"
-                >
-                  <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-[#5C5F60] uppercase tracking-wider">
-                    <span>BATCH-{batch.id}</span>
-                    <span className="w-1 h-1 bg-[#D3C3C5] rounded-full"></span>
-                    <span className="text-[#141D23] font-bold">
-                      {batch.itemCount} Items
-                    </span>
-                    <span className="ml-auto flex items-center gap-1 text-[#0D8246] normal-case tracking-normal">
-                      <CheckCircle size={14} /> Completed
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-[#141D23] mb-4">
-                    {batch.orderCount} Orders
-                  </h3>
-
-                  <OrderChips
-                    batch={batch}
-                    tone="pink"
-                    expanded={expandedBatch === batch.id}
-                    onToggle={() =>
-                      setExpandedBatch(
-                        expandedBatch === batch.id ? null : batch.id,
-                      )
-                    }
-                    openOrderId={openOrderId}
-                    onOpen={setOpenOrderId}
-                  />
-
-                  <div className="mt-auto">
-                    <button
-                      onClick={() => handleExportBatch(batch)}
-                      disabled={exportingBatchId === batch.id}
-                      className="w-full bg-[#FFD1DC]/60 hover:bg-[#FFD1DC] text-[#7A4E5B] border border-[#FFD1DC] rounded-sm py-2.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer transition-colors"
-                    >
-                      <Copy size={16} />
-                      {exportingBatchId === batch.id
-                        ? "Exporting..."
-                        : "Export Batch"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            {!completedBatchesLoading &&
-              !completedBatchesError &&
-              completedBatches.length === 0 && (
-                <div className="col-span-full py-12 text-center text-[#5C5F60]">
-                  No completed batches yet.
-                </div>
-              )}
-          </div>
-        )}
       </div>
 
       {/* Dashboard Elements */}
