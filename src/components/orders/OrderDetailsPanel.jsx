@@ -3,6 +3,7 @@ import { formatAddress } from "../../lib/format";
 import approve from "../../assets/approveicon.svg";
 import reject from "../../assets/rejecticon.svg";
 import { API_ORIGIN } from "../../lib/api/client";
+import { MAX_ITEM_QTY } from "./useOrderDetails";
 
 const imageUrl = (p) =>
   !p ? null : p.startsWith("http") ? p : `${API_ORIGIN}${p}`;
@@ -43,55 +44,44 @@ const Thumb = ({ item }) => (
 );
 
 /**
- * WAITING: +/- edit the quantity locally (0 to stock, saved on Approve).
- * Otherwise: "-" saves the lower available quantity straight away and "+" stays
- * disabled, since the quantity can never go above what the customer ordered.
+ * Local edit, saved on Approve. Range 0–MAX_ITEM_QTY (and the stock limit when
+ * known). Once an APPROVED order's item hits 0, "+" stays disabled: stock
+ * can't be added back after approval.
  */
-const QtyStepper = ({ item, d }) => {
-  const waiting = d.order?.status === "WAITING";
-  const qty = Number(item.quantity);
+const QtyStepper = ({ item, d, compact = false }) => {
+  const qty = Number(item.quantity ?? 0);
+  const max = Math.min(MAX_ITEM_QTY, item.maxQuantity ?? MAX_ITEM_QTY);
+  const lockedAtZero = d.order?.status === "APPROVED" && qty === 0;
+  const pad = compact ? "px-2 py-1" : "px-2.5 py-1.5";
   return (
     <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden shrink-0">
       <button
         type="button"
-        onClick={() =>
-          waiting
-            ? d.handleItemQuantityChange(item.id, -1)
-            : d.handleDecreaseQuantity(item)
-        }
-        disabled={
-          qty <= 0 || (!waiting && d.decreasingItemId != null)
-        }
-        title={waiting ? "Decrease quantity" : "Fewer available on Shein"}
-        className="px-2.5 py-1.5 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
+        onClick={() => d.handleItemQuantityChange(item.id, -1)}
+        disabled={qty <= 0}
+        className={`${pad} text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed`}
       >
         <Minus size={12} />
       </button>
       <span className="px-3 font-bold text-[10px] text-[#141D23]">
-        {d.decreasingItemId === item.id ? "…" : item.quantity}
+        {qty}
       </span>
       <button
         type="button"
         onClick={() => d.handleItemQuantityChange(item.id, 1)}
-        disabled={
-          !waiting || (item.maxQuantity != null && qty >= item.maxQuantity)
-        }
+        disabled={qty >= max || lockedAtZero}
         title={
-          waiting ? "Increase quantity" : "Can't exceed the ordered quantity"
+          lockedAtZero
+            ? "Can't add stock back after approval"
+            : undefined
         }
-        className="px-2.5 py-1.5 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
+        className={`${pad} text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed`}
       >
         <Plus size={12} />
       </button>
     </div>
   );
 };
-
-const OutOfStockBadge = () => (
-  <span className="px-2 py-1 rounded border border-red-200 bg-red-50 text-[10px] font-bold text-red-700 whitespace-nowrap">
-    Out of Stock
-  </span>
-);
 
 /** Promo price struck through the original; just the price when there's no promo. */
 const ItemPrice = ({ price, promotionalPrice }) => {
@@ -238,7 +228,7 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                             <span>Color: {item.color}</span>
                           </div>
                           {d.canModerate ? (
-                            <QtyStepper item={item} d={d} />
+                            <QtyStepper item={item} d={d} compact />
                           ) : (
                             <span className="px-4 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] py-1 shrink-0">
                               Qty: {item.quantity}
@@ -246,7 +236,6 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                           )}
                         </div>
                         <div className="flex justify-end gap-2">
-                          {Number(item.quantity) === 0 && <OutOfStockBadge />}
                           <BuyLink item={item} />
                         </div>
                       </div>
@@ -306,7 +295,6 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                         )}
 
                         <div className="flex items-center gap-2 shrink-0">
-                          {Number(item.quantity) === 0 && <OutOfStockBadge />}
                           <BuyLink item={item} />
                         </div>
                       </div>
@@ -336,13 +324,6 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                         value={d.estimatedWeight}
                         onChange={(e) => {
                           const value = e.target.value;
-
-                          if (Number(value) > 100) {
-                            d.setWeightError("Maximum weight is 100 kg.");
-                            return;
-                          }
-
-                          d.setWeightError("");
                           d.setEstimatedWeight(value);
 
                           const newShippingCost =
@@ -358,11 +339,6 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                         placeholder="0"
                         className="w-17 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-sm lg:text-base font-bold text-[#78555E] outline-none"
                       />
-                      {d.weightError && (
-                        <p className="mt-2 text-xs text-red-500">
-                          {d.weightError}
-                        </p>
-                      )}
                     </div>
                   ) : (
                     <span className="text-base font-bold text-[#78555E]">
@@ -392,26 +368,14 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                         onChange={(e) => {
                           const value = e.target.value;
 
-                          if (value === "" || Number(value) <= d.netAmount) {
-                            d.setAgentSurchargeError("");
-                            d.setAgentSurcharge(value);
-                            d.setFinalAmount(
-                              (d.netAmount + (Number(value) || 0)).toFixed(2),
-                            );
-                          } else {
-                            d.setAgentSurchargeError(
-                              "Surcharge cannot exceed net amount.",
-                            );
-                          }
+                          d.setAgentSurcharge(value);
+                          d.setFinalAmount(
+                            (d.netAmount + (Number(value) || 0)).toFixed(2),
+                          );
                         }}
                         placeholder="13"
                         className="w-17 bg-white border border-[#D9E4F2] rounded px-2 py-1 text-right text-base lg:text-base font-bold text-[#78555E] outline-none"
                       />
-                      {d.agentSurchargeError && (
-                        <p className="mt-1 text-[10px] text-red-500 whitespace-nowrap">
-                          {d.agentSurchargeError}
-                        </p>
-                      )}
                     </div>
                   ) : (
                     <span className="text-base font-bold text-[#78555E]">
@@ -552,9 +516,11 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
             {/* Footer Buttons */}
             {d.canModerate && (
               <div className="bg-[#EEF2F8] border-t border-[#D8DEE8] p-5 space-y-3">
-                {/* {d.statusError && (
-                  <p className="text-sm text-red-600">{d.statusError}</p>
-                )} */}
+                {d.statusError && (
+                  <p role="alert" className="text-sm text-red-600">
+                    {d.statusError}
+                  </p>
+                )}
                 <div className="flex gap-4">
                   <button
                     type="button"

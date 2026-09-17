@@ -41,8 +41,6 @@ export const ENDPOINTS = {
     byId: (id) => `/api/orders/${id}`,
     edit: (id) => `/api/orders/${id}/edit`,
     status: (id) => `/api/orders/${id}/status`,
-    markItemUnavailable: (orderId, itemId) =>
-      `/api/orders/${orderId}/items/${itemId}/mark-unavailable`,
   },
   customers: {
     list: "/api/customers",

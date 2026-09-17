@@ -3,6 +3,8 @@ import apiClient, { getErrorMessage } from "../../lib/api/client";
 import { ENDPOINTS } from "../../lib/api/endpoints";
 import { toast } from "../Toast";
 
+export const MAX_ITEM_QTY = 20;
+
 /**
  * Owns everything the order detail panel needs: fetching an order, editing its
  * items, pricing math and approve/reject. Used by Order Management.
@@ -15,8 +17,6 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
   const [canModerate, setCanModerate] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusError, setStatusError] = useState(null);
-  const [weightError, setWeightError] = useState("");
-  const [agentSurchargeError, setAgentSurchargeError] = useState("");
   const [finalAmount, setFinalAmount] = useState("");
   // Pricing settings (price per kg + discount tiers) loaded once from the API
   const [settings, setSettings] = useState({
@@ -109,7 +109,7 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
     return { itemSubtotal, grandTotal: itemSubtotal + Number(serviceFee || 0) };
   };
 
-  // WAITING orders only: edits stay local and are saved on Approve.
+  // Quantity edits stay in local state and are saved on Approve.
   const handleItemQuantityChange = (itemId, delta) => {
     setSelectedOrder((prev) => {
       if (!prev) return prev;
@@ -118,7 +118,10 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
         item.id === itemId
           ? {
               ...item,
-              quantity: Math.max(0, Number(item.quantity ?? 1) + delta),
+              quantity: Math.min(
+                MAX_ITEM_QTY,
+                Math.max(0, Number(item.quantity ?? 0) + delta),
+              ),
             }
           : item,
       );
@@ -143,31 +146,6 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
     });
   };
 
-  const [decreasingItemId, setDecreasingItemId] = useState(null);
-
-  // After approval, "-" on the stepper = Shein has fewer in stock. The backend saves the lower
-  // quantity and recalculates itemSubtotal/grandTotal, so reload the order.
-  const handleDecreaseQuantity = async (item) => {
-    const availableQuantity = Number(item.quantity) - 1;
-    if (availableQuantity < 0 || decreasingItemId) return;
-    setDecreasingItemId(item.id);
-    try {
-      await apiClient.patch(
-        ENDPOINTS.orders.markItemUnavailable(selectedOrderId, item.id),
-        { availableQuantity },
-      );
-      const { data: result } = await apiClient.get(
-        ENDPOINTS.orders.byId(selectedOrderId),
-      );
-      seedOrder(result.data || result);
-      onUpdated?.();
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Failed to update item quantity"));
-    } finally {
-      setDecreasingItemId(null);
-    }
-  };
-
   const handleSaveOrderEdits = async () => {
     await apiClient.patch(ENDPOINTS.orders.edit(selectedOrderId), {
       items: selectedOrder.items.map((item) => ({
@@ -179,28 +157,6 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
 
   const handleUpdateOrderStatus = async (newStatus) => {
     if (!selectedOrderId) return;
-    if (parseFloat(estimatedWeight) > 100) {
-      setStatusError("Estimated weight cannot exceed 100 kg.");
-      return;
-    }
-
-    if (Number(agentSurcharge) > netAmount) {
-      setStatusError("Agent surcharge cannot exceed the net amount.");
-      return;
-    }
-
-    if (newStatus === "APPROVED" && canModerate) {
-      if (!(Number(finalAmount) > 0)) {
-        setStatusError("Final amount must be greater than $0.");
-        return;
-      }
-      if (Number(finalAmount) > maxFinalAmount) {
-        setStatusError(
-          `Final amount cannot exceed $${maxFinalAmount.toFixed(2)} (120% of calculated total).`,
-        );
-        return;
-      }
-    }
     setStatusUpdating(true);
     setStatusError(null);
     try {
@@ -328,23 +284,17 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
     canModerate,
     statusUpdating,
     statusError,
-    weightError,
-    agentSurchargeError,
     settings,
     estimatedWeight,
     setEstimatedWeight,
-    setWeightError,
     agentSurcharge,
     setAgentSurcharge,
-    setAgentSurchargeError,
     finalAmount,
     setFinalAmount,
     openOrder: handleViewOrder,
     close: closeOrderDetails,
     handleItemQuantityChange,
     handleDeleteItem,
-    handleDecreaseQuantity,
-    decreasingItemId,
     handleUpdateOrderStatus,
     handleRejectClick,
     orderCustomFee,
