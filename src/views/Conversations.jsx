@@ -73,6 +73,89 @@ const Avatar = ({ name, avatarUrl }) => (
   </div>
 );
 
+// WhatsApp product-inquiry messages arrive with the catalog product on `metadata`
+// (sometimes stringified, same as notifications).
+const productMeta = (msg) => {
+  let meta = msg.metadata ?? msg.meta;
+  if (typeof meta === "string") {
+    try {
+      meta = JSON.parse(meta);
+    } catch {
+      return null;
+    }
+  }
+  const p = meta?.product ?? meta;
+  return p?.name ? p : null;
+};
+
+const ProductCard = ({ product }) => {
+  const image = resolveAvatarUrl(
+    product.images?.[0] || product.image || product.imageUrl,
+  );
+  const stock = Number(product.stockQuantity ?? 0);
+  return (
+    <div className="w-[240px] rounded-xl overflow-hidden bg-white text-[#141D23] border border-black/5 shadow-sm">
+      {image && (
+        <div className="relative">
+          <img
+            src={image}
+            alt={product.name}
+            className="w-full h-44 object-cover"
+          />
+          {product.tag && (
+            <span className="absolute top-2 left-2 px-2 py-1 rounded-md bg-[#A8215C] text-white text-[11px] font-semibold">
+              {product.tag}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="p-3 space-y-1">
+        <p className="font-semibold leading-snug break-words">{product.name}</p>
+        <p className="text-[12px] font-semibold text-[#E8A33D]">
+          ★ {product.rating ?? 5}{" "}
+          <span className="font-normal text-[#8C959F]">
+            ({product.reviewCount ?? 0} reviews)
+          </span>
+        </p>
+        <p className="text-lg font-bold text-[#D24D77]">
+          ${Number(product.price ?? 0).toFixed(2)}
+        </p>
+        {(product.size || product.color) && (
+          <p className="text-[12px] text-[#8C959F] flex flex-wrap gap-x-3">
+            {product.size && (
+              <span>
+                Size{" "}
+                <span className="font-semibold text-[#141D23]">
+                  {product.size}
+                </span>
+              </span>
+            )}
+            {product.color && (
+              <span>
+                Color{" "}
+                <span className="font-semibold text-[#141D23]">
+                  {product.color}
+                </span>
+              </span>
+            )}
+          </p>
+        )}
+        <p className="text-[12px] flex items-center gap-1.5">
+          <span
+            className={`h-2 w-2 rounded-full ${stock ? "bg-emerald-500" : "bg-red-500"}`}
+          />
+          <span className={stock ? "text-emerald-600" : "text-red-600"}>
+            {stock ? `${stock} in stock` : "Out of stock"}
+          </span>
+        </p>
+        {product.skuCode && (
+          <p className="text-[11px] text-[#B0B6BC]">SKU: {product.skuCode}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const generateDownloadName = (message, defaultExtension) => {
   if (message.originalFileName) return message.originalFileName;
 
@@ -1019,6 +1102,25 @@ const Conversations = () => {
                         className={`max-w-[85%] sm:max-w-[420px] ${selectionMode ? "pointer-events-none" : ""}`}
                       >
                         {(() => {
+                          const product = productMeta(m);
+                          if (product) {
+                            return (
+                              <div
+                                className={`rounded-2xl p-2 text-sm ${
+                                  isAgent
+                                    ? "bg-[#D24D77] text-white rounded-tr-none"
+                                    : "bg-[#F5F5F5] text-[#141D23] rounded-tl-none border border-[#E8DFE1]"
+                                }`}
+                              >
+                                <ProductCard product={product} />
+                                {m.content && (
+                                  <p className="px-2 py-2 break-words">
+                                    {m.content}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          }
                           const url = fileUrl(m.content);
                           const isImage =
                             m.messageType === "IMAGE" ||

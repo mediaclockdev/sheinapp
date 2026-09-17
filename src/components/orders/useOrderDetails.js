@@ -5,8 +5,7 @@ import { toast } from "../Toast";
 
 /**
  * Owns everything the order detail panel needs: fetching an order, editing its
- * items, pricing math and approve/reject. Shared by Order Management and the
- * Batch Queue's approved orders table.
+ * items, pricing math and approve/reject. Used by Order Management.
  */
 export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -84,7 +83,7 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
       const items = order?.items || [];
       const totalW = items.reduce(
         (sum, item) =>
-          sum + (parseFloat(item.weight) || 0) * (Number(item.quantity) || 1),
+          sum + (parseFloat(item.weight) || 0) * Number(item.quantity ?? 1),
         0,
       );
       setEstimatedWeight(String(totalW));
@@ -110,6 +109,7 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
     return { itemSubtotal, grandTotal: itemSubtotal + Number(serviceFee || 0) };
   };
 
+  // WAITING orders only: edits stay local and are saved on Approve.
   const handleItemQuantityChange = (itemId, delta) => {
     setSelectedOrder((prev) => {
       if (!prev) return prev;
@@ -118,7 +118,7 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
         item.id === itemId
           ? {
               ...item,
-              quantity: Math.max(1, Number(item.quantity || 1) + delta),
+              quantity: Math.max(0, Number(item.quantity ?? 1) + delta),
             }
           : item,
       );
@@ -141,6 +141,31 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
         ...recalculateOrderTotals(items, prev.serviceFee),
       };
     });
+  };
+
+  const [decreasingItemId, setDecreasingItemId] = useState(null);
+
+  // After approval, "-" on the stepper = Shein has fewer in stock. The backend saves the lower
+  // quantity and recalculates itemSubtotal/grandTotal, so reload the order.
+  const handleDecreaseQuantity = async (item) => {
+    const availableQuantity = Number(item.quantity) - 1;
+    if (availableQuantity < 0 || decreasingItemId) return;
+    setDecreasingItemId(item.id);
+    try {
+      await apiClient.patch(
+        ENDPOINTS.orders.markItemUnavailable(selectedOrderId, item.id),
+        { availableQuantity },
+      );
+      const { data: result } = await apiClient.get(
+        ENDPOINTS.orders.byId(selectedOrderId),
+      );
+      seedOrder(result.data || result);
+      onUpdated?.();
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to update item quantity"));
+    } finally {
+      setDecreasingItemId(null);
+    }
   };
 
   const handleSaveOrderEdits = async () => {
@@ -254,7 +279,7 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
 
   const itemSubtotal =
     (selectedOrder?.items || []).reduce(
-      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity ?? 1),
       0,
     ) ||
     Number(selectedOrder?.itemSubtotal) ||
@@ -318,6 +343,8 @@ export default function useOrderDetails({ onUpdated, onSuccess } = {}) {
     close: closeOrderDetails,
     handleItemQuantityChange,
     handleDeleteItem,
+    handleDecreaseQuantity,
+    decreasingItemId,
     handleUpdateOrderStatus,
     handleRejectClick,
     orderCustomFee,

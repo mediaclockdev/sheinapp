@@ -2,7 +2,6 @@ import { Plus, Minus, Trash2, ExternalLink } from "lucide-react";
 import { formatAddress } from "../../lib/format";
 import approve from "../../assets/approveicon.svg";
 import reject from "../../assets/rejecticon.svg";
-import customermessage from "../../assets/customermessage.svg";
 import { API_ORIGIN } from "../../lib/api/client";
 
 const imageUrl = (p) =>
@@ -27,6 +26,72 @@ const BuyLink = ({ item }) => {
     </a>
   ) : null;
 };
+
+/** 80px product thumbnail, or a placeholder when the item has no photo. */
+const Thumb = ({ item }) => (
+  <div className="w-20 h-20 shrink-0 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
+    {item.photoUrl ? (
+      <img
+        src={imageUrl(item.photoUrl)}
+        alt={item.productName}
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <span className="text-[10px] text-[#8C959F]">No image</span>
+    )}
+  </div>
+);
+
+/**
+ * WAITING: +/- edit the quantity locally (0 to stock, saved on Approve).
+ * Otherwise: "-" saves the lower available quantity straight away and "+" stays
+ * disabled, since the quantity can never go above what the customer ordered.
+ */
+const QtyStepper = ({ item, d }) => {
+  const waiting = d.order?.status === "WAITING";
+  const qty = Number(item.quantity);
+  return (
+    <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden shrink-0">
+      <button
+        type="button"
+        onClick={() =>
+          waiting
+            ? d.handleItemQuantityChange(item.id, -1)
+            : d.handleDecreaseQuantity(item)
+        }
+        disabled={
+          qty <= 0 || (!waiting && d.decreasingItemId != null)
+        }
+        title={waiting ? "Decrease quantity" : "Fewer available on Shein"}
+        className="px-2.5 py-1.5 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Minus size={12} />
+      </button>
+      <span className="px-3 font-bold text-[10px] text-[#141D23]">
+        {d.decreasingItemId === item.id ? "…" : item.quantity}
+      </span>
+      <button
+        type="button"
+        onClick={() => d.handleItemQuantityChange(item.id, 1)}
+        disabled={
+          !waiting || (item.maxQuantity != null && qty >= item.maxQuantity)
+        }
+        title={
+          waiting ? "Increase quantity" : "Can't exceed the ordered quantity"
+        }
+        className="px-2.5 py-1.5 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Plus size={12} />
+      </button>
+    </div>
+  );
+};
+
+const OutOfStockBadge = () => (
+  <span className="px-2 py-1 rounded border border-red-200 bg-red-50 text-[10px] font-bold text-red-700 whitespace-nowrap">
+    Out of Stock
+  </span>
+);
 
 /** Promo price struck through the original; just the price when there's no promo. */
 const ItemPrice = ({ price, promotionalPrice }) => {
@@ -128,25 +193,17 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
               {d.orderItems.map((item) => (
                 <div
                   key={item.id}
-                  className="border border-[#D3C3C5] rounded-xl bg-white p-4"
+                  className={`border border-[#D3C3C5] rounded-xl p-4 ${
+                    Number(item.quantity) === 0
+                      ? "bg-[#F3F4F6] opacity-60 grayscale"
+                      : "bg-white"
+                  }`}
                 >
                   {isMobile ? (
                     <>
                       {/* mobile: image + title/price row, details full-width below */}
                       <div className="flex gap-4 items-start">
-                        <div className="w-20 h-20 shrink-0 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
-                          {item.photoUrl ? (
-                            <img
-                              src={imageUrl(item.photoUrl)}
-                              alt={item.productName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-[10px] text-[#8C959F]">
-                              No image
-                            </span>
-                          )}
-                        </div>
+                        <Thumb item={item} />
                         <div className="flex-1 min-w-0 flex justify-between items-start gap-2">
                           <p
                             className="font-bold text-sm text-[#141D23] break-words line-clamp-2 pr-1"
@@ -181,129 +238,79 @@ export default function OrderDetailsPanel({ d, isMobile = false }) {
                             <span>Color: {item.color}</span>
                           </div>
                           {d.canModerate ? (
-                            <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden shrink-0">
-                              <button
-                                onClick={() =>
-                                  d.handleItemQuantityChange(item.id, -1)
-                                }
-                                className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
-                              >
-                                <Minus size={12} />
-                              </button>
-                              <span className="px-3 font-bold text-[10px] text-[#141D23]">
-                                {item.quantity}
-                              </span>
-                              <button
-                                onClick={() =>
-                                  d.handleItemQuantityChange(item.id, 1)
-                                }
-                                disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
-                                className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                <Plus size={12} />
-                              </button>
-                            </div>
+                            <QtyStepper item={item} d={d} />
                           ) : (
                             <span className="px-4 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] py-1 shrink-0">
                               Qty: {item.quantity}
                             </span>
                           )}
                         </div>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-2">
+                          {Number(item.quantity) === 0 && <OutOfStockBadge />}
                           <BuyLink item={item} />
                         </div>
                       </div>
                     </>
                   ) : (
-                    /* desktop: original layout */
-                    <div className="flex justify-between items-start">
-                      {/* Left Side */}
-                      <div className="flex flex-1 min-w-0 gap-4 pr-4">
-                        <div className="w-20 h-20 shrink-0 border border-[#D3C3C5] rounded-md overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
-                          {item.photoUrl ? (
-                            <img
-                              src={imageUrl(item.photoUrl)}
-                              alt={item.productName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-[10px] text-[#8C959F]">
-                              No image
-                            </span>
-                          )}
-                        </div>
+                    <>
+                      {/* desktop: thumb + title + meta, actions on one row */}
+                      <div className="flex gap-4 items-start">
+                        <Thumb item={item} />
 
-                        <div className="space-y-2 flex-1 min-w-0">
-                          <p
-                            className="font-bold text-sm text-[#141D23] truncate"
-                            title={item.productName}
-                          >
-                            {item.productName}
-                          </p>
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex justify-between items-start gap-2">
+                            <p
+                              className="font-bold text-sm text-[#141D23] break-words line-clamp-2"
+                              title={item.productName}
+                            >
+                              {item.productName}
+                            </p>
+                            <div className="flex items-start gap-2 shrink-0">
+                              <ItemPrice
+                                price={item.price}
+                                promotionalPrice={item.promotionalPrice}
+                              />
+                              {d.canModerate && (
+                                <button
+                                  onClick={() => d.handleDeleteItem(item.id)}
+                                  title="Remove item"
+                                  className="p-0.5"
+                                >
+                                  <Trash2
+                                    size={16}
+                                    className="text-[#5C5F60] hover:text-red-600"
+                                  />
+                                </button>
+                              )}
+                            </div>
+                          </div>
 
-                          <p className="text-[#5C5F60] text-xs font-normal">
+                          <p className="text-[#5C5F60] text-xs break-all">
                             SKU: {item.skuCode}
                           </p>
-
-                          <div className="flex gap-4 text-[#5C5F60] text-xs font-normal flex-wrap">
+                          <div className="flex gap-x-4 gap-y-1 flex-wrap text-[#5C5F60] text-xs">
                             <span>Size: {item.size}</span>
                             <span>Color: {item.color}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Right Side */}
-                      <div className="flex flex-col items-end justify-between gap-2 min-h-20 shrink-0">
-                        <div className="flex items-center gap-3">
-                          <ItemPrice
-                            price={item.price}
-                            promotionalPrice={item.promotionalPrice}
-                          />
-                          {d.canModerate && (
-                            <button
-                              onClick={() => d.handleDeleteItem(item.id)}
-                              title="Remove item"
-                            >
-                              <Trash2
-                                size={16}
-                                className="text-[#5C5F60] hover:text-red-600"
-                              />
-                            </button>
-                          )}
-                        </div>
-
+                      {/* quantity + per-item actions */}
+                      <div className="mt-3 flex items-center justify-between gap-2 flex-nowrap">
                         {d.canModerate ? (
-                          <div className="flex items-center border border-[#D6DCE5] rounded bg-[#EEF2F8] overflow-hidden">
-                            <button
-                              onClick={() =>
-                                d.handleItemQuantityChange(item.id, -1)
-                              }
-                              className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB]"
-                            >
-                              <Minus size={12} />
-                            </button>
-                            <span className="px-3 font-bold text-[10px] text-[#141D23]">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() =>
-                                d.handleItemQuantityChange(item.id, 1)
-                              }
-                              disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
-                              className="px-2 py-1 text-[#845F68] hover:bg-[#E5E7EB] disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              <Plus size={12} />
-                            </button>
-                          </div>
+                          <QtyStepper item={item} d={d} />
                         ) : (
-                          <span className="px-4 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] py-1">
+                          <span className="px-4 py-1 font-bold text-[10px] text-[#141D23] border border-[#D6DCE5] rounded bg-[#EEF2F8] shrink-0">
                             Qty: {item.quantity}
                           </span>
                         )}
 
-                        <BuyLink item={item} />
+                        <div className="flex items-center gap-2 shrink-0">
+                          {Number(item.quantity) === 0 && <OutOfStockBadge />}
+                          <BuyLink item={item} />
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               ))}

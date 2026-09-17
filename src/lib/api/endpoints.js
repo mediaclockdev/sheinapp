@@ -41,6 +41,8 @@ export const ENDPOINTS = {
     byId: (id) => `/api/orders/${id}`,
     edit: (id) => `/api/orders/${id}/edit`,
     status: (id) => `/api/orders/${id}/status`,
+    markItemUnavailable: (orderId, itemId) =>
+      `/api/orders/${orderId}/items/${itemId}/mark-unavailable`,
   },
   customers: {
     list: "/api/customers",
@@ -48,12 +50,9 @@ export const ENDPOINTS = {
   },
   batches: {
     list: "/api/batches",
-    approvedOrders: "/api/batches/approved-orders",
     activityLogs: "/api/batches/logs/activity",
     merge: "/api/batches/merge",
     byId: (id) => `/api/batches/${id}`,
-    lock: (id) => `/api/batches/${id}/lock`,
-    unlock: (id) => `/api/batches/${id}/unlock`,
     complete: (id) => `/api/batches/${id}/purchase`,
     moveOrders: (id) => `/api/batches/${id}/move-orders`,
     removeOrders: (id) => `/api/batches/${id}/remove-orders`,

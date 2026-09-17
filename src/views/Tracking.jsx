@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../lib/api/client";
 import { ENDPOINTS } from "../lib/api/endpoints";
+import { fmtMoney, imageUrl, orderCustomerName } from "../lib/format";
 import {
   Download,
   ExternalLink,
@@ -31,6 +32,33 @@ const TRACKING_STATUSES = [
   { value: "IN_TRANSIT", label: "IN_TRANSIT (On airplane/ship)" },
   { value: "ARRIVED", label: "ARRIVED (Local warehouse)" }
 ];
+
+// ponytail: tracking row shape unconfirmed; keep only the real field once known
+const batchIdOf = (row = {}) =>
+  row.batchId ?? row.batch_id ?? row.batch?.id ?? row.id;
+
+const hasItemList = (order) => Array.isArray(order?.items);
+
+/** Orders of a batch with their item lists, fetching any order that lacks them. */
+const loadBatchOrders = async (row) => {
+  let orders = row.orders || row.batch?.orders;
+  if (!Array.isArray(orders) || !orders.every(hasItemList)) {
+    const { data: res } = await apiClient.get(
+      ENDPOINTS.batches.byId(batchIdOf(row)),
+    );
+    const batch = res.data?.batch || res.data || res.batch || res;
+    orders = Array.isArray(batch?.orders) ? batch.orders : [];
+  }
+  return Promise.all(
+    orders.map(async (order) => {
+      if (hasItemList(order)) return order;
+      const { data: res } = await apiClient.get(
+        ENDPOINTS.orders.byId(order.id ?? order.orderId),
+      );
+      return { ...order, ...(res.data || res) };
+    }),
+  );
+};
 
 export default function Tracking() {
   const [data, setData] = useState([]);
@@ -89,7 +117,7 @@ export default function Tracking() {
   const handleUpdateStatus = async () => {
     if (!activeItem) return;
     setIsUpdating(true);
-    const batchId = activeItem.batchId || activeItem.id;
+    const batchId = batchIdOf(activeItem);
     try {
       await apiClient.patch(ENDPOINTS.batches.trackingStatus(batchId), {
         newStatus: updateStatus,
@@ -109,6 +137,10 @@ export default function Tracking() {
   const [trackingHistory, setTrackingHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
+  // Orders (with their items) inside the batch being managed
+  const [batchOrders, setBatchOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState(null);
 
   const toggleRow = (id) => {
     if (selectedRows.includes(id)) {
@@ -129,8 +161,24 @@ export default function Tracking() {
     setTrackingHistory([]);
     
     // Attempt to get the batch ID. Usually tracking items are batches, but sometimes they map ID.
-    const batchId = item.batchId || item.id;
-    
+    const batchId = batchIdOf(item);
+
+    setBatchOrders([]);
+    setOrdersLoading(true);
+    setOrdersError(null);
+    loadBatchOrders(item)
+      .then((orders) => {
+        if (orders.length === 0) {
+          // ponytail: remove once the tracking/batch response shape is confirmed
+          console.warn("Tracking: no orders found for batch", batchId, item);
+        }
+        setBatchOrders(orders);
+      })
+      .catch((err) =>
+        setOrdersError(err.message || "Failed to load batch items"),
+      )
+      .finally(() => setOrdersLoading(false));
+
     try {
       const { data: res } = await apiClient.get(ENDPOINTS.batches.trackingDetail(batchId));
       // Map based on typical shapes. If your backend returns `res.data` or `res.tracking`
@@ -142,6 +190,11 @@ export default function Tracking() {
       setHistoryLoading(false);
     }
   };
+
+  const batchItemCount = batchOrders.reduce(
+    (sum, o) => sum + (o.items?.length || 0),
+    0,
+  );
 
   return (
     <div className="p-4 lg:p-8 bg-[#f8fbff] min-h-[calc(100vh-70px)] font-sans">
@@ -242,7 +295,7 @@ export default function Tracking() {
               ) : (
                 data.map((item, idx) => {
                   const id = item.trackingId || idx;
-                  const batchId = item.batchId || item.id || "-";
+                  const batchId = batchIdOf(item) ?? "-";
                   const orders = item.totalOrders || 0;
                   const totalValue = item.totalValue || item.value || "-";
                   const lastUpdate = item.lastUpdate || item.updatedAt || "-";
@@ -339,8 +392,7 @@ export default function Tracking() {
                   Batch Detail
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Batch #{activeItem?.batchId} | {activeItem?.orders} Total
-                  Items
+                  Batch #{batchIdOf(activeItem ?? {})} | {batchItemCount} Total Items
                 </p>
               </div>
               <button
@@ -379,6 +431,75 @@ export default function Tracking() {
                     {isUpdating ? "Updating..." : "Update"}
                   </button>
                 </div>
+              </div>
+
+              {/* Items in this batch */}
+              <div className="mb-8">
+                <h3 className="text-xs font-bold text-gray-700 tracking-wider mb-4 uppercase">
+                  Items ({batchItemCount})
+                </h3>
+                {ordersLoading ? (
+                  <div className="text-sm text-gray-500 py-4">Loading items...</div>
+                ) : ordersError ? (
+                  <div className="text-sm text-red-500 py-4">{ordersError}</div>
+                ) : batchItemCount === 0 ? (
+                  <div className="text-sm text-gray-500 py-4">No items found.</div>
+                ) : (
+                  <div className="space-y-5">
+                    {batchOrders.map((order) => (
+                      <div key={order.id}>
+                        <p className="text-xs font-semibold text-gray-500 mb-2">
+                          {order.orderId || `#${order.id}`} ·{" "}
+                          {orderCustomerName(order)}
+                        </p>
+                        <div className="space-y-2">
+                          {(order.items || []).map((it) => {
+                            const out = Number(it.quantity) === 0;
+                            return (
+                              <div
+                                key={it.id}
+                                className={`flex gap-3 items-center border border-gray-200 rounded-lg p-2 ${out ? "bg-gray-100 opacity-60" : "bg-white"}`}
+                              >
+                                <div className="w-12 h-12 shrink-0 rounded bg-gray-100 overflow-hidden flex items-center justify-center">
+                                  {it.photoUrl ? (
+                                    <img
+                                      src={imageUrl(it.photoUrl)}
+                                      alt={it.productName}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <Package size={18} className="text-gray-400" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p
+                                    className="text-sm font-semibold text-gray-800 truncate"
+                                    title={it.productName}
+                                  >
+                                    {it.productName}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {[it.size && `Size: ${it.size}`, it.color && `Color: ${it.color}`, it.skuCode && `SKU: ${it.skuCode}`]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className="text-sm font-bold text-gray-800">
+                                    {fmtMoney(it.price)}
+                                  </p>
+                                  <p className={`text-xs font-semibold ${out ? "text-red-600" : "text-gray-500"}`}>
+                                    {out ? "Out of Stock" : `Qty: ${it.quantity}`}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Tracking History */}

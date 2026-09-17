@@ -4,35 +4,18 @@ import {
   Merge,
   Copy,
   Info,
-  LockKeyholeOpen,
   CheckCircle,
   X,
-  Eye,
   Trash2,
 } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
-import useOrderDetails from "../components/orders/useOrderDetails";
-import OrderDetailsPanel from "../components/orders/OrderDetailsPanel";
 import OrderSummaryDrawer from "../components/orders/OrderSummaryDrawer";
-import { getInitials, orderCustomerName } from "../lib/format";
+import { orderCustomerName } from "../lib/format";
 import apiClient, { getErrorMessage } from "../lib/api/client";
 import { ENDPOINTS } from "../lib/api/endpoints";
 
-const APPROVED_PAGE_SIZE = 10;
-
 const countOrderItems = (order) =>
   Array.isArray(order.items) ? order.items.length : Number(order.items) || 0;
-
-const fmtDisplayDate = (value) => {
-  const d = value ? new Date(value) : null;
-  return d && !isNaN(d)
-    ? d.toLocaleDateString("en-AU", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
-};
 
 const fmtLogTime = (value) => {
   const d = value ? new Date(value) : null;
@@ -66,22 +49,6 @@ const mapActivityLog = (log) => ({
   action: log.action || "—",
   status: String(log.status || "").toUpperCase(),
 });
-
-const mapApprovedOrder = (order) => {
-  const user = order.customerName || order.customer?.fullName || "Unknown";
-  return {
-    id: order.id,
-    displayId: order.orderId || order.id,
-    user,
-    initials: getInitials(user),
-    items:
-      Number(order._count?.items ?? order.itemsCount ?? order.itemCount ?? 0) ||
-      countOrderItems(order),
-    value: Number(order.grandTotal ?? order.value ?? 0),
-    date: order.createdAt || order.orderDate || null,
-    raw: order,
-  };
-};
 
 const mapBatch = (batch) => {
   const orders = batch.orders || [];
@@ -172,18 +139,9 @@ function OrderChips({ batch, tone, expanded, openOrderId, onToggle, onOpen }) {
 export default function BatchQueue() {
   const [activeTab, setActiveTab] = useState("active");
   const [successMessage, setSuccessMessage] = useState(null);
-  const [approvedOrders, setApprovedOrders] = useState([]);
-  const [approvedOrdersLoading, setApprovedOrdersLoading] = useState(true);
-  const [approvedOrdersError, setApprovedOrdersError] = useState(null);
-  const [approvedTotal, setApprovedTotal] = useState(0);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [selectedOrders, setSelectedOrders] = useState([]);
   const [activeBatches, setActiveBatches] = useState([]);
   const [activeBatchesLoading, setActiveBatchesLoading] = useState(true);
   const [activeBatchesError, setActiveBatchesError] = useState(null);
-  const [lockedBatches, setLockedBatches] = useState([]);
-  const [lockedBatchesLoading, setLockedBatchesLoading] = useState(true);
-  const [lockedBatchesError, setLockedBatchesError] = useState(null);
   const [completedBatches, setCompletedBatches] = useState([]);
   const [completedBatchesLoading, setCompletedBatchesLoading] = useState(true);
   const [completedBatchesError, setCompletedBatchesError] = useState(null);
@@ -217,21 +175,6 @@ export default function BatchQueue() {
     }
   }, [fetchBatches]);
 
-  const fetchLockedBatches = useCallback(async () => {
-    setLockedBatchesLoading(true);
-    setLockedBatchesError(null);
-    try {
-      setLockedBatches(await fetchBatches("LOCKED"));
-    } catch (err) {
-      setLockedBatchesError(
-        getErrorMessage(err, "Failed to fetch locked batches"),
-      );
-      setLockedBatches([]);
-    } finally {
-      setLockedBatchesLoading(false);
-    }
-  }, [fetchBatches]);
-
   const fetchCompletedBatches = useCallback(async () => {
     setCompletedBatchesLoading(true);
     setCompletedBatchesError(null);
@@ -249,55 +192,8 @@ export default function BatchQueue() {
 
   useEffect(() => {
     fetchActiveBatches();
-    fetchLockedBatches();
     fetchCompletedBatches();
-  }, [fetchActiveBatches, fetchLockedBatches, fetchCompletedBatches]);
-
-  const fetchApprovedOrders = useCallback(async (page = 1) => {
-    setApprovedOrdersLoading(true);
-    setApprovedOrdersError(null);
-    try {
-      const params = new URLSearchParams({
-        page,
-        limit: APPROVED_PAGE_SIZE,
-      });
-
-      const { data: result } = await apiClient.get(
-        `${ENDPOINTS.batches.approvedOrders}?${params}`,
-      );
-
-      const list =
-        result.data?.orders || result.data || result.orders || result || [];
-      const mapped = Array.isArray(list) ? list.map(mapApprovedOrder) : [];
-      setApprovedOrders(mapped);
-      setApprovedTotal(
-        Number(
-          result.total ??
-            result.totalCount ??
-            result.pagination?.total ??
-            result.data?.pagination?.total ??
-            result.meta?.total ??
-            mapped.length,
-        ),
-      );
-    } catch (err) {
-      setApprovedOrdersError(
-        getErrorMessage(err, "Failed to fetch approved orders"),
-      );
-      setApprovedOrders([]);
-    } finally {
-      setApprovedOrdersLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchApprovedOrders(pageIndex + 1);
-  }, [fetchApprovedOrders, pageIndex]);
-
-  const approvedPageCount = Math.max(
-    1,
-    Math.ceil(approvedTotal / APPROVED_PAGE_SIZE),
-  );
+  }, [fetchActiveBatches, fetchCompletedBatches]);
 
   // Modals state
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
@@ -311,117 +207,8 @@ export default function BatchQueue() {
   // For Merge Batch Modal specifically
   const [targetBatchIdForMerge, setTargetBatchIdForMerge] = useState("");
 
-  const detail = useOrderDetails({
-    onUpdated: () => fetchApprovedOrders(pageIndex + 1),
-    onSuccess: setSuccessMessage,
-  });
-
-  // "Delete" an approved order = reject it through the same status endpoint
-  const [deletingId, setDeletingId] = useState(null);
-
-  const handleDeleteOrder = async (order) => {
-    if (deletingId) return;
-    if (!window.confirm("Are you sure you want to delete this order?")) return;
-    setDeletingId(order.id);
-    try {
-      await apiClient.patch(ENDPOINTS.orders.status(order.id), {
-        status: "REJECTED",
-      });
-
-      setSelectedOrders((prev) => prev.filter((id) => id !== order.id));
-      if (detail.orderId === order.id) detail.close();
-      setSuccessMessage("Order deleted successfully!");
-      await fetchApprovedOrders(pageIndex + 1);
-    } catch (err) {
-      window.alert(getErrorMessage(err, "Failed to delete order"));
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const toggleSelectAllOnPage = () => {
-    const pageIds = approvedOrders.map((o) => o.id);
-    const allSelected = pageIds.every((id) => selectedOrders.includes(id));
-    setSelectedOrders((prev) =>
-      allSelected
-        ? prev.filter((id) => !pageIds.includes(id))
-        : [...new Set([...prev, ...pageIds])],
-    );
-  };
-
-  const toggleOrderSelection = (id) => {
-    setSelectedOrders((prev) =>
-      prev.includes(id)
-        ? prev.filter((orderId) => orderId !== id)
-        : [...prev, id],
-    );
-  };
-
-  const [creatingBatch, setCreatingBatch] = useState(false);
-  const [createBatchError, setCreateBatchError] = useState(null);
-
-  const handleCreateBatch = async () => {
-    if (selectedOrders.length === 0) return;
-    const ordersToAdd = approvedOrders.filter((o) =>
-      selectedOrders.includes(o.id),
-    );
-
-    // `raw` is the untouched API order, so the drawer sees real items.
-    const rawOrders = ordersToAdd.map((o) => o.raw || o);
-    const fallbackBatch = {
-      id: `BATCH-${Math.floor(Math.random() * 100) + 20}`,
-      itemCount: ordersToAdd.reduce((sum, order) => sum + order.items, 0),
-      orderCount: ordersToAdd.length,
-      status: "grouped",
-      baseShipping: 0,
-      totalWeight: 0,
-      orders: rawOrders,
-    };
-
-    setCreatingBatch(true);
-    setCreateBatchError(null);
-    try {
-      const { data: result } = await apiClient.post(ENDPOINTS.batches.list, {
-        orderIds: selectedOrders.map(Number),
-      });
-
-      const created = result.data || result;
-      if (created?.id) {
-        await fetchActiveBatches();
-      } else {
-        setActiveBatches([...activeBatches, fallbackBatch]);
-      }
-      await fetchApprovedOrders(pageIndex + 1);
-      setSelectedOrders([]);
-      setActiveTab("active");
-      refreshActivityLogs();
-      setSuccessMessage("Batch created successfully!");
-    } catch (err) {
-      setCreateBatchError(getErrorMessage(err, "Failed to create batch"));
-    } finally {
-      setCreatingBatch(false);
-    }
-  };
-
-  const [lockingBatchId, setLockingBatchId] = useState(null);
+  // Shared error banner for batch card actions (delete/purchase/export).
   const [lockError, setLockError] = useState(null);
-
-  const handleLockBatch = async (batch) => {
-    setLockingBatchId(batch.id);
-    setLockError(null);
-    try {
-      await apiClient.patch(ENDPOINTS.batches.lock(batch.id));
-
-      await Promise.all([fetchActiveBatches(), fetchLockedBatches()]);
-      refreshActivityLogs();
-      setSuccessMessage("Batch locked successfully!");
-    } catch (err) {
-      setLockError(getErrorMessage(err, "Failed to lock batch"));
-    } finally {
-      setLockingBatchId(null);
-    }
-  };
-
   const [deletingBatchId, setDeletingBatchId] = useState(null);
 
   const handleDeleteBatch = async (batch) => {
@@ -437,35 +224,13 @@ export default function BatchQueue() {
     try {
       await apiClient.delete(ENDPOINTS.batches.byId(batch.id));
 
-      await Promise.all([
-        fetchActiveBatches(),
-        fetchLockedBatches(),
-        fetchApprovedOrders(pageIndex + 1),
-      ]);
+      await fetchActiveBatches();
       refreshActivityLogs();
       setSuccessMessage("Batch deleted successfully!");
     } catch (err) {
       setLockError(getErrorMessage(err, "Failed to delete batch"));
     } finally {
       setDeletingBatchId(null);
-    }
-  };
-
-  const [unlockingBatchId, setUnlockingBatchId] = useState(null);
-
-  const handleUnlockBatch = async (batch) => {
-    setUnlockingBatchId(batch.id);
-    setLockError(null);
-    try {
-      await apiClient.patch(ENDPOINTS.batches.unlock(batch.id));
-
-      await Promise.all([fetchActiveBatches(), fetchLockedBatches()]);
-      refreshActivityLogs();
-      setSuccessMessage("Batch unlocked successfully!");
-    } catch (err) {
-      setLockError(getErrorMessage(err, "Failed to unlock batch"));
-    } finally {
-      setUnlockingBatchId(null);
     }
   };
 
@@ -480,7 +245,7 @@ export default function BatchQueue() {
         sheinOrderRef: batch.sheinOrderRef || undefined
       });
 
-      await Promise.all([fetchLockedBatches(), fetchCompletedBatches()]);
+      await Promise.all([fetchActiveBatches(), fetchCompletedBatches()]);
       refreshActivityLogs();
       setSuccessMessage("Batch marked as completed!");
     } catch (err) {
@@ -572,13 +337,10 @@ export default function BatchQueue() {
         orderIds: [Number(orderIdToRemove)],
       });
 
-      await Promise.all([
-        fetchActiveBatches(),
-        fetchApprovedOrders(pageIndex + 1),
-      ]);
+      await fetchActiveBatches();
       setRemoveModalOpen(false);
       refreshActivityLogs();
-      setSuccessMessage("Order removed from batch!");
+      setSuccessMessage("Order removed from batch and moved to Waiting.");
     } catch (err) {
       setRemoveError(getErrorMessage(err, "Failed to remove order"));
     } finally {
@@ -680,7 +442,7 @@ export default function BatchQueue() {
   const selectedBatch = activeBatches.find((b) => b.id === selectedBatchId);
 
   const drawerOrder = openOrderId
-    ? [...activeBatches, ...lockedBatches]
+    ? [...activeBatches, ...completedBatches]
         .flatMap((b) => b.orders || [])
         .find((o) => o.id === openOrderId)
     : null;
@@ -733,16 +495,6 @@ export default function BatchQueue() {
       <div className="border-b border-[#D3C3C5]">
         <div className="flex gap-8">
           <button
-            onClick={() => setActiveTab("approved")}
-            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
-              activeTab === "approved"
-                ? "border-[#7A4E5B] text-[#141D23] "
-                : "border-transparent text-[#5C5F60] hover:text-[#141D23] "
-            }`}
-          >
-            Approved Orders ({approvedOrders.length})
-          </button>
-          <button
             onClick={() => setActiveTab("active")}
             className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
               activeTab === "active"
@@ -753,16 +505,6 @@ export default function BatchQueue() {
             Active Batches ({activeBatches.length})
           </button>
           <button
-            onClick={() => setActiveTab("locked")}
-            className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
-              activeTab === "locked"
-                ? "border-[#7A4E5B] text-[#141D23]"
-                : "border-transparent text-[#5C5F60] hover:text-[#141D23]"
-            }`}
-          >
-            Locked & Processed
-          </button>
-          {/* <button
             onClick={() => setActiveTab("completed")}
             className={`pb-2 lg:pb-3 text-xs lg:text-sm font-semibold transition-colors border-b-2 cursor-pointer ${
               activeTab === "completed"
@@ -771,209 +513,12 @@ export default function BatchQueue() {
             }`}
           >
             Completed ({completedBatches.length})
-          </button> */}
+          </button>
         </div>
       </div>
 
       {/* Tab Content */}
       <div className="min-h-[300px]">
-        {activeTab === "approved" && (
-          <div className="flex flex-col lg:flex-row gap-4 items-start">
-            <div
-              className={`bg-white border border-[#D3C3C5] rounded-lg w-full ${
-                detail.orderId ? "lg:w-[60%]" : "lg:w-full"
-              }`}
-            >
-              <div className="p-4 border-b border-[#D3C3C5] flex flex-wrap gap-3 justify-between items-center bg-[#FFD1DC]/10">
-                <h2 className="font-semibold text-[#141D23] text-sm lg:text-base">
-                  Ready for Batching
-                </h2>
-                <button
-                  onClick={handleCreateBatch}
-                  disabled={selectedOrders.length === 0 || creatingBatch}
-                  className="bg-[#FFD1DC] hover:bg-[#FFD1DC]/80 text-[#2D141C] border border-[#D3C3C5] px-4 py-2 rounded-sm text-xs lg:text-sm font-medium disabled:opacity-50 transition-colors"
-                >
-                  {creatingBatch ? "Creating Batch..." : "Make Batch"}
-                </button>
-              </div>
-              {createBatchError && (
-                <p className="px-4 py-2 text-sm text-red-600 bg-red-50 border-b border-[#D3C3C5]">
-                  {createBatchError}
-                </p>
-              )}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="sticky top-0 z-10">
-                    <tr className="bg-[#F3F4F6] border-b border-[#D8D8D8]">
-                      <th className="py-4 px-3 w-12">
-                        <input
-                          type="checkbox"
-                          checked={
-                            approvedOrders.length > 0 &&
-                            approvedOrders.every((o) =>
-                              selectedOrders.includes(o.id),
-                            )
-                          }
-                          onChange={toggleSelectAllOnPage}
-                          className="accent-[#7A5C69] h-4 w-4 align-middle cursor-pointer"
-                        />
-                      </th>
-                      {[
-                        "ORDER ID",
-                        "CUSTOMER",
-                        "ITEMS",
-                        "VALUE",
-                        "DATE",
-                        "ACTIONS",
-                      ].map((label) => (
-                        <th
-                          key={label}
-                          className={`py-4 px-3 text-xs lg:text-sm font-bold text-[#666] ${
-                            label === "CUSTOMER"
-                              ? "text-left w-px whitespace-nowrap"
-                              : "text-center"
-                          }`}
-                        >
-                          {label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {approvedOrdersLoading ? (
-                      <tr>
-                        <td
-                          colSpan="7"
-                          className="py-8 text-center text-sm text-[#8C959F]"
-                        >
-                          Loading approved orders...
-                        </td>
-                      </tr>
-                    ) : approvedOrdersError ? (
-                      <tr>
-                        <td
-                          colSpan="7"
-                          className="py-8 text-center text-red-600"
-                        >
-                          {approvedOrdersError}
-                        </td>
-                      </tr>
-                    ) : approvedOrders.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan="7"
-                          className="py-8 text-center text-sm text-[#8C959F]"
-                        >
-                          No approved orders available.
-                        </td>
-                      </tr>
-                    ) : (
-                      approvedOrders.map((order) => (
-                        <tr
-                          key={order.id}
-                          className={`border-b border-[#ECECEC] hover:bg-gray-50 transition ${
-                            selectedOrders.includes(order.id)
-                              ? "bg-[#FFF8FA]"
-                              : ""
-                          }`}
-                        >
-                          <td className="py-4 px-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedOrders.includes(order.id)}
-                              onChange={() => toggleOrderSelection(order.id)}
-                              className="accent-[#7A5C69] h-4 w-4 align-middle cursor-pointer"
-                            />
-                          </td>
-                          <td className="py-4 text-center text-sm text-[#333]">
-                            {order.displayId}
-                          </td>
-                          <td className="py-4 px-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 shrink-0 rounded-full bg-[#D9DEE7] flex items-center justify-center text-[9px] font-semibold text-[#4B5563]">
-                                {order.initials}
-                              </div>
-                              <span className="text-sm text-[#333] whitespace-nowrap">
-                                {order.user}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 text-center text-sm text-[#444]">
-                            {order.items} items
-                          </td>
-                          <td className="py-4 text-center text-sm text-[#444]">
-                            ${order.value?.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="py-4 text-center text-sm text-[#444]">
-                            {fmtDisplayDate(order.date)}
-                          </td>
-                          <td className="py-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() =>
-                                  detail.openOrder(order.id, {
-                                    order: order.raw,
-                                  })
-                                }
-                                title="View Details"
-                                className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-[#F9F5F6] cursor-pointer"
-                              >
-                                <Eye size={16} className="text-[#7A5C69]" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteOrder(order)}
-                                title="Delete Order"
-                                disabled={deletingId === order.id}
-                                className="w-8 h-8 border border-[#D6C5CC] rounded flex items-center justify-center hover:bg-red-50 cursor-pointer"
-                              >
-                                <Trash2 size={16} className="text-[#C0392B]" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {approvedOrders.length > 0 && (
-                <div className="px-4 py-3 border-t border-[#D3C3C5] bg-[#FBF7F8] flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#8C959F]">
-                    {pageIndex * APPROVED_PAGE_SIZE + 1}-
-                    {pageIndex * APPROVED_PAGE_SIZE + approvedOrders.length} of{" "}
-                    {approvedTotal}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setPageIndex(pageIndex - 1)}
-                      disabled={pageIndex === 0}
-                      className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      ‹
-                    </button>
-                    <span className="text-xs font-semibold text-[#8C959F] mx-1">
-                      Page {pageIndex + 1} of {approvedPageCount}
-                    </span>
-                    <button
-                      onClick={() => setPageIndex(pageIndex + 1)}
-                      disabled={pageIndex >= approvedPageCount - 1}
-                      className="h-8 w-8 rounded-lg border border-[#E8DFE1] hover:bg-slate-100 flex items-center justify-center font-bold text-xs text-[#5c5f60] transition disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      ›
-                    </button>
-                  </div>
-                </div>
-              )}
-              {detail.orderId && (
-                <div className="px-4 pb-4 lg:hidden">
-                  <OrderDetailsPanel d={detail} isMobile />
-                </div>
-              )}
-            </div>
-            <OrderDetailsPanel d={detail} />
-          </div>
-        )}
-
         {activeTab === "active" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lockError && (
@@ -1073,114 +618,16 @@ export default function BatchQueue() {
                         <Trash2 size={14} /> Remove Order
                       </button>
                       <button
-                        onClick={() => handleLockBatch(batch)}
-                        disabled={lockingBatchId === batch.id}
+                        onClick={() => handleExportBatch(batch)}
+                        disabled={exportingBatchId === batch.id}
                         className="flex-1 bg-[#FFD1DC]/60 hover:bg-[#FFD1DC] text-[#7A4E5B] border border-[#FFD1DC] rounded-sm py-2 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                       >
-                        {lockingBatchId === batch.id
-                          ? "Locking..."
-                          : "Lock Batch"}
+                        <Copy size={14} />
+                        {exportingBatchId === batch.id
+                          ? "Exporting..."
+                          : "Export Batch"}
                       </button>
                     </div>
-                  </div>
-                </div>
-              ))}
-            {!activeBatchesLoading &&
-              !activeBatchesError &&
-              activeBatches.length === 0 && (
-                <div className="col-span-full py-12 text-center text-[#5C5F60]">
-                  No active batches. Go to "Approved Orders" to create one.
-                </div>
-              )}
-          </div>
-        )}
-
-        {activeTab === "locked" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {lockError && (
-              <div className="col-span-full bg-red-50 border border-red-300 text-red-600 text-sm font-medium rounded-md px-4 py-3">
-                {lockError}
-              </div>
-            )}
-            {lockedBatchesLoading && (
-              <div className="col-span-full py-12 text-center text-[#5C5F60]">
-                Loading locked batches...
-              </div>
-            )}
-            {!lockedBatchesLoading && lockedBatchesError && (
-              <div className="col-span-full py-12 text-center text-red-600">
-                {lockedBatchesError}
-              </div>
-            )}
-            {!lockedBatchesLoading &&
-              !lockedBatchesError &&
-              lockedBatches.map((batch) => (
-                <div
-                  key={batch.id}
-                  className="bg-white border border-[#FFD1DC] rounded-md p-5 flex flex-col shadow-sm relative overflow-hidden ring-1 ring-[#FFD1DC]"
-                >
-                  <div className="absolute top-0 right-0 flex">
-                    <button
-                      onClick={() => handleUnlockBatch(batch)}
-                      disabled={unlockingBatchId === batch.id}
-                      title="Unlock batch"
-                      className="bg-[#7A4E5B]/10 hover:bg-[#7A4E5B]/20 p-2 rounded-bl-md border-b border-l border-[#FFD1DC] disabled:opacity-50 cursor-pointer transition-colors"
-                    >
-                      <LockKeyholeOpen size={16} className="text-[#7A4E5B]" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-[#5C5F60] uppercase tracking-wider">
-                    <span>BATCH-{batch.id}</span>
-                    <span className="w-1 h-1 bg-[#D3C3C5] rounded-full"></span>
-                    <span className="text-[#141D23] font-bold">
-                      {batch.itemCount} Items
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-[#141D23] mb-4">
-                    {batch.orderCount} Orders Ready
-                  </h3>
-
-                  <OrderChips
-                    batch={batch}
-                    tone="pink"
-                    expanded={expandedBatch === batch.id}
-                    onToggle={() =>
-                      setExpandedBatch(
-                        expandedBatch === batch.id ? null : batch.id,
-                      )
-                    }
-                    openOrderId={openOrderId}
-                    onOpen={setOpenOrderId}
-                  />
-
-                  {/* <div className="mb-6">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#0D8246] mb-1.5">
-                      <CheckCircle size={14} /> 50% Max Discount
-                    </div>
-                    <div className="w-full bg-[#E6F4EA] rounded-full h-2 mb-2 overflow-hidden">
-                      <div
-                        className="bg-[#0D8246] h-2 rounded-full"
-                        style={{ width: "100%" }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-[#0D8246] font-medium">
-                      {batch.savingsText || "Estimated savings applied."}
-                    </p>
-                  </div> */}
-
-                  <div className="mt-auto flex flex-col gap-3">
-                    <button
-                      onClick={() => handleExportBatch(batch)}
-                      disabled={exportingBatchId === batch.id}
-                      className="w-full bg-[#FFD1DC]/60 hover:bg-[#FFD1DC] text-[#7A4E5B] border border-[#FFD1DC] rounded-sm py-2.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer transition-colors"
-                    >
-                      <Copy size={16} />
-                      {exportingBatchId === batch.id
-                        ? "Exporting..."
-                        : "Export Batch"}
-                    </button>
                     <button
                       onClick={() => handleCompleteBatch(batch)}
                       disabled={completingBatchId === batch.id}
@@ -1191,17 +638,14 @@ export default function BatchQueue() {
                         ? "Completing..."
                         : "Mark as Purchased"}
                     </button>
-                    {/* <p className="text-xs text-center text-[#5C5F60]">
-                      Locked for processing by {batch.lockedBy}
-                    </p> */}
                   </div>
                 </div>
               ))}
-            {!lockedBatchesLoading &&
-              !lockedBatchesError &&
-              lockedBatches.length === 0 && (
+            {!activeBatchesLoading &&
+              !activeBatchesError &&
+              activeBatches.length === 0 && (
                 <div className="col-span-full py-12 text-center text-[#5C5F60]">
-                  No locked batches yet.
+                  No active batches. Approving an order creates one automatically.
                 </div>
               )}
           </div>
@@ -1209,6 +653,11 @@ export default function BatchQueue() {
 
         {activeTab === "completed" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {lockError && (
+              <div className="col-span-full bg-red-50 border border-red-300 text-red-600 text-sm font-medium rounded-md px-4 py-3">
+                {lockError}
+              </div>
+            )}
             {completedBatchesLoading && (
               <div className="col-span-full py-12 text-center text-[#5C5F60]">
                 Loading completed batches...
