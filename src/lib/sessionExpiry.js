@@ -9,10 +9,11 @@ import { toast } from "../components/Toast";
 export const isUnauthorized = (status) => status === 401 || status === 403;
 
 // Called wherever an authenticated API call comes back unauthorized (token missing/expired).
-export const handleUnauthorized = () => {
+// `message` is the backend's reason when it gives one (e.g. account suspended).
+export const handleUnauthorized = (message) => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  toast.error("Your session has ended. Please log in again.");
+  toast.error(message || "Your session has ended. Please log in again.");
   window.location.href = window.location.pathname.startsWith("/admin")
     ? "/admin/login"
     : "/login";

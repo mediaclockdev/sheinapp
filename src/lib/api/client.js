@@ -24,7 +24,14 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (isUnauthorized(error.response?.status)) handleUnauthorized();
+    // Only a request that carried a token has a session to end. Public calls
+    // (login, activate) 403 for their own reasons, e.g. a suspended account,
+    // and the caller must get to show that message instead of a redirect.
+    if (
+      isUnauthorized(error.response?.status) &&
+      error.config?.headers?.Authorization
+    )
+      handleUnauthorized(error.response?.data?.message);
     return Promise.reject(error);
   },
 );

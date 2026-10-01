@@ -281,7 +281,7 @@ function LoginScreen({ admin = false }) {
           Object.fromEntries(result.errors.map((e) => [e.field, e.message])),
         );
       } else {
-        setError(result?.message || "Login failed");
+        setError(getErrorMessage(err, "Login failed"));
       }
     } finally {
       setLoading(false);
