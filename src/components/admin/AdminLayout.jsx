@@ -190,7 +190,7 @@ const AdminLayout = () => {
                   {name}
                 </p>
                 <p className="hidden text-xs font-medium text-[#5C5F60]/70 lg:block">
-                  Super Admin
+                  {isSuperAdmin() ? "Super Admin" : "Admin"}
                 </p>
               </div>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#dec9ce] bg-[#FFE8EF] text-sm font-bold text-[#D24D77]">
