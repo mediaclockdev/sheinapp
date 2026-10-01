@@ -86,7 +86,8 @@ export default function Customers() {
       setError(null);
       try {
         const params = new URLSearchParams({ page, limit: PAGE_SIZE });
-        if (STATUS_FILTERS[status]) params.set("status", STATUS_FILTERS[status]);
+        if (STATUS_FILTERS[status])
+          params.set("status", STATUS_FILTERS[status]);
         // Deep link: let the server tell us which page holds this customer.
         const focusing = Boolean(requestedId) && !focusSyncedRef.current;
         if (focusing) params.set("focusId", requestedId);
@@ -441,7 +442,7 @@ export default function Customers() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <button
                     disabled={isDisabled}
                     className={`p-2 border border-[#D3C3C5] rounded text-[#5C5F60] hover:bg-slate-50 transition-colors
@@ -456,7 +457,7 @@ export default function Customers() {
                   >
                     <MoreVertical size={16} />
                   </button>
-                </div>
+                </div> */}
               </div>
 
               <h2 className="text-xl font-bold text-[#141D23] mt-4">
@@ -520,7 +521,7 @@ export default function Customers() {
                 >
                   Contact Customer
                 </button>
-                <button
+                {/* <button
                   disabled={isDisabled}
                   className={`flex-1 bg-white hover:bg-slate-50 text-[#141D23] border border-[#D3C3C5] rounded-sm py-2.5 text-sm font-bold transition-colors
    ${
@@ -530,7 +531,7 @@ export default function Customers() {
    }`}
                 >
                   Edit Profile
-                </button>
+                </button> */}
               </div>
             </div>
 

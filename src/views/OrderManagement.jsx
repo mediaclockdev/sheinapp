@@ -14,6 +14,7 @@ import useOrderDetails from "../components/orders/useOrderDetails";
 import OrderDetailsPanel from "../components/orders/OrderDetailsPanel";
 import apiClient, { getErrorMessage } from "../lib/api/client";
 import { ENDPOINTS } from "../lib/api/endpoints";
+import TableSkeleton from "../components/common/TableSkeleton";
 
 const mapOrder = (order) => {
   const customerName =
@@ -485,16 +486,7 @@ const OrderManagement = () => {
               </thead>
 
               <tbody>
-                {ordersLoading && (
-                  <tr>
-                    <td
-                      colSpan={columns.length}
-                      className="py-8 text-center text-sm text-[#8C959F]"
-                    >
-                      Loading orders...
-                    </td>
-                  </tr>
-                )}
+                {ordersLoading && <TableSkeleton cols={columns.length} />}
                 {!ordersLoading && orders.length === 0 && (
                   <tr>
                     <td
@@ -505,28 +497,29 @@ const OrderManagement = () => {
                     </td>
                   </tr>
                 )}
-                {table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`border-b border-[#ECECEC] hover:bg-gray-50 transition ${
-                      row.getIsSelected() ? "bg-[#FFF8FA]" : ""
-                    }`}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className={`py-4 text-center ${
-                          cell.column.id === "select" ? "px-3" : ""
-                        }`}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+                {!ordersLoading &&
+                  table.getRowModel().rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className={`border-b border-[#ECECEC] hover:bg-gray-50 transition ${
+                        row.getIsSelected() ? "bg-[#FFF8FA]" : ""
+                      }`}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className={`py-4 text-center ${
+                            cell.column.id === "select" ? "px-3" : ""
+                          }`}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

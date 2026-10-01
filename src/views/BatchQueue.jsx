@@ -1,13 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  Move,
-  Merge,
-  Copy,
-  Info,
-  CheckCircle,
-  X,
-  Trash2,
-} from "lucide-react";
+import { Move, Merge, Copy, Info, CheckCircle, X, Trash2 } from "lucide-react";
 import SuccessToast from "../components/common/SuccessToast";
 import OrderSummaryDrawer from "../components/orders/OrderSummaryDrawer";
 import { orderCustomerName } from "../lib/format";
@@ -219,7 +211,7 @@ export default function BatchQueue() {
     setLockError(null);
     try {
       await apiClient.post(ENDPOINTS.batches.complete(batch.id), {
-        sheinOrderRef: batch.sheinOrderRef || undefined
+        sheinOrderRef: batch.sheinOrderRef || undefined,
       });
 
       await fetchActiveBatches();
@@ -563,7 +555,7 @@ export default function BatchQueue() {
                   )} */}
 
                   <div className="mt-auto flex flex-col gap-3">
-                    <div className="flex gap-3">
+                    {/* <div className="flex gap-3">
                       <button
                         onClick={() => openMoveModal(batch.id)}
                         className="flex-1 bg-white hover:bg-slate-50 text-[#5C5F60] border border-[#D3C3C5] rounded-sm py-2 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
@@ -576,14 +568,14 @@ export default function BatchQueue() {
                       >
                         <Merge size={14} /> Merge Batch
                       </button>
-                    </div>
+                    </div> */}
                     <div className="flex gap-3">
-                      <button
+                      {/* <button
                         onClick={() => openRemoveModal(batch.id)}
                         className="flex-1 bg-white hover:bg-red-50 text-[#5C5F60] border border-[#D3C3C5] rounded-sm py-2 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <Trash2 size={14} /> Remove Order
-                      </button>
+                      </button> */}
                       <button
                         onClick={() => handleExportBatch(batch)}
                         disabled={exportingBatchId === batch.id}
@@ -612,12 +604,13 @@ export default function BatchQueue() {
               !activeBatchesError &&
               activeBatches.length === 0 && (
                 <div className="col-span-full py-12 text-center text-[#5C5F60]">
-                  No active batches. Approving an order creates one automatically.
+                  No active batches available. Once an order is approved, a
+                  batch will be created automatically and can be viewed on the
+                  Tracking page.
                 </div>
               )}
           </div>
         )}
-
       </div>
 
       {/* Dashboard Elements */}
@@ -978,7 +971,6 @@ export default function BatchQueue() {
         order={drawerOrder}
         onClose={() => setOpenOrderId(null)}
       />
-
     </div>
   );
 }

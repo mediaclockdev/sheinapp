@@ -55,9 +55,13 @@ export const ENDPOINTS = {
     moveOrders: (id) => `/api/batches/${id}/move-orders`,
     removeOrders: (id) => `/api/batches/${id}/remove-orders`,
     export: (id) => `/api/batches/${id}/export`,
+  },
+
+  tracking: {
     tracking: "/api/batches/tracking",
     trackingDetail: (id) => `/api/batches/${id}/tracking`,
     trackingStatus: (id) => `/api/batches/${id}/tracking-status`,
+    export: (id) => `/api/batches/tracking/export?batchIds=${encodeURIComponent(id)}`,
   },
   chat: {
     conversations: "/api/chat/conversations",

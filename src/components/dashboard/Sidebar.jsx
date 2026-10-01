@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import logo2 from "../../assets/logo2.svg";
+import { NavLink, useNavigate } from "react-router-dom";
+import logo2 from "../../assets/logo2.webp";
 
 import dashboardicon from "../../assets/dashboardicon.svg";
 import ordericon from "../../assets/ordericon.svg";
-import paymentsicon from "../../assets/paymentsicon.svg";
+
 import batchqueueicon from "../../assets/batchqueueicon.svg";
 import trackingicon from "../../assets/trackingicon.svg";
 import customericon from "../../assets/customersicon.svg";
-import reportsicon from "../../assets/reportsicon.svg";
+
 import settingsicon from "../../assets/settingsicon.svg";
 import cameraicon from "../../assets/cameraicon.svg";
 import {
@@ -25,7 +25,6 @@ import { ENDPOINTS } from "../../lib/api/endpoints";
 import { isAdmin, logout } from "../../lib/auth";
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -54,11 +53,9 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Dashboard", path: "/dashboard", iconSrc: dashboardicon },
     { name: "Orders", path: "/orders", iconSrc: ordericon },
     { name: "Batch Queue", path: "/batch-queue", iconSrc: batchqueueicon },
-    { name: "Payments", path: "/payments", iconSrc: paymentsicon },
     { name: "Tracking", path: "/tracking", iconSrc: trackingicon },
     { name: "Customers", path: "/customers", iconSrc: customericon },
     { name: "Inbox", path: "/conversation", icon: MessageSquare },
-    { name: "Reports", path: "/reports", iconSrc: reportsicon },
     { name: "Settings", path: "/settings", iconSrc: settingsicon },
     { name: "Scan SKU", path: "/scanSku", iconSrc: cameraicon },
     { name: "Admin", path: "/admin", icon: Shield, adminOnly: true },
@@ -163,88 +160,10 @@ const Sidebar = ({ isOpen, onClose }) => {
             <LogOut size={20} />
             <span>Logout</span>
           </button>
-
-          {/* Order Journey Card */}
-          {/* {pathname.startsWith("/orders") && (
-            <div className="bg-[#EEF4FB]/30 border border-[#D3C3C5]/50 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)] mt-2 mb-2">
-              <span className="text-[10px] font-bold text-[#8A6A72] uppercase tracking-wider block mb-3">
-                Order Journey
-              </span>
-              <div className="relative pl-7 space-y-4">
-            
-                <div className="absolute left-[9px] top-2 bottom-2 w-[1.5px] bg-[#D3C3C5]" />
-
-      
-                <div className="relative flex flex-col justify-center min-h-5">
-                  <div className="absolute -left-7 top-0 flex items-center justify-center w-5 h-5 rounded-full bg-[#78555E] text-white text-[10px] font-bold">
-                    ✓
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#141D23] leading-tight">
-                      Submitted
-                    </p>
-                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">
-                      Oct 12 • 10:45 AM
-                    </p>
-                  </div>
-                </div>
-
-
-                <div className="relative flex flex-col justify-center min-h-5">
-                  <div className="absolute -left-7 top-0 flex items-center justify-center w-5 h-5 rounded-full bg-[#78555E] text-white text-[10px] font-bold">
-                    ✓
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#141D23] leading-tight">
-                      Payment Verified
-                    </p>
-                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">
-                      Oct 12 • 02:20 PM
-                    </p>
-                  </div>
-                </div>
-
-
-                <div className="relative flex flex-col justify-center min-h-5">
-                  <div className="absolute -left-7 top-0.5 flex items-center justify-center w-5 h-5 rounded-full border-[1.5px] border-[#78555E] bg-[#EEF4FB]/50">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#78555E]" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#78555E] leading-tight">
-                      Purchased
-                    </p>
-                    <p className="text-[9px] font-semibold text-[#8C959F] mt-0.5">
-                      Oct 14 • 11:30 AM
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )} */}
         </div>
 
         {/* Bottom Section */}
-        <div className="flex flex-col gap-2">
-          {/* New Order Action Button */}
-
-          {/* Help Center Item */}
-          {/* <a
-            href="#help"
-            className="flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B] transition duration-200"
-          >
-            <img src={helpicon} alt="Help" className="h-4 w-4" />
-            <p>Help Center</p>
-          </a> */}
-
-          {/* Logout Button */}
-          {/* <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#D24D77] border hover:bg-[#FFE8EF] transition duration-200"
-          >
-            <LogOut size={20} />
-            <span>Logout</span>
-          </button> */}
-        </div>
+        <div className="flex flex-col gap-2"></div>
       </div>
 
       {/* Invite Dialog */}

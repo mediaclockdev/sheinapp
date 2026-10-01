@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../lib/api/client";
 import { ENDPOINTS } from "../lib/api/endpoints";
+import TableSkeleton from "../components/common/TableSkeleton";
 import { fmtMoney, imageUrl, orderCustomerName } from "../lib/format";
 import {
   Download,
@@ -30,7 +31,7 @@ const TRACKING_STATUSES = [
   { value: "PURCHASED", label: "PURCHASED (Agent bought it on SHEIN)" },
   { value: "WAREHOUSE", label: "WAREHOUSE (Arrived at export warehouse)" },
   { value: "IN_TRANSIT", label: "IN_TRANSIT (On airplane/ship)" },
-  { value: "ARRIVED", label: "ARRIVED (Local warehouse)" }
+  { value: "ARRIVED", label: "ARRIVED (Local warehouse)" },
 ];
 
 // ponytail: tracking row shape unconfirmed; keep only the real field once known
@@ -100,7 +101,7 @@ const toTimeline = (logs = []) =>
 
 const loadHistory = async (batchId) => {
   const { data: res } = await apiClient.get(
-    ENDPOINTS.batches.trackingDetail(batchId),
+    ENDPOINTS.tracking.trackingDetail(batchId),
   );
   const logs = res.data?.activityLogs ?? res.activityLogs;
   return toTimeline(Array.isArray(logs) ? logs : []);
@@ -142,7 +143,7 @@ export default function Tracking() {
     setError(null);
     try {
       const { data: res } = await apiClient.get(
-        `${ENDPOINTS.batches.tracking}?statusFilter=${statusFilter}&page=${page}&limit=10`,
+        `${ENDPOINTS.tracking.tracking}?statusFilter=${statusFilter}&page=${page}&limit=10`,
       );
       // Assuming res.data contains { batches: [], pagination: { total: 10, totalPages: 1 } }
       const list = res.data?.batches || res.data || res.batches || res || [];
@@ -173,10 +174,10 @@ export default function Tracking() {
   useEffect(() => {
     fetchTracking();
   }, [statusFilter, page]);
-  const [selectedRows, setSelectedRows] = useState(["PX-89910023"]);
+  const [selectedRows, setSelectedRows] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeItem, setActiveItem] = useState(null);
-  
+
   const [updateStatus, setUpdateStatus] = useState("PURCHASED");
   const [updateNote, setUpdateNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -189,7 +190,7 @@ export default function Tracking() {
     setUpdateError(null);
     const batchId = batchIdOf(activeItem);
     try {
-      await apiClient.patch(ENDPOINTS.batches.trackingStatus(batchId), {
+      await apiClient.patch(ENDPOINTS.tracking.trackingStatus(batchId), {
         newStatus: updateStatus,
         trackingNotes: updateNote,
       });
@@ -199,12 +200,16 @@ export default function Tracking() {
         toTimelineEntry({
           id: `local-${Date.now()}`,
           status: updateStatus,
-          action: updateNote.trim() ? `${NOTE_MARKER} ${updateNote.trim()}` : "",
+          action: updateNote.trim()
+            ? `${NOTE_MARKER} ${updateNote.trim()}`
+            : "",
           createdAt: new Date().toISOString(),
         }),
         ...prev,
       ]);
-      setActiveItem((prev) => (prev ? { ...prev, status: updateStatus } : prev));
+      setActiveItem((prev) =>
+        prev ? { ...prev, status: updateStatus } : prev,
+      );
       setUpdateNote("");
       fetchTracking(); // Refresh main list
       loadHistory(batchId)
@@ -233,9 +238,6 @@ export default function Tracking() {
       setSelectedRows([...selectedRows, id]);
     }
   };
-
-
-
 
   const handleManage = async (item) => {
     setActiveItem(item);
@@ -272,7 +274,27 @@ export default function Tracking() {
       setHistoryLoading(false);
     }
   };
-
+  const handleExport = async () => {
+    const selectedIds = data
+      .filter((item, idx) => selectedRows.includes(item.trackingId || idx))
+      .map(batchIdOf)
+      .filter(Boolean);
+    if (!selectedIds.length) return;
+    try {
+      const { data: blob } = await apiClient.get(
+        ENDPOINTS.tracking.export(selectedIds.join(",")),
+        { responseType: "blob" },
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orders_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export orders:", err);
+    }
+  };
   const rankNow = currentRank(activeItem, trackingHistory);
   const nextStatuses = TRACKING_STATUSES.slice(rankNow + 1).map((s) => s.value);
   // Keep the agent's pick while it's still valid, otherwise the next milestone.
@@ -302,7 +324,7 @@ export default function Tracking() {
               }}
               className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 w-40 focus:outline-none focus:border-gray-400"
             >
-              <option value="ALL">All Statuses</option>
+              <option value="ALL">All Status</option>
               {TRACKING_STATUSES.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.value}
@@ -328,13 +350,17 @@ export default function Tracking() {
           </div>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors w-full md:w-auto">
+          <button
+            onClick={handleExport}
+            disabled={!selectedRows.length}
+            className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors w-full md:w-auto"
+          >
             <Download size={16} />
             Export
           </button>
           <button
             onClick={() => fetchTracking()}
-            className="px-4 py-2 bg-[#ffc6d8] hover:bg-[#ffb5cd] text-[#704154] rounded text-sm font-semibold transition-colors w-full md:w-auto"
+            className="cursor-pointer px-4 py-2 bg-[#ffc6d8] hover:bg-[#ffb5cd] text-[#704154] rounded text-sm font-semibold transition-colors w-full md:w-auto"
           >
             Apply Filters
           </button>
@@ -364,11 +390,7 @@ export default function Tracking() {
             </thead>
             <tbody className="bg-white">
               {loading ? (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-gray-500">
-                    Loading tracking data...
-                  </td>
-                </tr>
+                <TableSkeleton rows={10} cols={8} />
               ) : error ? (
                 <tr>
                   <td colSpan="8" className="p-8 text-center text-red-500">
@@ -481,7 +503,8 @@ export default function Tracking() {
                   Batch Detail
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Batch #{batchIdOf(activeItem ?? {})} | {batchItemCount} Total Items
+                  Batch #{batchIdOf(activeItem ?? {})} | {batchItemCount} Total
+                  Items
                 </p>
               </div>
               <button
@@ -499,23 +522,28 @@ export default function Tracking() {
                   Manual Status Update
                 </h3>
                 <div className="space-y-4">
-                  <select 
+                  <select
                     value={selectedStatus ?? ""}
                     onChange={(e) => setUpdateStatus(e.target.value)}
                     disabled={!selectedStatus}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-800 bg-white focus:outline-none focus:border-gray-400 font-medium disabled:opacity-60">
+                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-800 bg-white focus:outline-none focus:border-gray-400 font-medium disabled:opacity-60"
+                  >
                     {!selectedStatus && (
                       <option value="">Final status reached</option>
                     )}
                     {TRACKING_STATUSES.map((s, i) => (
-                      <option key={s.value} value={s.value} disabled={i <= rankNow}>
+                      <option
+                        key={s.value}
+                        value={s.value}
+                        disabled={i <= rankNow}
+                      >
                         {s.label}
                         {i === rankNow ? " — current" : ""}
                       </option>
                     ))}
                   </select>
-                  
-                  <textarea 
+
+                  <textarea
                     value={updateNote}
                     onChange={(e) => setUpdateNote(e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-4 py-3 text-sm text-gray-700 bg-white focus:outline-none focus:border-gray-400 min-h-[100px]"
@@ -528,10 +556,11 @@ export default function Tracking() {
                     </p>
                   )}
 
-                  <button 
+                  <button
                     onClick={handleUpdateStatus}
                     disabled={isUpdating || !selectedStatus}
-                    className="w-full bg-[#ffc6d8] hover:bg-[#ffb5cd] text-[#704154] font-bold py-3 rounded-md transition-colors disabled:opacity-50">
+                    className="w-full bg-[#ffc6d8] hover:bg-[#ffb5cd] text-[#704154] font-bold py-3 rounded-md transition-colors disabled:opacity-50"
+                  >
                     {isUpdating ? "Updating..." : "Update"}
                   </button>
                 </div>
@@ -543,11 +572,15 @@ export default function Tracking() {
                   Items ({batchItemCount})
                 </h3>
                 {ordersLoading ? (
-                  <div className="text-sm text-gray-500 py-4">Loading items...</div>
+                  <div className="text-sm text-gray-500 py-4">
+                    Loading items...
+                  </div>
                 ) : ordersError ? (
                   <div className="text-sm text-red-500 py-4">{ordersError}</div>
                 ) : batchItemCount === 0 ? (
-                  <div className="text-sm text-gray-500 py-4">No items found.</div>
+                  <div className="text-sm text-gray-500 py-4">
+                    No items found.
+                  </div>
                 ) : (
                   <div className="space-y-5">
                     {batchOrders.map((order) => (
@@ -572,7 +605,10 @@ export default function Tracking() {
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (
-                                    <Package size={18} className="text-gray-400" />
+                                    <Package
+                                      size={18}
+                                      className="text-gray-400"
+                                    />
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -583,7 +619,11 @@ export default function Tracking() {
                                     {it.productName}
                                   </p>
                                   <p className="text-xs text-gray-500">
-                                    {[it.size && `Size: ${it.size}`, it.color && `Color: ${it.color}`, it.skuCode && `SKU: ${it.skuCode}`]
+                                    {[
+                                      it.size && `Size: ${it.size}`,
+                                      it.color && `Color: ${it.color}`,
+                                      it.skuCode && `SKU: ${it.skuCode}`,
+                                    ]
                                       .filter(Boolean)
                                       .join(" · ")}
                                   </p>
@@ -592,8 +632,12 @@ export default function Tracking() {
                                   <p className="text-sm font-bold text-gray-800">
                                     {fmtMoney(it.price)}
                                   </p>
-                                  <p className={`text-xs font-semibold ${out ? "text-red-600" : "text-gray-500"}`}>
-                                    {out ? "Out of Stock" : `Qty: ${it.quantity}`}
+                                  <p
+                                    className={`text-xs font-semibold ${out ? "text-red-600" : "text-gray-500"}`}
+                                  >
+                                    {out
+                                      ? "Out of Stock"
+                                      : `Qty: ${it.quantity}`}
                                   </p>
                                 </div>
                               </div>
@@ -618,43 +662,62 @@ export default function Tracking() {
 
                   <div className="space-y-6">
                     {historyLoading ? (
-                      <div className="text-sm text-gray-500 py-4">Loading history...</div>
+                      <div className="text-sm text-gray-500 py-4">
+                        Loading history...
+                      </div>
                     ) : historyError ? (
-                      <div className="text-sm text-red-500 py-4">{historyError}</div>
+                      <div className="text-sm text-red-500 py-4">
+                        {historyError}
+                      </div>
                     ) : trackingHistory.length === 0 ? (
-                      <div className="text-sm text-gray-500 py-4">No tracking history found.</div>
+                      <div className="text-sm text-gray-500 py-4">
+                        No tracking history found.
+                      </div>
                     ) : (
                       trackingHistory.map((hist, index) => {
-                        const dateObj = hist.createdAt ? new Date(hist.createdAt) : null;
+                        const dateObj = hist.createdAt
+                          ? new Date(hist.createdAt)
+                          : null;
                         const valid = dateObj && !isNaN(dateObj);
-                        const dateStr = valid ? dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "";
-                        const timeStr = valid ? dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : "";
-                        
+                        const dateStr = valid
+                          ? dateObj.toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "";
+                        const timeStr = valid
+                          ? dateObj.toLocaleTimeString(undefined, {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "";
+
                         return (
-                        <div
-                          key={hist.id || index}
-                          className="relative flex items-start gap-4 z-10"
-                        >
-                          {/* Dot */}
-                          <div className="w-6 h-6 rounded-full bg-[#22c55e] flex items-center justify-center border-4 border-white shadow-sm mt-0.5 z-10 shrink-0 mx-auto ml-1"></div>
-  
-                          {/* Content */}
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <h4 className="font-bold text-gray-900 text-sm">
-                                {hist.title}
-                              </h4>
-                              <div className="text-right text-xs text-gray-500">
-                                <div>{dateStr}</div>
-                                <div>{timeStr}</div>
+                          <div
+                            key={hist.id || index}
+                            className="relative flex items-start gap-4 z-10"
+                          >
+                            {/* Dot */}
+                            <div className="w-6 h-6 rounded-full bg-[#22c55e] flex items-center justify-center border-4 border-white shadow-sm mt-0.5 z-10 shrink-0 mx-auto ml-1"></div>
+
+                            {/* Content */}
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <h4 className="font-bold text-gray-900 text-sm">
+                                  {hist.title}
+                                </h4>
+                                <div className="text-right text-xs text-gray-500">
+                                  <div>{dateStr}</div>
+                                  <div>{timeStr}</div>
+                                </div>
                               </div>
+                              <p className="text-sm text-gray-500 mt-1 pr-12">
+                                {hist.subtitle}
+                              </p>
                             </div>
-                            <p className="text-sm text-gray-500 mt-1 pr-12">
-                              {hist.subtitle}
-                            </p>
                           </div>
-                        </div>
-                      )})
+                        );
+                      })
                     )}
                   </div>
                 </div>

@@ -8,8 +8,8 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import logo from "../../assets/logo.svg";
-// import logo2 from "../../assets/logo2.svg";
+import logo from "../../assets/logo.webp";
+// import logo2 from "../../assets/logo2.webp";
 import apiClient, { getErrorMessage } from "../../lib/api/client";
 import { landingPath } from "../../lib/auth";
 import { ENDPOINTS } from "../../lib/api/endpoints";
@@ -138,7 +138,7 @@ function BrandLogo({ compact = false }) {
   if (compact) {
     return (
       <div>
-        <img src={logo} alt="logo" />
+        <img src={logo} alt="logo" width={33} height={31} />
       </div>
     );
   }

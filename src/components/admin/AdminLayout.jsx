@@ -9,7 +9,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import logo2 from "../../assets/logo2.svg";
+import logo2 from "../../assets/logo2.webp";
 import { getUser, logout } from "../../lib/auth";
 import apiClient from "../../lib/api/client";
 import { ENDPOINTS } from "../../lib/api/endpoints";
