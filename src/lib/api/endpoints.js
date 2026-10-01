@@ -81,5 +81,11 @@ export const ENDPOINTS = {
     agentById: (id) => `/api/admin/agents/${id}`,
     updateAgentStatus: (id) => `/api/admin/agents/${id}/status`,
     generatereport: "/api/admin/agents/export",
+    activate: "/api/admin/manage-admins/activate",
+    // ponytail: guessed admin-access endpoints, swap for the real ones once the backend ships them
+    admins: "/api/admin/manage-admins",
+    adminStatus: (id) => `/api/admin/manage-admins/${id}/status`,
+    adminById: (id) => `/api/admin/manage-admins/${id}`,
+    resendAdminInvite: (id) => `/api/admin/manage-admins/${id}/resend-invite`,
   },
 };

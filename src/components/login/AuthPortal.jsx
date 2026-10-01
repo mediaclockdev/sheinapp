@@ -13,6 +13,7 @@ import logo from "../../assets/logo.webp";
 import apiClient, { getErrorMessage } from "../../lib/api/client";
 import { landingPath } from "../../lib/auth";
 import { ENDPOINTS } from "../../lib/api/endpoints";
+import { toast } from "../Toast";
 
 const screenMeta = {
   "/login": {
@@ -40,6 +41,9 @@ const screenMeta = {
     stageClass: "pt-[70px]",
   },
   "/register": {
+    stageClass: "pt-[70px]",
+  },
+  "/admin/activate": {
     stageClass: "pt-[70px]",
   },
 };
@@ -412,7 +416,7 @@ function ForgotScreen() {
     setError("");
     setSuccess("");
     const formData = new FormData(event.target);
-    const email = formData.get("email"); 
+    const email = formData.get("email");
     if (!email?.trim()) {
       setError("Email is required.");
       return;
@@ -637,6 +641,126 @@ const countryCodes = [
   ["91", "India"],
   ["44", "UK"],
 ];
+
+// Mirrors the backend rule in admin.validation.ts: 8–72 chars with upper,
+// lower, digit and special. Returns the first unmet rule, or null.
+function adminPasswordError(pw) {
+  if (pw.length < 8 || pw.length > 72)
+    return "Password must be 8–72 characters.";
+  if (!/[A-Z]/.test(pw)) return "Password needs an uppercase letter.";
+  if (!/[a-z]/.test(pw)) return "Password needs a lowercase letter.";
+  if (!/\d/.test(pw)) return "Password needs a number.";
+  if (!/[^A-Za-z0-9]/.test(pw)) return "Password needs a special character.";
+  return null;
+}
+
+// Invite link target: the invitee has no account yet, so this must stay
+// reachable without a session (see AppRouter).
+function ActivateScreen() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!token) {
+      setError("This invite link is missing its token. Ask for a new invite.");
+      return;
+    }
+    const formData = new FormData(e.target);
+    const password = formData.get("password");
+    const ruleError = adminPasswordError(password);
+    if (ruleError) {
+      setError(ruleError);
+      return;
+    }
+    if (password !== formData.get("confirmPassword")) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiClient.post(ENDPOINTS.admin.activate, { token, password });
+      toast.success("Account activated successfully!");
+      setSuccess("Account activated! Redirecting to login...");
+      setTimeout(() => navigate("/admin/login", { replace: true }), 2000);
+    } catch (err) {
+      // Backend messages are specific ("This invitation link has expired");
+      // these fallbacks only cover a response without one.
+      const fallback =
+        {
+          400: "This invitation link is invalid or has already been used.",
+          403: "This admin account has been suspended.",
+          410: "This invitation link has expired. Ask for a new invite.",
+        }[err.response?.status] ?? "Failed to activate account";
+      const message = getErrorMessage(err, fallback);
+      setError(message);
+      toast.error(message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="w-full max-w-[460px] rounded-md border border-[#78555e]/20 bg-white/95 px-9 py-9 text-center shadow-[0_16px_36px_rgba(103,47,65,0.08)]">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-[#ffc6d8] text-[#7a4e5b]">
+          <Icon name="lock" className="h-6 w-6" />
+        </div>
+        <h1 className="mt-6 text-[28px] font-extrabold tracking-tight text-[#17222b]">
+          Set your password
+        </h1>
+        <p className="mt-2 text-[12px] text-[#626973]">
+          Choose a password to activate your admin account.
+        </p>
+
+        <div className="mt-4 text-left">
+          {error && <ErrorAlert message={error} />}
+          {success && (
+            <div className="rounded border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {success}
+            </div>
+          )}
+        </div>
+
+        <form className="mt-7 space-y-5 text-left" onSubmit={handleSubmit}>
+          <Field
+            required
+            label="Password"
+            name="password"
+            type="password"
+            icon="key"
+            placeholder="••••••••"
+            shellClassName="h-10"
+          />
+          <Field
+            required
+            label="Confirm Password"
+            name="confirmPassword"
+            type="password"
+            icon="lock"
+            placeholder="••••••••"
+            shellClassName="h-10"
+          />
+          <PrimaryButton arrow className="!mt-8 h-[54px] text-[14px]">
+            {loading ? "Activating..." : "Activate Account"}
+          </PrimaryButton>
+        </form>
+      </div>
+      <div className="mt-7 flex w-full max-w-[460px] gap-4 rounded bg-[#eef7ff] px-5 py-5 text-[13px] leading-5 text-[#5f6872]">
+        <Icon name="info" className="mt-0.5 h-5 w-5 shrink-0 text-[#7a4e5b]" />
+        <p>
+          8–72 characters, with at least one uppercase letter, one lowercase
+          letter, one number and one special character.
+        </p>
+      </div>
+    </>
+  );
+}
 
 function validateRegister({
   name,
@@ -888,7 +1012,7 @@ function StageFooter({ meta }) {
 
 function PortalLayout() {
   const { pathname } = useLocation();
-  const isAdminLogin = pathname === "/admin/login";
+  const isAdminLogin = pathname.startsWith("/admin");
   const meta = screenMeta[pathname] ?? screenMeta["/login"];
 
   useLayoutEffect(() => {
@@ -925,6 +1049,7 @@ function PortalLayout() {
             {/* <Route path="/verify-otp" element={<OtpScreen />} /> */}
             <Route path="/reset-password" element={<ResetScreen />} />
             <Route path="/register" element={<RegisterScreen />} />
+            <Route path="/admin/activate" element={<ActivateScreen />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
           <StageFooter meta={meta} />

@@ -31,6 +31,7 @@ import AdminLayout from "../components/admin/AdminLayout";
 const AdminDashboard = lazy(() => import("../views/admin/AdminDashboard"));
 const AgentManagement = lazy(() => import("../views/admin/AgentManagement"));
 const AgentDetail = lazy(() => import("../views/admin/AgentDetail"));
+const AdminAccess = lazy(() => import("../views/admin/AdminAccess"));
 
 const isAuthenticated = () => {
   return !!localStorage.getItem("token");
@@ -50,6 +51,13 @@ function AppRoutes() {
   ];
 
   const isAuthPath = authPaths.includes(pathname);
+
+  // Invite activation sits outside the auth guard both ways: the invitee has
+  // no account yet, and an existing session in this browser shouldn't bounce
+  // them away from it either.
+  if (pathname === "/admin/activate") {
+    return <AuthPortal />;
+  }
 
   // Redirect authenticated users away from login/register to dashboard
   if (isAuth && isAuthPath) {
@@ -115,6 +123,14 @@ function AppRoutes() {
           <Route index element={<AdminDashboard />} />
           <Route path="agents" element={<AgentManagement />} />
           <Route path="agents/:id" element={<AgentDetail />} />
+          <Route
+            path="admin-access"
+            element={
+              <AdminRoute superOnly>
+                <AdminAccess />
+              </AdminRoute>
+            }
+          />
           <Route
             path="settings"
             element={<PagePlaceholder title="Admin Settings" />}

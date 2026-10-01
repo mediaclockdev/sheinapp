@@ -13,6 +13,14 @@ export const getRole = () => getUser()?.role?.toLowerCase() ?? null;
 
 export const isAdmin = () => getRole() === "admin";
 
+// `role` is the portal (ADMIN vs agent); `adminRole` is the level inside it.
+// Accepts SUPER_ADMIN / SUPERADMIN / super-admin: separators and case ignored.
+export const isSuperAdmin = () =>
+  isAdmin() &&
+  String(getUser()?.adminRole ?? "")
+    .replace(/[^a-z]/gi, "")
+    .toUpperCase() === "SUPERADMIN";
+
 export const landingPath = () => (isAdmin() ? "/admin" : "/dashboard");
 
 export const logout = () => {

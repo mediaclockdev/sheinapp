@@ -1,31 +1,34 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Users,
-  Bell,
-  FileText,
-  LogOut,
-  Menu,
-  X,
-} from "lucide-react";
+import { LayoutDashboard, Bell, FileText, LogOut, Menu, X } from "lucide-react";
 import logo2 from "../../assets/logo2.webp";
-import { getUser, logout } from "../../lib/auth";
+import { getUser, isSuperAdmin, logout } from "../../lib/auth";
 import apiClient from "../../lib/api/client";
 import { ENDPOINTS } from "../../lib/api/endpoints";
 import { toast } from "../Toast";
 import { getErrorMessage } from "../../lib/api/client";
+import agentmanagementicon from "../../assets/adminagentmanagement.webp";
+import adminaccessicon from "../../assets/adminacess.webp";
 
 const NAV = [
   { name: "Dashboard", path: "/admin", end: true, icon: LayoutDashboard },
-  { name: "Agent Management", path: "/admin/agents", icon: Users },
-  // { name: "Settings", path: "/admin/settings", icon: Settings },
+  {
+    name: "Agent Management",
+    path: "/admin/agents",
+    icon: agentmanagementicon,
+  },
+  {
+    name: "Manage Admin Access",
+    path: "/admin/admin-access",
+    icon: adminaccessicon,
+    superOnly: true,
+  },
 ];
 
 const PAGE_TITLES = {
   "/admin": "Dashboard",
   "/admin/agents": "Agent Management",
-  "/admin/settings": "Settings",
+  "/admin/admin-access": "Manage Admin Access",
 };
 
 const AdminLayout = () => {
@@ -111,24 +114,31 @@ const AdminLayout = () => {
           </div>
 
           <nav className="flex flex-col gap-1">
-            {NAV.map(({ name, path, end, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                end={end}
-                onClick={() => setIsSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors duration-200 ${
-                    isActive
-                      ? "bg-[#FFE8EF] text-[#D24D77]"
-                      : "text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B]"
-                  }`
-                }
-              >
-                <Icon size={16} className="shrink-0" />
-                <span>{name}</span>
-              </NavLink>
-            ))}
+            {NAV.filter((n) => !n.superOnly || isSuperAdmin()).map(
+              ({ name, path, end, icon: Icon }) => (
+                <NavLink
+                  key={path}
+                  to={path}
+                  end={end}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
+                      isActive
+                        ? "bg-[#FFE8EF] text-[#D24D77]"
+                        : "text-[#5C5F60] hover:bg-[#EEF4FB] hover:text-[#17222B]"
+                    }`
+                  }
+                >
+                  {/* Image icons import as URL strings; lucide icons are components. */}
+                  {typeof Icon === "string" ? (
+                    <img src={Icon} alt="" className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <Icon size={16} className="shrink-0" />
+                  )}
+                  <span>{name}</span>
+                </NavLink>
+              ),
+            )}
           </nav>
 
           <div className="flex flex-col gap-2">
