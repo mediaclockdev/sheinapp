@@ -90,10 +90,9 @@ function Icon({ name, className = "h-5 w-5" }) {
     ),
     key: (
       <>
-        <path d="m3 10 4-4 4 4" />
-        <path d="M7 6v12" />
-        <path d="M11 14h10" />
-        <path d="M18 11v6" />
+        <circle cx="7.5" cy="15.5" r="5.5" />
+        <path d="m21 2-9.6 9.6" />
+        <path d="m15.5 7.5 3 3L22 7l-3-3" />
       </>
     ),
     refresh: (

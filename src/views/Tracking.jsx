@@ -134,6 +134,9 @@ export default function Tracking() {
   const [error, setError] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("ALL");
+  // Native date inputs already give YYYY-MM-DD, the format the API takes.
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -142,9 +145,16 @@ export default function Tracking() {
     setLoading(true);
     setError(null);
     try {
-      const { data: res } = await apiClient.get(
-        `${ENDPOINTS.tracking.tracking}?statusFilter=${statusFilter}&page=${page}&limit=10`,
-      );
+      const { data: res } = await apiClient.get(ENDPOINTS.tracking.tracking, {
+        params: {
+          statusFilter,
+          page,
+          limit: 10,
+          // Same names the orders list uses; confirm against the tracking API.
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+        },
+      });
       // Assuming res.data contains { batches: [], pagination: { total: 10, totalPages: 1 } }
       const list = res.data?.batches || res.data || res.batches || res || [];
       setData(Array.isArray(list) ? list : []);
@@ -173,7 +183,7 @@ export default function Tracking() {
 
   useEffect(() => {
     fetchTracking();
-  }, [statusFilter, page]);
+  }, [statusFilter, page, startDate, endDate]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeItem, setActiveItem] = useState(null);
@@ -231,6 +241,19 @@ export default function Tracking() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
 
+  // Rows are selected by batch id: stable across pages, and what export needs.
+  const rowKey = (item, idx) => batchIdOf(item) ?? item.trackingId ?? idx;
+  const pageKeys = data.map(rowKey);
+  const selectedOnPage = pageKeys.filter((k) => selectedRows.includes(k));
+  const allOnPageSelected =
+    pageKeys.length > 0 && selectedOnPage.length === pageKeys.length;
+  const toggleAll = () =>
+    setSelectedRows((prev) =>
+      allOnPageSelected
+        ? prev.filter((k) => !pageKeys.includes(k))
+        : [...new Set([...prev, ...pageKeys])],
+    );
+
   const toggleRow = (id) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
@@ -275,10 +298,7 @@ export default function Tracking() {
     }
   };
   const handleExport = async () => {
-    const selectedIds = data
-      .filter((item, idx) => selectedRows.includes(item.trackingId || idx))
-      .map(batchIdOf)
-      .filter(Boolean);
+    const selectedIds = selectedRows;
     if (!selectedIds.length) return;
     try {
       const { data: blob } = await apiClient.get(
@@ -339,13 +359,39 @@ export default function Tracking() {
             <div className="flex items-center gap-2">
               <input
                 type="date"
+                value={startDate}
+                max={endDate || undefined}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setPage(1);
+                }}
+                aria-label="From date"
                 className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-500 focus:outline-none focus:border-gray-400"
               />
               <span className="text-gray-400">-</span>
               <input
                 type="date"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setPage(1);
+                }}
+                aria-label="To date"
                 className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-500 focus:outline-none focus:border-gray-400"
               />
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                    setPage(1);
+                  }}
+                  className="cursor-pointer text-xs font-semibold text-[#704154] hover:underline"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -357,12 +403,6 @@ export default function Tracking() {
           >
             <Download size={16} />
             Export
-          </button>
-          <button
-            onClick={() => fetchTracking()}
-            className="cursor-pointer px-4 py-2 bg-[#ffc6d8] hover:bg-[#ffb5cd] text-[#704154] rounded text-sm font-semibold transition-colors w-full md:w-auto"
-          >
-            Apply Filters
           </button>
         </div>
       </div>
@@ -376,6 +416,15 @@ export default function Tracking() {
                 <th className="p-4 w-12 text-center">
                   <input
                     type="checkbox"
+                    checked={allOnPageSelected}
+                    ref={(el) => {
+                      if (el)
+                        el.indeterminate =
+                          selectedOnPage.length > 0 && !allOnPageSelected;
+                    }}
+                    onChange={toggleAll}
+                    disabled={loading || !data.length}
+                    aria-label="Select all rows on this page"
                     className="rounded border-gray-300 text-[#7a4e5b] focus:ring-[#7a4e5b]"
                   />
                 </th>
@@ -412,7 +461,7 @@ export default function Tracking() {
                   const lastUpdate = item.lastUpdate || item.updatedAt || "-";
                   const statusStr = item.status || "PENDING";
 
-                  const isSelected = selectedRows.includes(id);
+                  const isSelected = selectedRows.includes(rowKey(item, idx));
                   const IconComponent =
                     STATUS_ICONS[statusStr.toUpperCase()] || Package;
                   return (
@@ -424,7 +473,7 @@ export default function Tracking() {
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => toggleRow(id)}
+                          onChange={() => toggleRow(rowKey(item, idx))}
                           className="rounded border-gray-300 text-[#7a4e5b] focus:ring-[#7a4e5b]"
                         />
                       </td>
