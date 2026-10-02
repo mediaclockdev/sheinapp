@@ -732,7 +732,7 @@ function ActivateScreen() {
             label="Password"
             name="password"
             type="password"
-            icon="key"
+            icon="lock"
             placeholder="••••••••"
             shellClassName="h-10"
           />
